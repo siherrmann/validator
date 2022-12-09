@@ -42,9 +42,11 @@ func Validate(value any) error {
 				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
 			}
 		case reflect.Int:
-			// TODO validate int
-		case reflect.Uint:
-			// TODO validate uint
+			valueTemp := reflect.ValueOf(value).Int()
+			err := checkInt(int(valueTemp), conditions)
+			if err != nil {
+				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
+			}
 		case reflect.String:
 			valueTemp := reflect.ValueOf(value).String()
 			err := checkString(valueTemp, conditions)
@@ -53,7 +55,11 @@ func Validate(value any) error {
 			}
 		case reflect.Array:
 		case reflect.Slice:
-			// TODO validate array/slice
+			valueTemp := reflect.ValueOf(value)
+			err := checkArray(valueTemp, conditions)
+			if err != nil {
+				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
+			}
 		}
 	}
 
@@ -83,6 +89,36 @@ func checkFloat(f float64, c []string) error {
 		if err != nil {
 			return err
 		} else if f > maxValue {
+			return fmt.Errorf("value greater than %v", maxValue)
+		}
+	}
+
+	return nil
+}
+
+func checkInt(i int, c []string) error {
+	condition, err := getConditionByType(c, MIN_VALUE)
+	if err != nil {
+		return err
+	}
+	if len(condition) != 0 {
+		minValue, err := strconv.Atoi(condition)
+		if err != nil {
+			return err
+		} else if i < minValue {
+			return fmt.Errorf("value smaller than %v", minValue)
+		}
+	}
+
+	condition, err = getConditionByType(c, MAX_VLAUE)
+	if err != nil {
+		return err
+	}
+	if len(condition) != 0 {
+		maxValue, err := strconv.Atoi(condition)
+		if err != nil {
+			return err
+		} else if i > maxValue {
 			return fmt.Errorf("value greater than %v", maxValue)
 		}
 	}
@@ -126,6 +162,51 @@ func checkString(s string, c []string) error {
 			return fmt.Errorf("value does not include %v", condition)
 		}
 	}
+
+	return nil
+}
+
+func checkArray(a reflect.Value, c []string) error {
+	if a.Kind() != reflect.Array || a.Kind() != reflect.Slice {
+		return errors.New("value to validate has to be a array or slice")
+	}
+
+	condition, err := getConditionByType(c, MIN_VALUE)
+	if err != nil {
+		return err
+	}
+	if len(condition) != 0 {
+		minValue, err := strconv.Atoi(condition)
+		if err != nil {
+			return err
+		} else if a.Len() < minValue {
+			return fmt.Errorf("value shorter than %v", minValue)
+		}
+	}
+
+	condition, err = getConditionByType(c, MAX_VLAUE)
+	if err != nil {
+		return err
+	}
+	if len(condition) != 0 {
+		maxValue, err := strconv.Atoi(condition)
+		if err != nil {
+			return err
+		} else if a.Len() > maxValue {
+			return fmt.Errorf("value longer than %v", maxValue)
+		}
+	}
+
+	// TODO fix check for different types of arrays
+	// condition, err = getConditionByType(c, CONTAINS)
+	// if err != nil {
+	// 	return err
+	// }
+	// if len(condition) != 0 {
+	// 	if !contains(a, condition) {
+	// 		return fmt.Errorf("value does not include %v", condition)
+	// 	}
+	// }
 
 	return nil
 }
