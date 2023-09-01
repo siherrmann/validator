@@ -1,18 +1,21 @@
-package validator
+package main
 
 import (
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
 const (
+	EQUAL     string = "equ"
+	NOT_EQUAL string = "neq"
 	MIN_VALUE string = "min"
 	MAX_VLAUE string = "max"
 	CONTAINS  string = "con"
+	REGX      string = "rex"
 )
 
 func Validate(value any) error {
@@ -36,26 +39,26 @@ func Validate(value any) error {
 
 		switch value.Type().Kind() {
 		case reflect.Float64:
-			valueTemp := reflect.ValueOf(value).Float()
+			valueTemp := value.Float()
 			err := checkFloat(valueTemp, conditions)
 			if err != nil {
 				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
 			}
 		case reflect.Int:
-			valueTemp := reflect.ValueOf(value).Int()
+			valueTemp := value.Int()
 			err := checkInt(int(valueTemp), conditions)
 			if err != nil {
 				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
 			}
 		case reflect.String:
-			valueTemp := reflect.ValueOf(value).String()
+			valueTemp := value.String()
 			err := checkString(valueTemp, conditions)
 			if err != nil {
 				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
 			}
 		case reflect.Array:
 		case reflect.Slice:
-			valueTemp := reflect.ValueOf(value)
+			valueTemp := value
 			err := checkArray(valueTemp, conditions)
 			if err != nil {
 				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
@@ -67,7 +70,33 @@ func Validate(value any) error {
 }
 
 func checkFloat(f float64, c []string) error {
-	condition, err := getConditionByType(c, MIN_VALUE)
+	condition, err := getConditionByType(c, EQUAL)
+	if err != nil {
+		return err
+	}
+	if len(condition) != 0 {
+		equal, err := strconv.ParseFloat(condition, 64)
+		if err != nil {
+			return err
+		} else if f != equal {
+			return fmt.Errorf("value must be equal to %v", equal)
+		}
+	}
+
+	condition, err = getConditionByType(c, NOT_EQUAL)
+	if err != nil {
+		return err
+	}
+	if len(condition) != 0 {
+		notEqual, err := strconv.ParseFloat(condition, 64)
+		if err != nil {
+			return err
+		} else if f == notEqual {
+			return fmt.Errorf("value can't be equal to %v", notEqual)
+		}
+	}
+
+	condition, err = getConditionByType(c, MIN_VALUE)
 	if err != nil {
 		return err
 	}
@@ -97,7 +126,33 @@ func checkFloat(f float64, c []string) error {
 }
 
 func checkInt(i int, c []string) error {
-	condition, err := getConditionByType(c, MIN_VALUE)
+	condition, err := getConditionByType(c, EQUAL)
+	if err != nil {
+		return err
+	}
+	if len(condition) != 0 {
+		equal, err := strconv.Atoi(condition)
+		if err != nil {
+			return err
+		} else if i != equal {
+			return fmt.Errorf("value must be equal to %v", equal)
+		}
+	}
+
+	condition, err = getConditionByType(c, NOT_EQUAL)
+	if err != nil {
+		return err
+	}
+	if len(condition) != 0 {
+		notEqual, err := strconv.Atoi(condition)
+		if err != nil {
+			return err
+		} else if i == notEqual {
+			return fmt.Errorf("value can't be equal to %v", notEqual)
+		}
+	}
+
+	condition, err = getConditionByType(c, MIN_VALUE)
 	if err != nil {
 		return err
 	}
@@ -127,7 +182,27 @@ func checkInt(i int, c []string) error {
 }
 
 func checkString(s string, c []string) error {
-	condition, err := getConditionByType(c, MIN_VALUE)
+	condition, err := getConditionByType(c, EQUAL)
+	if err != nil {
+		return err
+	}
+	if len(condition) != 0 {
+		if s != condition {
+			return fmt.Errorf("value must be equal to %v", condition)
+		}
+	}
+
+	condition, err = getConditionByType(c, NOT_EQUAL)
+	if err != nil {
+		return err
+	}
+	if len(condition) != 0 {
+		if s == condition {
+			return fmt.Errorf("value can't be equal to %v", condition)
+		}
+	}
+
+	condition, err = getConditionByType(c, MIN_VALUE)
 	if err != nil {
 		return err
 	}
@@ -160,6 +235,19 @@ func checkString(s string, c []string) error {
 	if len(condition) != 0 {
 		if !strings.Contains(s, condition) {
 			return fmt.Errorf("value does not include %v", condition)
+		}
+	}
+
+	condition, err = getConditionByType(c, REGX)
+	if err != nil {
+		return err
+	}
+	if len(condition) != 0 {
+		match, err := regexp.MatchString(condition, s)
+		if err != nil {
+			return err
+		} else if !match {
+			return fmt.Errorf("value does match regex %v", condition)
 		}
 	}
 
@@ -212,22 +300,20 @@ func checkArray(a reflect.Value, c []string) error {
 }
 
 func getConditionByType(conditions []string, conditionType string) (string, error) {
-	if contains(conditions, conditionType) {
-		condition := strings.TrimPrefix(firstWhere(conditions, func(v string) bool { return strings.HasPrefix(v, conditionType) }), conditionType)
-
-		log.Println(condition)
-
-		if len(condition) == 0 {
-			return "", errors.New("empty 'min' value for float")
-		}
-
-		return condition, nil
-	} else {
+	first := FirstWhere(conditions, func(v string) bool { return strings.HasPrefix(v, conditionType) })
+	if first == "" {
 		return "", nil
 	}
+
+	condition := strings.TrimPrefix(first, conditionType)
+	if len(condition) == 0 {
+		return "", errors.New("empty 'min' value for float")
+	}
+
+	return condition, nil
 }
 
-func contains[V comparable](list []V, v V) bool {
+func Contains[V comparable](list []V, v V) bool {
 	for _, s := range list {
 		if v == s {
 			return true
@@ -236,7 +322,7 @@ func contains[V comparable](list []V, v V) bool {
 	return false
 }
 
-func firstWhere[V comparable](list []V, where func(v V) bool) V {
+func FirstWhere[V comparable](list []V, where func(v V) bool) V {
 	var temp V
 	for i := 0; i < len(list); i++ {
 		if where(list[i]) {
