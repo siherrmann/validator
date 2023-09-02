@@ -63,19 +63,22 @@ func Validate(value any) error {
 
 	// get valid reflect value of struct
 	structFull := reflect.ValueOf(value)
-	structValues := make([]StructValue, structFull.Type().NumField())
 
 	groups := map[string]string{}
+	groupErrors := map[string][]error{}
+	groupSize := map[string]int{}
 
-	for i := range structValues {
+	for i := 0; i < structFull.Type().NumField(); i++ {
 		tag := structFull.Type().Field(i).Tag.Get("vld")
 		if len(strings.TrimSpace(tag)) == 0 {
 			return fmt.Errorf("no validate tag found for field %s, to ignore the validation put a 'vld:\"-\"' into the tag", structFull.Type().Field(i).Name)
 		}
 
 		tagSplit := strings.Split(tag, ", ")
+		groupsValue := []string{}
+		groupsString := []string{}
 		if len(tagSplit) > 1 {
-			groupsString := strings.Split(tagSplit[1], " ")
+			groupsString = strings.Split(tagSplit[1], " ")
 
 			for _, g := range groupsString {
 				group := getConditionType(g)
@@ -84,8 +87,10 @@ func Validate(value any) error {
 					return fmt.Errorf("error extracting group: %v", err)
 				}
 
+				groupsValue = append(groupsValue, group)
 				groups[group] = condition
-				structValues[i].Groups = append(structValues[i].Groups, group)
+				groupErrors[group] = []error{}
+				groupSize[group]++
 			}
 		}
 
@@ -97,36 +102,44 @@ func Validate(value any) error {
 		case reflect.Int:
 			valueTemp := value.Int()
 			err := checkInt(int(valueTemp), conditions)
-			if err != nil && len(structValues[i].Groups) == 0 {
+			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
 			} else if err != nil {
-				structValues[i].Error = err
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], err)
+				}
 			}
 		case reflect.Float32:
 		case reflect.Float64:
 			valueTemp := value.Float()
 			err := checkFloat(valueTemp, conditions)
-			if err != nil && len(structValues[i].Groups) == 0 {
+			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
 			} else if err != nil {
-				structValues[i].Error = err
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], err)
+				}
 			}
 		case reflect.String:
 			valueTemp := value.String()
 			err := checkString(valueTemp, conditions)
-			if err != nil && len(structValues[i].Groups) == 0 {
+			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
 			} else if err != nil {
-				structValues[i].Error = err
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], err)
+				}
 			}
 		case reflect.Array:
 		case reflect.Slice:
 			valueTemp := value
 			err := checkArray(valueTemp, conditions)
-			if err != nil && len(structValues[i].Groups) == 0 {
+			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
 			} else if err != nil {
-				structValues[i].Error = err
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], err)
+				}
 			}
 		default:
 			return fmt.Errorf("invalid field type: %v", value.Type().Kind())
@@ -135,16 +148,6 @@ func Validate(value any) error {
 
 	if len(groups) != 0 {
 		for groupName, groupCondition := range groups {
-			withoutError := 0
-			var lastError error
-			for _, structValue := range structValues {
-				if contains(structValue.Groups, groupName) && structValue.Error == nil {
-					withoutError++
-				} else if contains(structValue.Groups, groupName) {
-					lastError = structValue.Error
-				}
-			}
-
 			conType := getConditionType(groupCondition)
 
 			switch conType {
@@ -157,8 +160,8 @@ func Validate(value any) error {
 					minValue, err := strconv.Atoi(condition)
 					if err != nil {
 						return err
-					} else if withoutError < minValue {
-						return fmt.Errorf("less the %v in group without error, last error: %v", minValue, lastError)
+					} else if (groupSize[groupName] - len(groupErrors[groupName])) < minValue {
+						return fmt.Errorf("less the %v in group without error, all errors: %v", minValue, groupErrors[groupName])
 					}
 				}
 			case MAX_VLAUE:
@@ -170,8 +173,8 @@ func Validate(value any) error {
 					maxValue, err := strconv.Atoi(condition)
 					if err != nil {
 						return err
-					} else if withoutError > maxValue {
-						return fmt.Errorf("more the %v in group without error, last error: %v", maxValue, lastError)
+					} else if (groupSize[groupName] - len(groupErrors[groupName])) > maxValue {
+						return fmt.Errorf("more the %v in group without error, all errors: %v", maxValue, groupErrors[groupName])
 					}
 				}
 			default:

@@ -77,6 +77,13 @@ type TestStructGroup struct {
 	Array  []string `vld:"min3, gr1min1"`
 }
 
+type TestStructInvalidGroupCondition struct {
+	String string   `vld:"min3, gr1min1 gr2min2"`
+	Int    int      `vld:"min3, gr1min1 gr2min2"`
+	Float  float64  `vld:"min3, gr1min1"`
+	Array  []string `vld:"min3, gr10min1"`
+}
+
 func TestStructValidator(t *testing.T) {
 	testCases := map[string]TestRequestWrapper{
 		"valid": {
@@ -559,6 +566,23 @@ func TestStructValidator(t *testing.T) {
 				Int:    2,
 				Float:  3.0,
 				Array:  []string{"", ""},
+			},
+			"group",
+		},
+	}
+
+	for k, v := range testCases {
+		err := Validate(v.Data)
+		assertError(t, k, err, v.InvalidField)
+	}
+
+	testCases = map[string]TestRequestWrapper{
+		"invalidGroupConditionLast": {
+			TestStructInvalidGroupCondition{
+				String: "test",
+				Int:    3,
+				Float:  3.0,
+				Array:  []string{"", "", ""},
 			},
 			"group",
 		},
