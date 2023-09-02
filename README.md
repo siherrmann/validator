@@ -11,7 +11,14 @@ All fields in the struct need a vld tag.
 If you want to ignore one field in the validator you can add `` `vld:"-"` ``.
 If you don't add the vld tag to every field the function will fail with an error.
 
+If you want to use multiple conditions you can add them with a space in between them.
+
+A complex example for a password check (min length 8, max length 30, at least one capital letter, one small letter, one digit and one special character) would be:
+`` `vld:"min8 max30 rex^(.*[A-Z])+(.*)$ rex^(.*[a-z])+(.*)$ rex^(.*\\d)+(.*)$ rex^(.*[\x60!@#$%^&*()_+={};':\"|\\,.<>/?~-])+(.*)$"` ``
+
 ## Condition types
+
+**-** - ignores the field
 
 **equ** - equal (value or length)
 

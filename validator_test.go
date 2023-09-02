@@ -40,8 +40,8 @@ type TestStructMax struct {
 
 type TestStructCon struct {
 	String string   `vld:"con@"`
-	Int    int      `vld:"con@"`
-	Float  float64  `vld:"con@"`
+	Int    int      `vld:"-"`
+	Float  float64  `vld:"-"`
 	Array  []string `vld:"con@"`
 }
 
@@ -49,14 +49,14 @@ type TestStructRex struct {
 	String string   `vld:"rex^[a-zA-Z0-9]+$"`
 	Int    int      `vld:"rex^(2|3)$"`
 	Float  float64  `vld:"rex^(2.000000|3.000000)$"`
-	Array  []string `vld:"rex^[a-zA-Z0-9]+$"`
+	Array  []string `vld:"-"`
 }
 
 type TestStructMulti struct {
-	String string   `vld:"min3,neqtest"`
-	Int    int      `vld:"min3,neq4"`
-	Float  float64  `vld:"min3,neq4"`
-	Array  []string `vld:"min3,max4"`
+	String string   `vld:"min3 neqtest"`
+	Int    int      `vld:"min3 neq4"`
+	Float  float64  `vld:"min3 neq4"`
+	Array  []string `vld:"min3 max4"`
 }
 
 type TestStructEmptyCondition struct {
@@ -64,6 +64,17 @@ type TestStructEmptyCondition struct {
 	Int    int      `vld:"neq"`
 	Float  float64  `vld:"min"`
 	Array  []string `vld:"max"`
+}
+
+type TestStructPassword struct {
+	String string `vld:"min8 max30 rex^(.*[A-Z])+(.*)$ rex^(.*[a-z])+(.*)$ rex^(.*\\d)+(.*)$ rex^(.*[\x60!@#$%^&*()_+={};':\"|\\,.<>/?~-])+(.*)$"`
+}
+
+type TestStructGroup struct {
+	String string   `vld:"min3, gr1min1 gr2min2"`
+	Int    int      `vld:"min3, gr1min1 gr2min2"`
+	Float  float64  `vld:"min3, gr1min1"`
+	Array  []string `vld:"min3, gr1min1"`
 }
 
 func TestStructValidator(t *testing.T) {
@@ -463,6 +474,100 @@ func TestStructValidator(t *testing.T) {
 		err := Validate(v.Data)
 		assertError(t, k, err, v.InvalidField)
 	}
+
+	testCases = map[string]TestRequestWrapper{
+		"valid": {
+			TestStructPassword{
+				String: "Password123.4",
+			},
+			"",
+		},
+		"tooShort": {
+			TestStructPassword{
+				String: "Pa123.4",
+			},
+			"String",
+		},
+		"tooLong": {
+			TestStructPassword{
+				String: "Password1.Password1.Password1.2",
+			},
+			"String",
+		},
+		"missingCapitalLetter": {
+			TestStructPassword{
+				String: "password123.4",
+			},
+			"String",
+		},
+		"missingNonCapitalLetter": {
+			TestStructPassword{
+				String: "PASSWORD123.4",
+			},
+			"String",
+		},
+		"missingDecimalLetter": {
+			TestStructPassword{
+				String: "Password.",
+			},
+			"String",
+		},
+		"missingSpecialCharacter": {
+			TestStructPassword{
+				String: "Password1234",
+			},
+			"String",
+		},
+	}
+
+	for k, v := range testCases {
+		err := Validate(v.Data)
+		assertError(t, k, err, v.InvalidField)
+	}
+
+	testCases = map[string]TestRequestWrapper{
+		"validAll": {
+			TestStructGroup{
+				String: "test",
+				Int:    3,
+				Float:  3.0,
+				Array:  []string{"", "", ""},
+			},
+			"",
+		},
+		"validOnlyGroup2": {
+			TestStructGroup{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", ""},
+			},
+			"",
+		},
+		"noneOfGroup": {
+			TestStructGroup{
+				String: "te",
+				Int:    2,
+				Float:  2.0,
+				Array:  []string{"", ""},
+			},
+			"group",
+		},
+		"onlyGroup1": {
+			TestStructGroup{
+				String: "te",
+				Int:    2,
+				Float:  3.0,
+				Array:  []string{"", ""},
+			},
+			"group",
+		},
+	}
+
+	for k, v := range testCases {
+		err := Validate(v.Data)
+		assertError(t, k, err, v.InvalidField)
+	}
 }
 
 func assertError(t testing.TB, testCase string, err error, invalidField string) {
@@ -470,7 +575,7 @@ func assertError(t testing.TB, testCase string, err error, invalidField string) 
 	if len(invalidField) == 0 && err != nil {
 		t.Errorf("test case: %s - wanted no invalid field, got error: %v", testCase, err)
 	} else if len(invalidField) != 0 && err == nil {
-		t.Errorf("test case: %s - wanted invalid field: %v, got error: %v", testCase, invalidField, err)
+		t.Errorf("test case: %s - wanted invalid field: %v, got no error", testCase, invalidField)
 	} else if err != nil && !strings.Contains(err.Error(), invalidField) {
 		t.Errorf("test case: %s - wanted invalid field: %v, got error: %v", testCase, invalidField, err)
 	}
