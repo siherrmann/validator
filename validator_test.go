@@ -285,7 +285,7 @@ func TestStructValidator(t *testing.T) {
 				String: "test@",
 				Int:    4,
 				Float:  4.0,
-				Array:  []string{"", "", "", ""},
+				Array:  []string{"", "@"},
 			},
 			"",
 		},
@@ -294,9 +294,18 @@ func TestStructValidator(t *testing.T) {
 				String: "test",
 				Int:    4,
 				Float:  4.0,
-				Array:  []string{"", "", "", ""},
+				Array:  []string{"", "@"},
 			},
 			"String",
+		},
+		"notContainingArray": {
+			TestStructCon{
+				String: "test@",
+				Int:    4,
+				Float:  4.0,
+				Array:  []string{"", ""},
+			},
+			"Array",
 		},
 	}
 

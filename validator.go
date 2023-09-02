@@ -31,13 +31,16 @@ const (
 //
 // neq - int/float/string != condition, len(array) != condition
 //
-// min - int/float >= condition, len(string)/len(array) >= condition
+// min - int/float >= condition, len(string/array) >= condition
 //
-// max - int/float <= condition, len(string)/len(array) <= condition
+// max - int/float <= condition, len(string/array) <= condition
 //
-// con - strings.Contains(string, condition), int/float/array ignored
+// con - strings.Contains(string, condition), contains(array, condition), int/float ignored
 //
 // rex - regexp.MatchString(condition, int/float/string), array ignored
+//
+// For con you need to put in a condition that is convertable to the underlying type of the arrary.
+// Eg. for an array of int the condition must be convertable to int (bad: `vld:"conA"`, good: `vld:"con1"`).
 //
 // In the case of rex the int and float input will get converted to a string (strconv.Itoa(int) and fmt.Sprintf("%f", f)).
 // If you want to check more complex cases you can obviously replace equ, neq, min, max and con with one regular expression.
@@ -67,6 +70,7 @@ func Validate(value any) error {
 			if err != nil {
 				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
 			}
+		case reflect.Float32:
 		case reflect.Float64:
 			valueTemp := value.Float()
 			err := checkFloat(valueTemp, conditions)
@@ -360,22 +364,47 @@ func checkArray(a reflect.Value, c []string) error {
 		}
 	}
 
-	// TODO fix check for different types of arrays
-	// condition, err = getConditionByType(c, CONTAINS)
-	// if err != nil {
-	// 	return err
-	// }
-	// if len(condition) != 0 {
-	// 	if !contains(a, condition) {
-	// 		return fmt.Errorf("value does not include %v", condition)
-	// 	}
-	// }
+	condition, err = getConditionByType(c, CONTAINS)
+	if err != nil {
+		return err
+	}
+	if len(condition) != 0 {
+		switch v := a.Interface().(type) {
+		case []int:
+			contain, err := strconv.Atoi(condition)
+			if err != nil {
+				return err
+			} else if !contains(v, contain) {
+				return fmt.Errorf("value does not contain %v", contain)
+			}
+		case []float32:
+			contain, err := strconv.ParseFloat(condition, 32)
+			if err != nil {
+				return err
+			} else if !contains(v, float32(contain)) {
+				return fmt.Errorf("value does not contain %v", contain)
+			}
+		case []float64:
+			contain, err := strconv.ParseFloat(condition, 64)
+			if err != nil {
+				return err
+			} else if !contains(v, contain) {
+				return fmt.Errorf("value does not contain %v", contain)
+			}
+		case []string:
+			if !contains(v, condition) {
+				return fmt.Errorf("value does not contain %v", condition)
+			}
+		default:
+			return fmt.Errorf("type %v not supported", reflect.TypeOf(v))
+		}
+	}
 
 	return nil
 }
 
 func getConditionByType(conditions []string, conditionType string) (string, error) {
-	first := FirstWhere(conditions, func(v string) bool { return strings.HasPrefix(v, conditionType) })
+	first := firstWhere(conditions, func(v string) bool { return strings.HasPrefix(v, conditionType) })
 	if first == "" {
 		return "", nil
 	}
@@ -388,7 +417,7 @@ func getConditionByType(conditions []string, conditionType string) (string, erro
 	return condition, nil
 }
 
-func Contains[V comparable](list []V, v V) bool {
+func contains[V comparable](list []V, v V) bool {
 	for _, s := range list {
 		if v == s {
 			return true
@@ -397,7 +426,7 @@ func Contains[V comparable](list []V, v V) bool {
 	return false
 }
 
-func FirstWhere[V comparable](list []V, where func(v V) bool) V {
+func firstWhere[V comparable](list []V, where func(v V) bool) V {
 	var temp V
 	for i := 0; i < len(list); i++ {
 		if where(list[i]) {
