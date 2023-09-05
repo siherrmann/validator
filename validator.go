@@ -40,7 +40,7 @@ func UnmarshalAndValidate(data []byte, v any) error {
 		return fmt.Errorf("error unmarshalling %T: %v", value, err)
 	}
 
-	err = Validate(value)
+	err = Validate(v)
 	if err != nil {
 		return err
 	}
