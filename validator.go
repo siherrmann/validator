@@ -117,7 +117,6 @@ func Validate(v any) error {
 
 				groupsValue = append(groupsValue, group)
 				groups[group] = condition
-				groupErrors[group] = []error{}
 				groupSize[group]++
 			}
 		}

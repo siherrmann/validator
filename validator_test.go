@@ -77,11 +77,18 @@ type TestStructGroup struct {
 	Array  []string `vld:"min3, gr1min1"`
 }
 
+type TestStructGroupNoGroup struct {
+	String string   `vld:"min3"`
+	Int    int      `vld:"min3, gr3min1"`
+	Float  float64  `vld:"min3, gr3min1"`
+	Array  []string `vld:"min3, gr3min1"`
+}
+
 type TestStructInvalidGroupCondition struct {
-	String string   `vld:"min3, gr1min1 gr2min2"`
-	Int    int      `vld:"min3, gr1min1 gr2min2"`
-	Float  float64  `vld:"min3, gr1min1"`
-	Array  []string `vld:"min3, gr10min1"`
+	String string   `vld:"min3, gr4min1 gr5min2"`
+	Int    int      `vld:"min3, gr4min1 gr5min2"`
+	Float  float64  `vld:"min3, gr4min1"`
+	Array  []string `vld:"min3, gr40min1"`
 }
 
 func TestStructValidator(t *testing.T) {
@@ -565,6 +572,50 @@ func TestStructValidator(t *testing.T) {
 				String: "te",
 				Int:    2,
 				Float:  3.0,
+				Array:  []string{"", ""},
+			},
+			"group",
+		},
+	}
+
+	for k, v := range testCases {
+		err := Validate(v.Data)
+		assertError(t, k, err, v.InvalidField)
+	}
+
+	testCases = map[string]*TestRequestWrapper{
+		"validAll": {
+			&TestStructGroupNoGroup{
+				String: "test",
+				Int:    3,
+				Float:  3.0,
+				Array:  []string{"", "", ""},
+			},
+			"",
+		},
+		"validOnlyOneOfGroup": {
+			&TestStructGroupNoGroup{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", ""},
+			},
+			"",
+		},
+		"onlyGroup": {
+			&TestStructGroupNoGroup{
+				String: "te",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", ""},
+			},
+			"String",
+		},
+		"onlyNoGroup": {
+			&TestStructGroupNoGroup{
+				String: "test",
+				Int:    2,
+				Float:  2.0,
 				Array:  []string{"", ""},
 			},
 			"group",
