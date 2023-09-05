@@ -1,7 +1,7 @@
 package validator
 
 import (
-	"errors"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -22,6 +22,30 @@ const (
 type StructValue struct {
 	Error  error
 	Groups []string
+}
+
+// UnmarshalAndValidate unmarshals given json ([]byte) into pointer v.
+// For more information to Validate look at Validate(value any).
+func UnmarshalAndValidate(data []byte, v any) error {
+	value := reflect.ValueOf(v)
+	if value.Kind() != reflect.Ptr {
+		return fmt.Errorf("value has to be of kind pointer, was %T", value)
+	}
+	if value.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("value has to be of kind struct, was %T", value)
+	}
+
+	err := json.Unmarshal(data, v)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling %T: %v", value, err)
+	}
+
+	err = Validate(value)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Validate validates a given struct by vld tags.
@@ -55,14 +79,18 @@ type StructValue struct {
 //
 // In the case of rex the int and float input will get converted to a string (strconv.Itoa(int) and fmt.Sprintf("%f", f)).
 // If you want to check more complex cases you can obviously replace equ, neq, min, max and con with one regular expression.
-func Validate(value any) error {
-	// check if value is a struct
-	if reflect.ValueOf(value).Kind() != reflect.Struct {
-		return errors.New("value to validate has to be a pointer to a struct")
+func Validate(v any) error {
+	// check if value is a pointer to a struct
+	value := reflect.ValueOf(v)
+	if value.Kind() != reflect.Ptr {
+		return fmt.Errorf("value has to be of kind pointer, was %T", value)
+	}
+	if value.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("value has to be of kind struct, was %T", value)
 	}
 
 	// get valid reflect value of struct
-	structFull := reflect.ValueOf(value)
+	structFull := value.Elem()
 
 	groups := map[string]string{}
 	groupErrors := map[string][]error{}

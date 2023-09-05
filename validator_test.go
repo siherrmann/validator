@@ -85,9 +85,9 @@ type TestStructInvalidGroupCondition struct {
 }
 
 func TestStructValidator(t *testing.T) {
-	testCases := map[string]TestRequestWrapper{
+	testCases := map[string]*TestRequestWrapper{
 		"valid": {
-			TestStructEqual{
+			&TestStructEqual{
 				String: "test",
 				Int:    3,
 				Float:  3.0,
@@ -96,7 +96,7 @@ func TestStructValidator(t *testing.T) {
 			"",
 		},
 		"notEqualString": {
-			TestStructEqual{
+			&TestStructEqual{
 				String: "tes",
 				Int:    3,
 				Float:  3.0,
@@ -105,7 +105,7 @@ func TestStructValidator(t *testing.T) {
 			"String",
 		},
 		"notEqualInt": {
-			TestStructEqual{
+			&TestStructEqual{
 				String: "test",
 				Int:    -3,
 				Float:  3.0,
@@ -114,7 +114,7 @@ func TestStructValidator(t *testing.T) {
 			"Int",
 		},
 		"notEqualFloat": {
-			TestStructEqual{
+			&TestStructEqual{
 				String: "test",
 				Int:    3,
 				Float:  -3.0,
@@ -123,7 +123,7 @@ func TestStructValidator(t *testing.T) {
 			"Float",
 		},
 		"notEqualArray": {
-			TestStructEqual{
+			&TestStructEqual{
 				String: "test",
 				Int:    3,
 				Float:  3.0,
@@ -138,9 +138,9 @@ func TestStructValidator(t *testing.T) {
 		assertError(t, k, err, v.InvalidField)
 	}
 
-	testCases = map[string]TestRequestWrapper{
+	testCases = map[string]*TestRequestWrapper{
 		"valid": {
-			TestStructNotEqual{
+			&TestStructNotEqual{
 				String: "tes",
 				Int:    -3,
 				Float:  -3.0,
@@ -149,7 +149,7 @@ func TestStructValidator(t *testing.T) {
 			"",
 		},
 		"equalString": {
-			TestStructNotEqual{
+			&TestStructNotEqual{
 				String: "test",
 				Int:    -3,
 				Float:  -3.0,
@@ -158,7 +158,7 @@ func TestStructValidator(t *testing.T) {
 			"String",
 		},
 		"equalInt": {
-			TestStructNotEqual{
+			&TestStructNotEqual{
 				String: "tes",
 				Int:    3,
 				Float:  -3.0,
@@ -167,7 +167,7 @@ func TestStructValidator(t *testing.T) {
 			"Int",
 		},
 		"equalFloat": {
-			TestStructNotEqual{
+			&TestStructNotEqual{
 				String: "tes",
 				Int:    -3,
 				Float:  3.0,
@@ -176,7 +176,7 @@ func TestStructValidator(t *testing.T) {
 			"Float",
 		},
 		"equalArray": {
-			TestStructNotEqual{
+			&TestStructNotEqual{
 				String: "tes",
 				Int:    -3,
 				Float:  -3.0,
@@ -191,9 +191,9 @@ func TestStructValidator(t *testing.T) {
 		assertError(t, k, err, v.InvalidField)
 	}
 
-	testCases = map[string]TestRequestWrapper{
+	testCases = map[string]*TestRequestWrapper{
 		"valid": {
-			TestStructMin{
+			&TestStructMin{
 				String: "test",
 				Int:    3,
 				Float:  3.0,
@@ -202,7 +202,7 @@ func TestStructValidator(t *testing.T) {
 			"",
 		},
 		"tooShortString": {
-			TestStructMin{
+			&TestStructMin{
 				String: "",
 				Int:    3,
 				Float:  3.0,
@@ -211,7 +211,7 @@ func TestStructValidator(t *testing.T) {
 			"String",
 		},
 		"tooShortInt": {
-			TestStructMin{
+			&TestStructMin{
 				String: "test",
 				Int:    -3,
 				Float:  3.0,
@@ -220,7 +220,7 @@ func TestStructValidator(t *testing.T) {
 			"Int",
 		},
 		"tooShortFloat": {
-			TestStructMin{
+			&TestStructMin{
 				String: "test",
 				Int:    3,
 				Float:  -3.0,
@@ -229,7 +229,7 @@ func TestStructValidator(t *testing.T) {
 			"Float",
 		},
 		"tooShortArray": {
-			TestStructMin{
+			&TestStructMin{
 				String: "test",
 				Int:    3,
 				Float:  3.0,
@@ -244,9 +244,9 @@ func TestStructValidator(t *testing.T) {
 		assertError(t, k, err, v.InvalidField)
 	}
 
-	testCases = map[string]TestRequestWrapper{
+	testCases = map[string]*TestRequestWrapper{
 		"valid": {
-			TestStructMax{
+			&TestStructMax{
 				String: "test",
 				Int:    4,
 				Float:  4.0,
@@ -255,7 +255,7 @@ func TestStructValidator(t *testing.T) {
 			"",
 		},
 		"tooLongString": {
-			TestStructMax{
+			&TestStructMax{
 				String: "testi",
 				Int:    4,
 				Float:  4.0,
@@ -264,7 +264,7 @@ func TestStructValidator(t *testing.T) {
 			"String",
 		},
 		"tooLongInt": {
-			TestStructMax{
+			&TestStructMax{
 				String: "test",
 				Int:    5,
 				Float:  4.0,
@@ -273,7 +273,7 @@ func TestStructValidator(t *testing.T) {
 			"Int",
 		},
 		"tooLongFloat": {
-			TestStructMax{
+			&TestStructMax{
 				String: "test",
 				Int:    4,
 				Float:  4.1,
@@ -282,7 +282,7 @@ func TestStructValidator(t *testing.T) {
 			"Float",
 		},
 		"tooLongArray": {
-			TestStructMax{
+			&TestStructMax{
 				String: "test",
 				Int:    4,
 				Float:  4.0,
@@ -297,9 +297,9 @@ func TestStructValidator(t *testing.T) {
 		assertError(t, k, err, v.InvalidField)
 	}
 
-	testCases = map[string]TestRequestWrapper{
+	testCases = map[string]*TestRequestWrapper{
 		"valid": {
-			TestStructCon{
+			&TestStructCon{
 				String: "test@",
 				Int:    4,
 				Float:  4.0,
@@ -308,7 +308,7 @@ func TestStructValidator(t *testing.T) {
 			"",
 		},
 		"notContainingString": {
-			TestStructCon{
+			&TestStructCon{
 				String: "test",
 				Int:    4,
 				Float:  4.0,
@@ -317,7 +317,7 @@ func TestStructValidator(t *testing.T) {
 			"String",
 		},
 		"notContainingArray": {
-			TestStructCon{
+			&TestStructCon{
 				String: "test@",
 				Int:    4,
 				Float:  4.0,
@@ -332,9 +332,9 @@ func TestStructValidator(t *testing.T) {
 		assertError(t, k, err, v.InvalidField)
 	}
 
-	testCases = map[string]TestRequestWrapper{
+	testCases = map[string]*TestRequestWrapper{
 		"valid": {
-			TestStructRex{
+			&TestStructRex{
 				String: "test",
 				Int:    2,
 				Float:  2.0,
@@ -343,7 +343,7 @@ func TestStructValidator(t *testing.T) {
 			"",
 		},
 		"notMatchingString": {
-			TestStructRex{
+			&TestStructRex{
 				String: "test@",
 				Int:    2,
 				Float:  2.0,
@@ -352,7 +352,7 @@ func TestStructValidator(t *testing.T) {
 			"String",
 		},
 		"notMatchingInt": {
-			TestStructRex{
+			&TestStructRex{
 				String: "test",
 				Int:    -2,
 				Float:  2.0,
@@ -361,7 +361,7 @@ func TestStructValidator(t *testing.T) {
 			"Int",
 		},
 		"notMatchingFloat": {
-			TestStructRex{
+			&TestStructRex{
 				String: "test",
 				Int:    2,
 				Float:  -2.0,
@@ -376,9 +376,9 @@ func TestStructValidator(t *testing.T) {
 		assertError(t, k, err, v.InvalidField)
 	}
 
-	testCases = map[string]TestRequestWrapper{
+	testCases = map[string]*TestRequestWrapper{
 		"valid": {
-			TestStructMulti{
+			&TestStructMulti{
 				String: "tes",
 				Int:    3,
 				Float:  3.0,
@@ -387,7 +387,7 @@ func TestStructValidator(t *testing.T) {
 			"",
 		},
 		"firstFailString": {
-			TestStructMulti{
+			&TestStructMulti{
 				String: "te",
 				Int:    3,
 				Float:  3.0,
@@ -396,7 +396,7 @@ func TestStructValidator(t *testing.T) {
 			"String",
 		},
 		"firstFailInt": {
-			TestStructMulti{
+			&TestStructMulti{
 				String: "tes",
 				Int:    2,
 				Float:  3.0,
@@ -405,7 +405,7 @@ func TestStructValidator(t *testing.T) {
 			"Int",
 		},
 		"firstFailFloat": {
-			TestStructMulti{
+			&TestStructMulti{
 				String: "tes",
 				Int:    3,
 				Float:  2.0,
@@ -414,7 +414,7 @@ func TestStructValidator(t *testing.T) {
 			"Float",
 		},
 		"firstFailArray": {
-			TestStructMulti{
+			&TestStructMulti{
 				String: "tes",
 				Int:    3,
 				Float:  3.0,
@@ -423,7 +423,7 @@ func TestStructValidator(t *testing.T) {
 			"Array",
 		},
 		"secondFailString": {
-			TestStructMulti{
+			&TestStructMulti{
 				String: "test",
 				Int:    3,
 				Float:  3.0,
@@ -432,7 +432,7 @@ func TestStructValidator(t *testing.T) {
 			"String",
 		},
 		"secondFailInt": {
-			TestStructMulti{
+			&TestStructMulti{
 				String: "tes",
 				Int:    4,
 				Float:  3.0,
@@ -441,7 +441,7 @@ func TestStructValidator(t *testing.T) {
 			"Int",
 		},
 		"secondFailFloat": {
-			TestStructMulti{
+			&TestStructMulti{
 				String: "tes",
 				Int:    3,
 				Float:  4.0,
@@ -450,7 +450,7 @@ func TestStructValidator(t *testing.T) {
 			"Float",
 		},
 		"secondFailArray": {
-			TestStructMulti{
+			&TestStructMulti{
 				String: "tes",
 				Int:    3,
 				Float:  3.0,
@@ -465,9 +465,9 @@ func TestStructValidator(t *testing.T) {
 		assertError(t, k, err, v.InvalidField)
 	}
 
-	testCases = map[string]TestRequestWrapper{
+	testCases = map[string]*TestRequestWrapper{
 		"emptyConditon": {
-			TestStructEmptyCondition{
+			&TestStructEmptyCondition{
 				String: "test@",
 				Int:    4,
 				Float:  4.0,
@@ -482,45 +482,45 @@ func TestStructValidator(t *testing.T) {
 		assertError(t, k, err, v.InvalidField)
 	}
 
-	testCases = map[string]TestRequestWrapper{
+	testCases = map[string]*TestRequestWrapper{
 		"valid": {
-			TestStructPassword{
+			&TestStructPassword{
 				String: "Password123.4",
 			},
 			"",
 		},
 		"tooShort": {
-			TestStructPassword{
+			&TestStructPassword{
 				String: "Pa123.4",
 			},
 			"String",
 		},
 		"tooLong": {
-			TestStructPassword{
+			&TestStructPassword{
 				String: "Password1.Password1.Password1.2",
 			},
 			"String",
 		},
 		"missingCapitalLetter": {
-			TestStructPassword{
+			&TestStructPassword{
 				String: "password123.4",
 			},
 			"String",
 		},
 		"missingNonCapitalLetter": {
-			TestStructPassword{
+			&TestStructPassword{
 				String: "PASSWORD123.4",
 			},
 			"String",
 		},
 		"missingDecimalLetter": {
-			TestStructPassword{
+			&TestStructPassword{
 				String: "Password.",
 			},
 			"String",
 		},
 		"missingSpecialCharacter": {
-			TestStructPassword{
+			&TestStructPassword{
 				String: "Password1234",
 			},
 			"String",
@@ -532,9 +532,9 @@ func TestStructValidator(t *testing.T) {
 		assertError(t, k, err, v.InvalidField)
 	}
 
-	testCases = map[string]TestRequestWrapper{
+	testCases = map[string]*TestRequestWrapper{
 		"validAll": {
-			TestStructGroup{
+			&TestStructGroup{
 				String: "test",
 				Int:    3,
 				Float:  3.0,
@@ -543,7 +543,7 @@ func TestStructValidator(t *testing.T) {
 			"",
 		},
 		"validOnlyGroup2": {
-			TestStructGroup{
+			&TestStructGroup{
 				String: "test",
 				Int:    3,
 				Float:  2.0,
@@ -552,7 +552,7 @@ func TestStructValidator(t *testing.T) {
 			"",
 		},
 		"noneOfGroup": {
-			TestStructGroup{
+			&TestStructGroup{
 				String: "te",
 				Int:    2,
 				Float:  2.0,
@@ -561,7 +561,7 @@ func TestStructValidator(t *testing.T) {
 			"group",
 		},
 		"onlyGroup1": {
-			TestStructGroup{
+			&TestStructGroup{
 				String: "te",
 				Int:    2,
 				Float:  3.0,
@@ -576,9 +576,9 @@ func TestStructValidator(t *testing.T) {
 		assertError(t, k, err, v.InvalidField)
 	}
 
-	testCases = map[string]TestRequestWrapper{
+	testCases = map[string]*TestRequestWrapper{
 		"invalidGroupConditionLast": {
-			TestStructInvalidGroupCondition{
+			&TestStructInvalidGroupCondition{
 				String: "test",
 				Int:    3,
 				Float:  3.0,
