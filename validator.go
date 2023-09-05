@@ -380,7 +380,7 @@ func checkString(s string, c []string) error {
 				minValue, err := strconv.Atoi(condition)
 				if err != nil {
 					return err
-				} else if len(s) < minValue {
+				} else if len(strings.TrimSpace(s)) < minValue {
 					return fmt.Errorf("value shorter than %v", minValue)
 				}
 			}
@@ -393,7 +393,7 @@ func checkString(s string, c []string) error {
 				maxValue, err := strconv.Atoi(condition)
 				if err != nil {
 					return err
-				} else if len(s) > maxValue {
+				} else if len(strings.TrimSpace(s)) > maxValue {
 					return fmt.Errorf("value longer than %v", maxValue)
 				}
 			}

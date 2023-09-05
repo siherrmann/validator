@@ -40,9 +40,9 @@ Conditions have different usages per variable type:
 
 **neq** - `int/float/string != condition`, `len(array) != condition`
 
-**min** - `int/float >= condition`, `len(string/array) >= condition`
+**min** - `int/float >= condition`, `len(strings.TrimSpace(string)/array) >= condition`
 
-**max** - `int/float <= condition`, `len(string/array) <= condition`
+**max** - `int/float <= condition`, `len(strings.TrimSpace(string)/array) <= condition`
 
 **con** - `strings.Contains(string, condition)`, `contains(array, condition)`, int/float ignored
 
