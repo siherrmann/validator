@@ -1,3 +1,3 @@
-module github.com/siherrmann/structValidator
+module validator
 
 go 1.21
