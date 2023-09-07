@@ -46,7 +46,7 @@ Conditions have different usages per variable type:
 
 **con** - `strings.Contains(string, condition)`, `contains(array, condition)`, int/float ignored
 
-**rex** - `regexp.MatchString(condition, int/float/string)`, array ignored
+**rex** - `regexp.MatchString(condition, strconv.Itoa(int)/strconv.FormatFloat(float, 'f', 3, 64)/string)`, array ignored
 
 For con you need to put in a condition that is convertable to the underlying type of the arrary.
 Eg. for an array of int the condition must be convertable to int (bad: `` `vld:"conA"` ``, good: `` `vld:"con1"` ``).

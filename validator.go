@@ -17,6 +17,7 @@ const (
 	MAX_VLAUE string = "max"
 	CONTAINS  string = "con"
 	REGX      string = "rex"
+	OR        string = "||"
 )
 
 type StructValue struct {
@@ -125,47 +126,56 @@ func Validate(v any) error {
 		fieldName := structFull.Type().Field(i).Name
 		conditions := strings.Split(tagSplit[0], " ")
 
+		if contains(conditions, NONE) {
+			continue
+		}
+
+		or := false
+		if contains(conditions, OR) {
+			or = true
+		}
+
 		switch value.Type().Kind() {
 		case reflect.Int:
 			valueTemp := value.Int()
-			err := checkInt(int(valueTemp), conditions)
+			err := checkInt(int(valueTemp), conditions, or)
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
 			} else if err != nil {
 				for _, groupName := range groupsValue {
-					groupErrors[groupName] = append(groupErrors[groupName], err)
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
 				}
 			}
 		case reflect.Float32:
 		case reflect.Float64:
 			valueTemp := value.Float()
-			err := checkFloat(valueTemp, conditions)
+			err := checkFloat(valueTemp, conditions, or)
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
 			} else if err != nil {
 				for _, groupName := range groupsValue {
-					groupErrors[groupName] = append(groupErrors[groupName], err)
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
 				}
 			}
 		case reflect.String:
 			valueTemp := value.String()
-			err := checkString(valueTemp, conditions)
+			err := checkString(valueTemp, conditions, or)
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
 			} else if err != nil {
 				for _, groupName := range groupsValue {
-					groupErrors[groupName] = append(groupErrors[groupName], err)
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
 				}
 			}
 		case reflect.Array:
 		case reflect.Slice:
 			valueTemp := value
-			err := checkArray(valueTemp, conditions)
+			err := checkArray(valueTemp, conditions, or)
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
 			} else if err != nil {
 				for _, groupName := range groupsValue {
-					groupErrors[groupName] = append(groupErrors[groupName], err)
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
 				}
 			}
 		default:
@@ -213,7 +223,8 @@ func Validate(v any) error {
 	return nil
 }
 
-func checkInt(i int, c []string) error {
+func checkInt(i int, c []string, or bool) error {
+	var errors []error
 	for _, conFull := range c {
 		conType := getConditionType(conFull)
 
@@ -221,79 +232,146 @@ func checkInt(i int, c []string) error {
 		case EQUAL:
 			condition, err := getConditionByType(conFull, EQUAL)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				equal, err := strconv.Atoi(condition)
 				if err != nil {
-					return err
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
 				} else if i != equal {
-					return fmt.Errorf("value must be equal to %v", equal)
+					if or {
+						errors = append(errors, fmt.Errorf("value must be equal to %v", equal))
+					} else {
+						return fmt.Errorf("value must be equal to %v", equal)
+					}
 				}
 			}
 		case NOT_EQUAL:
 			condition, err := getConditionByType(conFull, NOT_EQUAL)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				notEqual, err := strconv.Atoi(condition)
 				if err != nil {
-					return err
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
 				} else if i == notEqual {
-					return fmt.Errorf("value can't be equal to %v", notEqual)
+					if or {
+						errors = append(errors, fmt.Errorf("value can't be equal to %v", notEqual))
+					} else {
+						return fmt.Errorf("value can't be equal to %v", notEqual)
+					}
 				}
 			}
 		case MIN_VALUE:
 			condition, err := getConditionByType(conFull, MIN_VALUE)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				minValue, err := strconv.Atoi(condition)
 				if err != nil {
-					return err
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
 				} else if i < minValue {
-					return fmt.Errorf("value smaller than %v", minValue)
+					if or {
+						errors = append(errors, fmt.Errorf("value smaller than %v", minValue))
+					} else {
+						return fmt.Errorf("value smaller than %v", minValue)
+					}
 				}
 			}
 		case MAX_VLAUE:
 			condition, err := getConditionByType(conFull, MAX_VLAUE)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				maxValue, err := strconv.Atoi(condition)
 				if err != nil {
-					return err
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
 				} else if i > maxValue {
-					return fmt.Errorf("value greater than %v", maxValue)
+					if or {
+						errors = append(errors, fmt.Errorf("value greater than %v", maxValue))
+					} else {
+						return fmt.Errorf("value greater than %v", maxValue)
+					}
 				}
 			}
 		case REGX:
 			condition, err := getConditionByType(conFull, REGX)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				match, err := regexp.MatchString(condition, strconv.Itoa(i))
 				if err != nil {
-					return err
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
 				} else if !match {
-					return fmt.Errorf("value does match regex %v", condition)
+					if or {
+						errors = append(errors, fmt.Errorf("value does match regex %v", condition))
+					} else {
+						return fmt.Errorf("value does match regex %v", condition)
+					}
 				}
 			}
 		case NONE:
 			return nil
+		case OR:
+			continue
 		default:
 			return fmt.Errorf("invalid condition type %s", conType)
 		}
 	}
 
+	if len(errors) >= len(c) {
+		return fmt.Errorf("no condition fulfilled, all errors: %v", errors)
+	}
+
 	return nil
 }
 
-func checkFloat(f float64, c []string) error {
+func checkFloat(f float64, c []string, or bool) error {
+	var errors []error
 	for _, conFull := range c {
 		conType := getConditionType(conFull)
 
@@ -301,66 +379,126 @@ func checkFloat(f float64, c []string) error {
 		case EQUAL:
 			condition, err := getConditionByType(conFull, EQUAL)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				equal, err := strconv.ParseFloat(condition, 64)
 				if err != nil {
-					return err
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
 				} else if f != equal {
-					return fmt.Errorf("value must be equal to %v", equal)
+					if or {
+						errors = append(errors, fmt.Errorf("value must be equal to %v", equal))
+					} else {
+						return fmt.Errorf("value must be equal to %v", equal)
+					}
 				}
 			}
 		case NOT_EQUAL:
 			condition, err := getConditionByType(conFull, NOT_EQUAL)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				notEqual, err := strconv.ParseFloat(condition, 64)
 				if err != nil {
-					return err
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
 				} else if f == notEqual {
-					return fmt.Errorf("value can't be equal to %v", notEqual)
+					if or {
+						errors = append(errors, fmt.Errorf("value can't be equal to %v", notEqual))
+					} else {
+						return fmt.Errorf("value can't be equal to %v", notEqual)
+					}
 				}
 			}
 		case MIN_VALUE:
 			condition, err := getConditionByType(conFull, MIN_VALUE)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				minValue, err := strconv.ParseFloat(condition, 64)
 				if err != nil {
-					return err
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
 				} else if f < minValue {
-					return fmt.Errorf("value smaller than %v", minValue)
+					if or {
+						errors = append(errors, fmt.Errorf("value smaller than %v", minValue))
+					} else {
+						return fmt.Errorf("value smaller than %v", minValue)
+					}
 				}
 			}
 		case MAX_VLAUE:
 			condition, err := getConditionByType(conFull, MAX_VLAUE)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				maxValue, err := strconv.ParseFloat(condition, 64)
 				if err != nil {
-					return err
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
 				} else if f > maxValue {
-					return fmt.Errorf("value greater than %v", maxValue)
+					if or {
+						errors = append(errors, fmt.Errorf("value greater than %v", maxValue))
+					} else {
+						return fmt.Errorf("value greater than %v", maxValue)
+					}
 				}
 			}
 		case REGX:
 			condition, err := getConditionByType(conFull, REGX)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
-				match, err := regexp.MatchString(condition, fmt.Sprintf("%f", f))
+				match, err := regexp.MatchString(condition, strconv.FormatFloat(f, 'f', 3, 64))
 				if err != nil {
-					return err
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
 				} else if !match {
-					return fmt.Errorf("value does match regex %v", condition)
+					if or {
+						errors = append(errors, fmt.Errorf("value does match regex %v", condition))
+					} else {
+						return fmt.Errorf("value does match regex %v", condition)
+					}
 				}
 			}
 		case NONE:
@@ -370,10 +508,15 @@ func checkFloat(f float64, c []string) error {
 		}
 	}
 
+	if len(errors) >= len(c) {
+		return fmt.Errorf("no condition fulfilled, all errors: %v", errors)
+	}
+
 	return nil
 }
 
-func checkString(s string, c []string) error {
+func checkString(s string, c []string, or bool) error {
+	var errors []error
 	for _, conFull := range c {
 		conType := getConditionType(conFull)
 
@@ -381,70 +524,130 @@ func checkString(s string, c []string) error {
 		case EQUAL:
 			condition, err := getConditionByType(conFull, EQUAL)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				if s != condition {
-					return fmt.Errorf("value must be equal to %v", condition)
+					if or {
+						errors = append(errors, fmt.Errorf("value must be equal to %v", condition))
+					} else {
+						return fmt.Errorf("value must be equal to %v", condition)
+					}
 				}
 			}
 		case NOT_EQUAL:
 			condition, err := getConditionByType(conFull, NOT_EQUAL)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				if s == condition {
-					return fmt.Errorf("value can't be equal to %v", condition)
+					if or {
+						errors = append(errors, fmt.Errorf("value can't be equal to %v", condition))
+					} else {
+						return fmt.Errorf("value can't be equal to %v", condition)
+					}
 				}
 			}
 		case MIN_VALUE:
 			condition, err := getConditionByType(conFull, MIN_VALUE)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				minValue, err := strconv.Atoi(condition)
 				if err != nil {
-					return err
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
 				} else if len(strings.TrimSpace(s)) < minValue {
-					return fmt.Errorf("value shorter than %v", minValue)
+					if or {
+						errors = append(errors, fmt.Errorf("value shorter than %v", minValue))
+					} else {
+						return fmt.Errorf("value shorter than %v", minValue)
+					}
 				}
 			}
 		case MAX_VLAUE:
 			condition, err := getConditionByType(conFull, MAX_VLAUE)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				maxValue, err := strconv.Atoi(condition)
 				if err != nil {
-					return err
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
 				} else if len(strings.TrimSpace(s)) > maxValue {
-					return fmt.Errorf("value longer than %v", maxValue)
+					if or {
+						errors = append(errors, fmt.Errorf("value longer than %v", maxValue))
+					} else {
+						return fmt.Errorf("value longer than %v", maxValue)
+					}
 				}
 			}
 		case CONTAINS:
 			condition, err := getConditionByType(conFull, CONTAINS)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				if !strings.Contains(s, condition) {
-					return fmt.Errorf("value does not include %v", condition)
+					if or {
+						errors = append(errors, fmt.Errorf("value does not include %v", condition))
+					} else {
+						return fmt.Errorf("value does not include %v", condition)
+					}
 				}
 			}
 		case REGX:
 			condition, err := getConditionByType(conFull, REGX)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				match, err := regexp.MatchString(condition, s)
 				if err != nil {
-					return err
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
 				} else if !match {
-					return fmt.Errorf("value does match regex %v", condition)
+					if or {
+						errors = append(errors, fmt.Errorf("value does match regex %v", condition))
+					} else {
+						return fmt.Errorf("value does match regex %v", condition)
+					}
 				}
 			}
 		case NONE:
@@ -454,14 +657,19 @@ func checkString(s string, c []string) error {
 		}
 	}
 
+	if len(errors) >= len(c) {
+		return fmt.Errorf("no condition fulfilled, all errors: %v", errors)
+	}
+
 	return nil
 }
 
-func checkArray(a reflect.Value, c []string) error {
+func checkArray(a reflect.Value, c []string, or bool) error {
 	if a.Type().Kind() != reflect.Array && a.Type().Kind() != reflect.Slice {
 		return fmt.Errorf("value to validate has to be a array or slice, was %v", a.Type().Kind())
 	}
 
+	var errors []error
 	for _, conFull := range c {
 		conType := getConditionType(conFull)
 
@@ -469,86 +677,166 @@ func checkArray(a reflect.Value, c []string) error {
 		case EQUAL:
 			condition, err := getConditionByType(conFull, EQUAL)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				equal, err := strconv.Atoi(condition)
 				if err != nil {
-					return err
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
 				} else if a.Len() != equal {
-					return fmt.Errorf("value shorter than %v", equal)
+					if or {
+						errors = append(errors, fmt.Errorf("value shorter than %v", equal))
+					} else {
+						return fmt.Errorf("value shorter than %v", equal)
+					}
 				}
 			}
 		case NOT_EQUAL:
 			condition, err := getConditionByType(conFull, NOT_EQUAL)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				notEqual, err := strconv.Atoi(condition)
 				if err != nil {
-					return err
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
 				} else if a.Len() == notEqual {
-					return fmt.Errorf("value longer than %v", notEqual)
+					if or {
+						errors = append(errors, fmt.Errorf("value longer than %v", notEqual))
+					} else {
+						return fmt.Errorf("value longer than %v", notEqual)
+					}
 				}
 			}
 		case MIN_VALUE:
 			condition, err := getConditionByType(conFull, MIN_VALUE)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				minValue, err := strconv.Atoi(condition)
 				if err != nil {
-					return err
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
 				} else if a.Len() < minValue {
-					return fmt.Errorf("value shorter than %v", minValue)
+					if or {
+						errors = append(errors, fmt.Errorf("value shorter than %v", minValue))
+					} else {
+						return fmt.Errorf("value shorter than %v", minValue)
+					}
 				}
 			}
 		case MAX_VLAUE:
 			condition, err := getConditionByType(conFull, MAX_VLAUE)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				maxValue, err := strconv.Atoi(condition)
 				if err != nil {
-					return err
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
 				} else if a.Len() > maxValue {
-					return fmt.Errorf("value longer than %v", maxValue)
+					if or {
+						errors = append(errors, fmt.Errorf("value longer than %v", maxValue))
+					} else {
+						return fmt.Errorf("value longer than %v", maxValue)
+					}
 				}
 			}
 		case CONTAINS:
 			condition, err := getConditionByType(conFull, CONTAINS)
 			if err != nil {
-				return err
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
 			}
 			if len(condition) != 0 {
 				switch v := a.Interface().(type) {
 				case []int:
 					contain, err := strconv.Atoi(condition)
 					if err != nil {
-						return err
+						if or {
+							errors = append(errors, err)
+						} else {
+							return err
+						}
 					} else if !contains(v, contain) {
-						return fmt.Errorf("value does not contain %v", contain)
+						if or {
+							errors = append(errors, fmt.Errorf("value does not contain %v", contain))
+						} else {
+							return fmt.Errorf("value does not contain %v", contain)
+						}
 					}
 				case []float32:
 					contain, err := strconv.ParseFloat(condition, 32)
 					if err != nil {
-						return err
+						if or {
+							errors = append(errors, err)
+						} else {
+							return err
+						}
 					} else if !contains(v, float32(contain)) {
-						return fmt.Errorf("value does not contain %v", contain)
+						if or {
+							errors = append(errors, fmt.Errorf("value does not contain %v", contain))
+						} else {
+							return fmt.Errorf("value does not contain %v", contain)
+						}
 					}
 				case []float64:
 					contain, err := strconv.ParseFloat(condition, 64)
 					if err != nil {
-						return err
+						if or {
+							errors = append(errors, err)
+						} else {
+							return err
+						}
 					} else if !contains(v, contain) {
-						return fmt.Errorf("value does not contain %v", contain)
+						if or {
+							errors = append(errors, fmt.Errorf("value does not contain %v", contain))
+						} else {
+							return fmt.Errorf("value does not contain %v", contain)
+						}
 					}
 				case []string:
 					if !contains(v, condition) {
-						return fmt.Errorf("value does not contain %v", condition)
+						if or {
+							errors = append(errors, fmt.Errorf("value does not contain %v", condition))
+						} else {
+							return fmt.Errorf("value does not contain %v", condition)
+						}
 					}
 				default:
 					return fmt.Errorf("type %v not supported", reflect.TypeOf(v))
@@ -559,6 +847,10 @@ func checkArray(a reflect.Value, c []string) error {
 		default:
 			return fmt.Errorf("invalid condition type %s", conType)
 		}
+	}
+
+	if len(errors) >= len(c) {
+		return fmt.Errorf("no condition fulfilled, all errors: %v", errors)
 	}
 
 	return nil

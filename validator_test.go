@@ -48,7 +48,7 @@ type TestStructCon struct {
 type TestStructRex struct {
 	String string   `vld:"rex^[a-zA-Z0-9]+$"`
 	Int    int      `vld:"rex^(2|3)$"`
-	Float  float64  `vld:"rex^(2.000000|3.000000)$"`
+	Float  float64  `vld:"rex^(2.000|3.000)$"`
 	Array  []string `vld:"-"`
 }
 
