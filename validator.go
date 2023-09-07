@@ -503,6 +503,8 @@ func checkFloat(f float64, c []string, or bool) error {
 			}
 		case NONE:
 			return nil
+		case OR:
+			continue
 		default:
 			return fmt.Errorf("invalid condition type %s", conType)
 		}
@@ -652,6 +654,8 @@ func checkString(s string, c []string, or bool) error {
 			}
 		case NONE:
 			return nil
+		case OR:
+			continue
 		default:
 			return fmt.Errorf("invalid condition type %s", conType)
 		}
@@ -844,6 +848,8 @@ func checkArray(a reflect.Value, c []string, or bool) error {
 			}
 		case NONE:
 			return nil
+		case OR:
+			continue
 		default:
 			return fmt.Errorf("invalid condition type %s", conType)
 		}
