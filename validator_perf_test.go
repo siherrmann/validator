@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"encoding/json"
 	"regexp"
 	"strconv"
 	"testing"
@@ -22,13 +23,46 @@ type TestStructValidationRex struct {
 }
 
 type TestStructValidation struct {
-	String string   `vld:"rex^[a-zA-Z0-9]+$, gr1min3"`
-	Int    int      `vld:"equ2 || equ3, gr1min3"`
-	Float  float64  `vld:"equ2 || equ3, gr1min3"`
-	Array  []string `vld:"min3, gr1min3"`
+	String string   `json:"string" vld:"rex^[a-zA-Z0-9]+$, gr1min3"`
+	Int    int      `json:"int" vld:"equ2 || equ3, gr1min3"`
+	Float  float64  `json:"float" vld:"equ2 || equ3, gr1min3"`
+	Array  []string `json:"array" vld:"min3, gr1min3"`
 }
 
 func TestPerformanceStructValidator(t *testing.T) {
+	// unmarshal to map
+	jsonString := []byte(`{"string": "test", "int": 2, "float": 3.0, "array":  ["", "", ""]}`)
+	unmarshalToMap := &map[string]interface{}{}
+	start := time.Now()
+	err := json.Unmarshal(jsonString, unmarshalToMap)
+	if err != nil {
+		t.Logf("error unmarshalling %s: %v", jsonString, err)
+	}
+	elapsed := time.Since(start)
+	t.Logf("unmarshal to map took %s", elapsed)
+
+	// unmarshal to struct
+	jsonString = []byte(`{"string": "test", "int": 2, "float": 3.0, "array": ["", "", ""]}`)
+	unmarshalToStruct := &TestStructNoValidation{}
+	start = time.Now()
+	err = json.Unmarshal(jsonString, unmarshalToStruct)
+	if err != nil {
+		t.Logf("error unmarshalling %s: %v", jsonString, err)
+	}
+	elapsed = time.Since(start)
+	t.Logf("unmarshal to struct took %s", elapsed)
+
+	// unmarshal to map
+	jsonString = []byte(`{"string": "test", "int": 2, "float": 3.0, "array":  ["", "", ""]}`)
+	unmarshalToMap = &map[string]interface{}{}
+	start = time.Now()
+	err = json.Unmarshal(jsonString, unmarshalToMap)
+	if err != nil {
+		t.Logf("error unmarshalling %s: %v", jsonString, err)
+	}
+	elapsed = time.Since(start)
+	t.Logf("unmarshal to map took %s", elapsed)
+
 	// no validation in validator
 	noValidation := &TestStructNoValidation{
 		String: "test",
@@ -36,14 +70,13 @@ func TestPerformanceStructValidator(t *testing.T) {
 		Float:  3.0,
 		Array:  []string{"", "", ""},
 	}
-	start := time.Now()
-	err := Validate(noValidation)
+	start = time.Now()
+	err = Validate(noValidation)
 	if err != nil {
 		t.Logf("error no validation %v", err)
 	}
-	elapsed := time.Since(start)
+	elapsed = time.Since(start)
 	t.Logf("no validation took %s", elapsed)
-	t.Log("probably slower because of warming up")
 
 	// validation with regex in validator
 	validationRex := &TestStructValidationRex{
@@ -146,6 +179,17 @@ func TestPerformanceStructValidator(t *testing.T) {
 	}
 	elapsed = time.Since(start)
 	t.Logf("no validation took %s", elapsed)
+
+	// unmarshal and validate
+	jsonString = []byte(`{"string": "test", "int": 2, "float": 3.0, "array": ["", "", ""]}`)
+	unmarshalAndValidate := &TestStructValidation{}
+	start = time.Now()
+	err = UnmarshalAndValidate(jsonString, unmarshalAndValidate)
+	if err != nil {
+		t.Logf("error unmarshal and validate %v", err)
+	}
+	elapsed = time.Since(start)
+	t.Logf("unmarshal and validate took %s with %v", elapsed, unmarshalAndValidate)
 
 	t.Error("test ended")
 }

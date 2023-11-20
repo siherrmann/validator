@@ -94,8 +94,8 @@ func Validate(v any) error {
 	structFull := value.Elem()
 
 	groups := map[string]string{}
-	groupErrors := map[string][]error{}
 	groupSize := map[string]int{}
+	groupErrors := map[string][]error{}
 
 	for i := 0; i < structFull.Type().NumField(); i++ {
 		tag := structFull.Type().Field(i).Tag.Get("vld")
@@ -104,6 +104,20 @@ func Validate(v any) error {
 		}
 
 		tagSplit := strings.Split(tag, ", ")
+
+		value := structFull.Field(i)
+		fieldName := structFull.Type().Field(i).Name
+		conditions := strings.Split(tagSplit[0], " ")
+
+		if contains(conditions, NONE) {
+			continue
+		}
+
+		or := false
+		if contains(conditions, OR) {
+			or = true
+		}
+
 		groupsValue := []string{}
 		groupsString := []string{}
 		if len(tagSplit) > 1 {
@@ -122,21 +136,8 @@ func Validate(v any) error {
 			}
 		}
 
-		value := structFull.Field(i)
-		fieldName := structFull.Type().Field(i).Name
-		conditions := strings.Split(tagSplit[0], " ")
-
-		if contains(conditions, NONE) {
-			continue
-		}
-
-		or := false
-		if contains(conditions, OR) {
-			or = true
-		}
-
 		switch value.Type().Kind() {
-		case reflect.Int:
+		case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
 			valueTemp := value.Int()
 			err := checkInt(int(valueTemp), conditions, or)
 			if err != nil && len(groupsString) == 0 {
@@ -146,8 +147,7 @@ func Validate(v any) error {
 					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
 				}
 			}
-		case reflect.Float32:
-		case reflect.Float64:
+		case reflect.Float64, reflect.Float32:
 			valueTemp := value.Float()
 			err := checkFloat(valueTemp, conditions, or)
 			if err != nil && len(groupsString) == 0 {
@@ -167,8 +167,7 @@ func Validate(v any) error {
 					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
 				}
 			}
-		case reflect.Array:
-		case reflect.Slice:
+		case reflect.Array, reflect.Slice:
 			valueTemp := value
 			err := checkArray(valueTemp, conditions, or)
 			if err != nil && len(groupsString) == 0 {
