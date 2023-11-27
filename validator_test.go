@@ -91,6 +91,19 @@ type TestStructInvalidGroupCondition struct {
 	Array  []string `vld:"min3, gr40min1"`
 }
 
+type TestRequestWrapperUpdate struct {
+	Data       interface{}
+	JsonUpdate string
+	Error      bool
+}
+
+type TestStructUpdate struct {
+	String string  `upd:"string, min1, gr1min1"`
+	Int    int     `upd:"int, min1, gr1min1"`
+	Float  float64 `upd:"float, min1, gr1min1"`
+	Array  []int   `upd:"array, min1, gr1min1"`
+}
+
 func TestStructValidator(t *testing.T) {
 	testCases := map[string]*TestRequestWrapper{
 		"valid": {
@@ -643,6 +656,104 @@ func TestStructValidator(t *testing.T) {
 		err := Validate(v.Data)
 		assertError(t, k, err, v.InvalidField)
 	}
+
+	testCasesUpdate := map[string]*TestRequestWrapperUpdate{
+		"validUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			`{"string": "Blubb", "int": 2, "float": 1.2, "array": [2]}`,
+			false,
+		},
+		"invalidJsonStringUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			`{"string": Blubb, "int": 2, "float": 1.2, "array": [2]}`,
+			true,
+		},
+		"invalidTypeStringUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			`{"string": 1, "int": 2, "float": 1.2, "array": [2]}`,
+			true,
+		},
+		"invalidJsonIntUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			`{"string": "Blubb", "int": Blubb, "float": 1.2, "array": [2]}`,
+			true,
+		},
+		"invalidTypeIntUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			`{"string": "Blubb", "int": "2", "float": 1.2, "array": [2]}`,
+			true,
+		},
+		"invalidJsonFloatUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			`{"string": "Blubb", "int": 2, "float": Blubb, "array": [2]}`,
+			true,
+		},
+		"invalidTypeFloatUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			`{"string": "Blubb", "int": 2, "float": "1.2", "array": [2]}`,
+			true,
+		},
+		"invalidJsonArrayUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			`{"string": "Blubb", "int": 2, "float": Blubb, "array": Blubb}`,
+			true,
+		},
+		"invalidTypeArrayUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			`{"string": "Blubb", "int": 2, "float": "1.2", "array": ["2"]}`,
+			false,
+		},
+	}
+
+	for k, v := range testCasesUpdate {
+		err := UnmarshalValidateAndUpdate([]byte(v.JsonUpdate), v.Data)
+		assertErrorUpdate(t, k, err, v.Error)
+	}
 }
 
 func assertError(t testing.TB, testCase string, err error, invalidField string) {
@@ -653,5 +764,14 @@ func assertError(t testing.TB, testCase string, err error, invalidField string) 
 		t.Errorf("test case: %s - wanted invalid field: %v, got no error", testCase, invalidField)
 	} else if err != nil && !strings.Contains(err.Error(), invalidField) {
 		t.Errorf("test case: %s - wanted invalid field: %v, got error: %v", testCase, invalidField, err)
+	}
+}
+
+func assertErrorUpdate(t testing.TB, testCase string, err error, errorExpected bool) {
+	t.Helper()
+	if !errorExpected && err != nil {
+		t.Errorf("test case: %s - wanted no error, got error: %v", testCase, err)
+	} else if errorExpected && err == nil {
+		t.Errorf("test case: %s - wanted error, got no error", testCase)
 	}
 }

@@ -3,8 +3,8 @@ package validator
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -197,7 +197,7 @@ func Validate(v any) error {
 					if err != nil {
 						return err
 					} else if (groupSize[groupName] - len(groupErrors[groupName])) < minValue {
-						return fmt.Errorf("less the %v in group without error, all errors: %v", minValue, groupErrors[groupName])
+						return fmt.Errorf("less then %v in group without error, all errors: %v", minValue, groupErrors[groupName])
 					}
 				}
 			case MAX_VLAUE:
@@ -222,643 +222,463 @@ func Validate(v any) error {
 	return nil
 }
 
-func checkInt(i int, c []string, or bool) error {
-	var errors []error
-	for _, conFull := range c {
-		conType := getConditionType(conFull)
+func UnmarshalValidateAndUpdate(jsonInput []byte, structToUpdate interface{}) error {
+	jsonUnmarshaled := map[string]interface{}{}
 
-		switch conType {
-		case EQUAL:
-			condition, err := getConditionByType(conFull, EQUAL)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				equal, err := strconv.Atoi(condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if i != equal {
-					if or {
-						errors = append(errors, fmt.Errorf("value must be equal to %v", equal))
-					} else {
-						return fmt.Errorf("value must be equal to %v", equal)
-					}
-				}
-			}
-		case NOT_EQUAL:
-			condition, err := getConditionByType(conFull, NOT_EQUAL)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				notEqual, err := strconv.Atoi(condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if i == notEqual {
-					if or {
-						errors = append(errors, fmt.Errorf("value can't be equal to %v", notEqual))
-					} else {
-						return fmt.Errorf("value can't be equal to %v", notEqual)
-					}
-				}
-			}
-		case MIN_VALUE:
-			condition, err := getConditionByType(conFull, MIN_VALUE)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				minValue, err := strconv.Atoi(condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if i < minValue {
-					if or {
-						errors = append(errors, fmt.Errorf("value smaller than %v", minValue))
-					} else {
-						return fmt.Errorf("value smaller than %v", minValue)
-					}
-				}
-			}
-		case MAX_VLAUE:
-			condition, err := getConditionByType(conFull, MAX_VLAUE)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				maxValue, err := strconv.Atoi(condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if i > maxValue {
-					if or {
-						errors = append(errors, fmt.Errorf("value greater than %v", maxValue))
-					} else {
-						return fmt.Errorf("value greater than %v", maxValue)
-					}
-				}
-			}
-		case REGX:
-			condition, err := getConditionByType(conFull, REGX)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				match, err := regexp.MatchString(condition, strconv.Itoa(i))
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if !match {
-					if or {
-						errors = append(errors, fmt.Errorf("value does match regex %v", condition))
-					} else {
-						return fmt.Errorf("value does match regex %v", condition)
-					}
-				}
-			}
-		case NONE:
-			return nil
-		case OR:
+	err := json.Unmarshal(jsonInput, &jsonUnmarshaled)
+	if err != nil {
+		return fmt.Errorf("error unmarshaling: %v", err)
+	}
+
+	// TODO remove log, could contain sensitive data
+	log.Printf("struct old: %v", structToUpdate)
+	log.Printf("json update: %v", &jsonUnmarshaled)
+
+	err = ValidateAndUpdate(structToUpdate, jsonUnmarshaled)
+	if err != nil {
+		return fmt.Errorf("error updating struct: %v", err)
+	}
+
+	// TODO remove log, could contain sensitive data
+	log.Printf("struct updated: %v", structToUpdate)
+
+	return nil
+}
+
+// ValidateAndUpdate validates a given struct by upd tags.
+// ValidateAndUpdate needs a struct pointer and a json map as input.
+// The given struct is updated by the values in the json map.
+//
+// All fields in the struct need a upd tag.
+// The tag has to contain the key value for the json struct.
+// If no tag is present the field in the struct is ignored and does not get updated.
+//
+// The second part of the tag contains the conditions for the validation.
+//
+// If you want to use multiple conditions you can add them with a space in between them.
+//
+// A complex example for password would be:
+// `upd:"password, min8 max30 rex^(.*[A-Z])+(.*)$ rex^(.*[a-z])+(.*)$ rex^(.*\\d)+(.*)$ rex^(.*[\x60!@#$%^&*()_+={};':\"|\\,.<>/?~-])+(.*)$"`
+//
+// If you want don't want to validate the field you can add `upd:"json_key, -"`.
+// If you don't add the upd tag to every field the function will fail with an error.
+//
+// Conditions have different usages per variable type:
+//
+// equ - int/float/string == condition, len(array) == condition
+//
+// neq - int/float/string != condition, len(array) != condition
+//
+// min - int/float >= condition, len(string/array) >= condition
+//
+// max - int/float <= condition, len(string/array) <= condition
+//
+// con - strings.Contains(string, condition), contains(array, condition), int/float ignored
+//
+// rex - regexp.MatchString(condition, int/float/string), array ignored
+//
+// For con you need to put in a condition that is convertable to the underlying type of the arrary.
+// Eg. for an array of int the condition must be convertable to int (bad: `upd:"array, conA"`, good: `upd:"array, con1"`).
+//
+// In the case of rex the int and float input will get converted to a string (strconv.Itoa(int) and fmt.Sprintf("%f", f)).
+// If you want to check more complex cases you can obviously replace equ, neq, min, max and con with one regular expression.
+func ValidateAndUpdate(v any, jsonValues map[string]interface{}) error {
+	// check if value is a pointer to a struct
+	value := reflect.ValueOf(v)
+	if value.Kind() != reflect.Ptr {
+		return fmt.Errorf("value has to be of kind pointer, was %T", value)
+	}
+	if value.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("value has to be of kind struct, was %T", value)
+	}
+
+	// get valid reflect value of struct
+	structFull := value.Elem()
+
+	groups := map[string]string{}
+	groupSize := map[string]int{}
+	groupErrors := map[string][]error{}
+
+	for i := 0; i < structFull.Type().NumField(); i++ {
+		tag := structFull.Type().Field(i).Tag.Get("upd")
+		if len(strings.TrimSpace(tag)) == 0 {
 			continue
+		}
+
+		tagSplit := strings.Split(tag, ", ")
+
+		value := structFull.Field(i)
+		fieldName := structFull.Type().Field(i).Name
+
+		jsonKey := tagSplit[0]
+
+		or := false
+		conditions := []string{}
+		if len(tagSplit) > 1 {
+			conditions = strings.Split(tagSplit[1], " ")
+			if contains(conditions, OR) {
+				or = true
+			}
+		}
+
+		groupsValue := []string{}
+		groupsString := []string{}
+		if len(tagSplit) > 2 {
+			groupsString = strings.Split(tagSplit[2], " ")
+
+			for _, g := range groupsString {
+				group := getConditionType(g)
+				condition, err := getConditionByType(g, group)
+				if err != nil {
+					return fmt.Errorf("error extracting group: %v", err)
+				}
+
+				groupsValue = append(groupsValue, group)
+				groups[group] = condition
+				groupSize[group]++
+			}
+		}
+
+		var ok bool
+		var err error
+		var jsonValue interface{}
+		if jsonValue, ok = jsonValues[jsonKey]; !ok {
+			for _, groupName := range groupsValue {
+				groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("json %v key not in map", jsonKey))
+			}
+			continue
+		}
+
+		switch structValueType := value.Type().Kind(); structValueType {
+		case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
+			var newInt int64
+			if fl, ok := jsonValue.(float64); ok {
+				// This case is for the case that json.Unmarshal unmarshals an int value into a float64 value.
+				newInt = int64(fl)
+			} else if _, ok := jsonValue.(int); ok {
+				newInt = int64(jsonValue.(int))
+			} else if _, ok := jsonValue.(int64); ok {
+				newInt = int64(jsonValue.(int64))
+			} else if _, ok := jsonValue.(int32); ok {
+				newInt = int64(jsonValue.(int32))
+			} else if _, ok := jsonValue.(int16); ok {
+				newInt = int64(jsonValue.(int16))
+			} else if _, ok := jsonValue.(int8); ok {
+				newInt = int64(jsonValue.(int8))
+			} else {
+				return fmt.Errorf("input value has to be of type %v, was %v", structValueType, reflect.ValueOf(jsonValue).Kind())
+			}
+
+			err = checkInt(int(newInt), conditions, or)
+			if err != nil && len(groupsString) == 0 {
+				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
+			} else if err != nil {
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
+				}
+				continue
+			}
+
+			fieldValue := reflect.ValueOf(v).Elem().FieldByName(fieldName)
+			err = setStructValueByJson(fieldValue, jsonKey, jsonValue)
+			if err != nil && len(groupsString) == 0 {
+				return fmt.Errorf("could not set field %v: %v", fieldName, err.Error())
+			} else if err != nil {
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("could not set field %v: %v", fieldName, err.Error()))
+				}
+			}
+		case reflect.Float64, reflect.Float32:
+			var newFloat float64
+			if fl, ok := jsonValue.(float64); ok {
+				newFloat = float64(fl)
+			} else if fl, ok := jsonValue.(float32); ok {
+				newFloat = float64(fl)
+			} else {
+				return fmt.Errorf("input value has to be of type %v, was %v", structValueType, reflect.ValueOf(jsonValue).Kind())
+			}
+
+			err = checkFloat(float64(newFloat), conditions, or)
+			if err != nil && len(groupsString) == 0 {
+				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
+			} else if err != nil {
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
+				}
+				continue
+			}
+
+			fieldValue := reflect.ValueOf(v).Elem().FieldByName(fieldName)
+			err = setStructValueByJson(fieldValue, jsonKey, jsonValue)
+			if err != nil && len(groupsString) == 0 {
+				return fmt.Errorf("could not set field %v: %v", fieldName, err.Error())
+			} else if err != nil {
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("could not set field %v: %v", fieldName, err.Error()))
+				}
+			}
+		case reflect.String:
+			if _, ok := jsonValue.(string); !ok {
+				return fmt.Errorf("input value has to be of type %v, was %v", structValueType, reflect.ValueOf(jsonValue).Kind())
+			}
+
+			err = checkString(jsonValue.(string), conditions, or)
+			if err != nil && len(groupsString) == 0 {
+				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
+			} else if err != nil {
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
+				}
+				continue
+			}
+
+			fieldValue := reflect.ValueOf(v).Elem().FieldByName(fieldName)
+			err = setStructValueByJson(fieldValue, jsonKey, jsonValue)
+			if err != nil && len(groupsString) == 0 {
+				return fmt.Errorf("could not set field %v: %v", fieldName, err.Error())
+			} else if err != nil {
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("could not set field %v: %v", fieldName, err.Error()))
+				}
+			}
+		case reflect.Bool:
+			if _, ok := jsonValue.(bool); !ok {
+				return fmt.Errorf("input value has to be of type %v, was %v", structValueType, reflect.ValueOf(jsonValue).Kind())
+			}
+
+			fieldValue := reflect.ValueOf(v).Elem().FieldByName(fieldName)
+			err = setStructValueByJson(fieldValue, jsonKey, jsonValue)
+			if err != nil && len(groupsString) == 0 {
+				return fmt.Errorf("could not set field %v: %v", fieldName, err.Error())
+			} else if err != nil {
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("could not set field %v: %v", fieldName, err.Error()))
+				}
+				continue
+			}
+		case reflect.Array, reflect.Slice:
+			err = checkArray(reflect.ValueOf(jsonValue), conditions, or)
+			if err != nil && len(groupsString) == 0 {
+				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
+			} else if err != nil {
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
+				}
+				continue
+			}
+
+			fieldValue := reflect.ValueOf(v).Elem().FieldByName(fieldName)
+			err = setStructValueByJson(fieldValue, jsonKey, jsonValues[jsonKey])
+			if err != nil && len(groupsString) == 0 {
+				return fmt.Errorf("could not set field %v: %v", fieldName, err.Error())
+			} else if err != nil {
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("could not set field %v: %v", fieldName, err.Error()))
+				}
+			}
 		default:
-			return fmt.Errorf("invalid condition type %s", conType)
+			return fmt.Errorf("invalid field type: %v", value.Type().Kind())
 		}
 	}
 
-	if len(errors) >= len(c) {
-		return fmt.Errorf("no condition fulfilled, all errors: %v", errors)
+	if len(groups) != 0 {
+		for groupName, groupCondition := range groups {
+			conType := getConditionType(groupCondition)
+
+			switch conType {
+			case MIN_VALUE:
+				condition, err := getConditionByType(groupCondition, MIN_VALUE)
+				if err != nil {
+					return err
+				}
+				if len(condition) != 0 {
+					minValue, err := strconv.Atoi(condition)
+					if err != nil {
+						return err
+					} else if (groupSize[groupName] - len(groupErrors[groupName])) < minValue {
+						return fmt.Errorf("less then %v in group without error, all errors: %v", minValue, groupErrors[groupName])
+					}
+				}
+			case MAX_VLAUE:
+				condition, err := getConditionByType(groupCondition, MAX_VLAUE)
+				if err != nil {
+					return err
+				}
+				if len(condition) != 0 {
+					maxValue, err := strconv.Atoi(condition)
+					if err != nil {
+						return err
+					} else if (groupSize[groupName] - len(groupErrors[groupName])) > maxValue {
+						return fmt.Errorf("more the %v in group without error, all errors: %v", maxValue, groupErrors[groupName])
+					}
+				}
+			default:
+				return fmt.Errorf("invalid group condition type %s", conType)
+			}
+		}
 	}
 
 	return nil
 }
 
-func checkFloat(f float64, c []string, or bool) error {
-	var errors []error
-	for _, conFull := range c {
-		conType := getConditionType(conFull)
+func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{}) error {
+	if fv.IsValid() && fv.CanSet() {
+		switch fv.Kind() {
+		case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
+			var newInt int64
+			if fl, ok := jsonValue.(float64); ok {
+				// This case is for the case that json.Unmarshal unmarshals an int value into a float64 value.
+				newInt = int64(fl)
+			} else if _, ok := jsonValue.(int); ok {
+				newInt = int64(jsonValue.(int))
+			} else if _, ok := jsonValue.(int64); ok {
+				newInt = int64(jsonValue.(int64))
+			} else if _, ok := jsonValue.(int32); ok {
+				newInt = int64(jsonValue.(int32))
+			} else if _, ok := jsonValue.(int16); ok {
+				newInt = int64(jsonValue.(int16))
+			} else if _, ok := jsonValue.(int8); ok {
+				newInt = int64(jsonValue.(int8))
+			} else {
+				return fmt.Errorf("input value has to be of type %v, was %v", fv.Kind(), reflect.ValueOf(jsonValue).Kind())
+			}
 
-		switch conType {
-		case EQUAL:
-			condition, err := getConditionByType(conFull, EQUAL)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
+			if fv.OverflowInt(newInt) {
+				return fmt.Errorf("cannot set overflowing int for field %v", jsonKey)
+			}
+			fv.SetInt(newInt)
+		case reflect.Float64, reflect.Float32:
+			var newFloat float64
+			if fl, ok := jsonValue.(float64); ok {
+				newFloat = float64(fl)
+			} else if fl, ok := jsonValue.(float32); ok {
+				newFloat = float64(fl)
+			} else {
+				return fmt.Errorf("input value has to be of type %v, was %v", fv.Kind(), reflect.ValueOf(jsonValue).Kind())
+			}
+
+			if fv.OverflowFloat(newFloat) {
+				return fmt.Errorf("cannot set overflowing float for field %v", jsonKey)
+			}
+			fv.SetFloat(newFloat)
+		case reflect.String:
+			if _, ok := jsonValue.(string); !ok {
+				return fmt.Errorf("input value has to be of type %v, was %v", fv.Kind(), reflect.ValueOf(jsonValue).Kind())
+			}
+
+			fv.SetString(string(jsonValue.(string)))
+		case reflect.Bool:
+			if _, ok := jsonValue.(bool); !ok {
+				return fmt.Errorf("input value has to be of type %v, was %v", fv.Kind(), reflect.ValueOf(jsonValue).Kind())
+			}
+
+			fv.SetBool(bool(jsonValue.(bool)))
+		case reflect.Array, reflect.Slice:
+			if reflect.TypeOf(jsonValue).Kind() != reflect.Array && reflect.TypeOf(jsonValue).Kind() != reflect.Slice {
+				return fmt.Errorf("input value has to be of type %v or %v, was %v of %v", reflect.Array, reflect.Slice, reflect.ValueOf(jsonValue).Kind(), reflect.TypeOf(jsonValue).Elem().Kind())
+			}
+
+			switch reflect.TypeOf(fv.Interface()).Elem().Kind() {
+			case reflect.Int:
+				newIntArray, err := ArrayOfInterfaceToArrayOf[int](jsonValue.([]interface{}))
+				if err != nil {
 					return err
 				}
-			}
-			if len(condition) != 0 {
-				equal, err := strconv.ParseFloat(condition, 64)
+				reflect.Copy(fv, reflect.ValueOf(newIntArray))
+			case reflect.Int64:
+				newIntArray, err := ArrayOfInterfaceToArrayOf[int64](jsonValue.([]interface{}))
 				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if f != equal {
-					if or {
-						errors = append(errors, fmt.Errorf("value must be equal to %v", equal))
-					} else {
-						return fmt.Errorf("value must be equal to %v", equal)
-					}
-				}
-			}
-		case NOT_EQUAL:
-			condition, err := getConditionByType(conFull, NOT_EQUAL)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
 					return err
 				}
-			}
-			if len(condition) != 0 {
-				notEqual, err := strconv.ParseFloat(condition, 64)
+				reflect.Copy(fv, reflect.ValueOf(newIntArray))
+			case reflect.Int32:
+				newIntArray, err := ArrayOfInterfaceToArrayOf[int32](jsonValue.([]interface{}))
 				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if f == notEqual {
-					if or {
-						errors = append(errors, fmt.Errorf("value can't be equal to %v", notEqual))
-					} else {
-						return fmt.Errorf("value can't be equal to %v", notEqual)
-					}
-				}
-			}
-		case MIN_VALUE:
-			condition, err := getConditionByType(conFull, MIN_VALUE)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
 					return err
 				}
-			}
-			if len(condition) != 0 {
-				minValue, err := strconv.ParseFloat(condition, 64)
+				reflect.Copy(fv, reflect.ValueOf(newIntArray))
+			case reflect.Int16:
+				newIntArray, err := ArrayOfInterfaceToArrayOf[int16](jsonValue.([]interface{}))
 				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if f < minValue {
-					if or {
-						errors = append(errors, fmt.Errorf("value smaller than %v", minValue))
-					} else {
-						return fmt.Errorf("value smaller than %v", minValue)
-					}
-				}
-			}
-		case MAX_VLAUE:
-			condition, err := getConditionByType(conFull, MAX_VLAUE)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
 					return err
 				}
-			}
-			if len(condition) != 0 {
-				maxValue, err := strconv.ParseFloat(condition, 64)
+				reflect.Copy(fv, reflect.ValueOf(newIntArray))
+			case reflect.Int8:
+				newIntArray, err := ArrayOfInterfaceToArrayOf[int8](jsonValue.([]interface{}))
 				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if f > maxValue {
-					if or {
-						errors = append(errors, fmt.Errorf("value greater than %v", maxValue))
-					} else {
-						return fmt.Errorf("value greater than %v", maxValue)
-					}
-				}
-			}
-		case REGX:
-			condition, err := getConditionByType(conFull, REGX)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
 					return err
 				}
-			}
-			if len(condition) != 0 {
-				match, err := regexp.MatchString(condition, strconv.FormatFloat(f, 'f', 3, 64))
+				reflect.Copy(fv, reflect.ValueOf(newIntArray))
+			case reflect.Float32:
+				newFloatArray, err := ArrayOfInterfaceToArrayOf[float32](jsonValue.([]interface{}))
 				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if !match {
-					if or {
-						errors = append(errors, fmt.Errorf("value does match regex %v", condition))
-					} else {
-						return fmt.Errorf("value does match regex %v", condition)
-					}
+					return err
 				}
+				reflect.Copy(fv, reflect.ValueOf(newFloatArray))
+			case reflect.Float64:
+				newFloatArray, err := ArrayOfInterfaceToArrayOf[float64](jsonValue.([]interface{}))
+				if err != nil {
+					return err
+				}
+				reflect.Copy(fv, reflect.ValueOf(newFloatArray))
+			case reflect.String:
+				newStringArray, err := ArrayOfInterfaceToArrayOf[string](jsonValue.([]interface{}))
+				if err != nil {
+					return err
+				}
+				reflect.Copy(fv, reflect.ValueOf(newStringArray))
+			case reflect.Bool:
+				newBoolArray, err := ArrayOfInterfaceToArrayOf[bool](jsonValue.([]interface{}))
+				if err != nil {
+					return err
+				}
+				reflect.Copy(fv, reflect.ValueOf(newBoolArray))
+			default:
+				return fmt.Errorf("invalid array element type: %v", reflect.TypeOf(fv.Interface()).Elem().Kind())
 			}
-		case NONE:
-			return nil
-		case OR:
-			continue
 		default:
-			return fmt.Errorf("invalid condition type %s", conType)
+			return fmt.Errorf("invalid field type: %v", reflect.TypeOf(jsonValue).Elem().Kind())
 		}
 	}
-
-	if len(errors) >= len(c) {
-		return fmt.Errorf("no condition fulfilled, all errors: %v", errors)
-	}
-
 	return nil
 }
 
-func checkString(s string, c []string, or bool) error {
-	var errors []error
-	for _, conFull := range c {
-		conType := getConditionType(conFull)
-
-		switch conType {
-		case EQUAL:
-			condition, err := getConditionByType(conFull, EQUAL)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
+func ArrayOfInterfaceToArrayOf[T comparable](in []interface{}) ([]T, error) {
+	inReflect := reflect.ValueOf(in)
+	arrayOfType := []T{}
+	for i := 0; i < inReflect.Len(); i++ {
+		// This case is for the case that json.Unmarshal unmarshals an int value into a float64 value.
+		if (reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int || reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int8 || reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int16 || reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int32 || reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int64) && reflect.TypeOf(inReflect.Index(i).Interface()).Kind() == reflect.Float64 {
+			valueOfType, ok := inReflect.Index(i).Interface().(float64)
+			if !ok {
+				return []T{}, fmt.Errorf("invalid input array element type: %v, expected: %v", reflect.TypeOf(inReflect.Index(i).Interface()).Kind(), reflect.TypeOf(arrayOfType).Elem().Kind())
 			}
-			if len(condition) != 0 {
-				if s != condition {
-					if or {
-						errors = append(errors, fmt.Errorf("value must be equal to %v", condition))
-					} else {
-						return fmt.Errorf("value must be equal to %v", condition)
-					}
-				}
+			var newValueInterface interface{}
+			if reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int {
+				newValueInterface = int(valueOfType)
+				arrayOfType = append(arrayOfType, newValueInterface.(T))
+			} else if reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int8 {
+				newValueInterface = int8(valueOfType)
+				arrayOfType = append(arrayOfType, newValueInterface.(T))
+			} else if reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int16 {
+				newValueInterface = int16(valueOfType)
+				arrayOfType = append(arrayOfType, newValueInterface.(T))
+			} else if reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int32 {
+				newValueInterface = int32(valueOfType)
+				arrayOfType = append(arrayOfType, newValueInterface.(T))
+			} else if reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int64 {
+				newValueInterface = int64(valueOfType)
+				arrayOfType = append(arrayOfType, newValueInterface.(T))
 			}
-		case NOT_EQUAL:
-			condition, err := getConditionByType(conFull, NOT_EQUAL)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
+		} else {
+			valueOfType, ok := inReflect.Index(i).Interface().(T)
+			if !ok {
+				return []T{}, fmt.Errorf("invalid input array element type: %v, expected: %v", reflect.TypeOf(inReflect.Index(i).Interface()).Kind(), reflect.TypeOf(arrayOfType).Elem().Kind())
 			}
-			if len(condition) != 0 {
-				if s == condition {
-					if or {
-						errors = append(errors, fmt.Errorf("value can't be equal to %v", condition))
-					} else {
-						return fmt.Errorf("value can't be equal to %v", condition)
-					}
-				}
-			}
-		case MIN_VALUE:
-			condition, err := getConditionByType(conFull, MIN_VALUE)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				minValue, err := strconv.Atoi(condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if len(strings.TrimSpace(s)) < minValue {
-					if or {
-						errors = append(errors, fmt.Errorf("value shorter than %v", minValue))
-					} else {
-						return fmt.Errorf("value shorter than %v", minValue)
-					}
-				}
-			}
-		case MAX_VLAUE:
-			condition, err := getConditionByType(conFull, MAX_VLAUE)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				maxValue, err := strconv.Atoi(condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if len(strings.TrimSpace(s)) > maxValue {
-					if or {
-						errors = append(errors, fmt.Errorf("value longer than %v", maxValue))
-					} else {
-						return fmt.Errorf("value longer than %v", maxValue)
-					}
-				}
-			}
-		case CONTAINS:
-			condition, err := getConditionByType(conFull, CONTAINS)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				if !strings.Contains(s, condition) {
-					if or {
-						errors = append(errors, fmt.Errorf("value does not include %v", condition))
-					} else {
-						return fmt.Errorf("value does not include %v", condition)
-					}
-				}
-			}
-		case REGX:
-			condition, err := getConditionByType(conFull, REGX)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				match, err := regexp.MatchString(condition, s)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if !match {
-					if or {
-						errors = append(errors, fmt.Errorf("value does match regex %v", condition))
-					} else {
-						return fmt.Errorf("value does match regex %v", condition)
-					}
-				}
-			}
-		case NONE:
-			return nil
-		case OR:
-			continue
-		default:
-			return fmt.Errorf("invalid condition type %s", conType)
+			arrayOfType = append(arrayOfType, valueOfType)
 		}
 	}
-
-	if len(errors) >= len(c) {
-		return fmt.Errorf("no condition fulfilled, all errors: %v", errors)
-	}
-
-	return nil
-}
-
-func checkArray(a reflect.Value, c []string, or bool) error {
-	if a.Type().Kind() != reflect.Array && a.Type().Kind() != reflect.Slice {
-		return fmt.Errorf("value to validate has to be a array or slice, was %v", a.Type().Kind())
-	}
-
-	var errors []error
-	for _, conFull := range c {
-		conType := getConditionType(conFull)
-
-		switch conType {
-		case EQUAL:
-			condition, err := getConditionByType(conFull, EQUAL)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				equal, err := strconv.Atoi(condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if a.Len() != equal {
-					if or {
-						errors = append(errors, fmt.Errorf("value shorter than %v", equal))
-					} else {
-						return fmt.Errorf("value shorter than %v", equal)
-					}
-				}
-			}
-		case NOT_EQUAL:
-			condition, err := getConditionByType(conFull, NOT_EQUAL)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				notEqual, err := strconv.Atoi(condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if a.Len() == notEqual {
-					if or {
-						errors = append(errors, fmt.Errorf("value longer than %v", notEqual))
-					} else {
-						return fmt.Errorf("value longer than %v", notEqual)
-					}
-				}
-			}
-		case MIN_VALUE:
-			condition, err := getConditionByType(conFull, MIN_VALUE)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				minValue, err := strconv.Atoi(condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if a.Len() < minValue {
-					if or {
-						errors = append(errors, fmt.Errorf("value shorter than %v", minValue))
-					} else {
-						return fmt.Errorf("value shorter than %v", minValue)
-					}
-				}
-			}
-		case MAX_VLAUE:
-			condition, err := getConditionByType(conFull, MAX_VLAUE)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				maxValue, err := strconv.Atoi(condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if a.Len() > maxValue {
-					if or {
-						errors = append(errors, fmt.Errorf("value longer than %v", maxValue))
-					} else {
-						return fmt.Errorf("value longer than %v", maxValue)
-					}
-				}
-			}
-		case CONTAINS:
-			condition, err := getConditionByType(conFull, CONTAINS)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				switch v := a.Interface().(type) {
-				case []int:
-					contain, err := strconv.Atoi(condition)
-					if err != nil {
-						if or {
-							errors = append(errors, err)
-						} else {
-							return err
-						}
-					} else if !contains(v, contain) {
-						if or {
-							errors = append(errors, fmt.Errorf("value does not contain %v", contain))
-						} else {
-							return fmt.Errorf("value does not contain %v", contain)
-						}
-					}
-				case []float32:
-					contain, err := strconv.ParseFloat(condition, 32)
-					if err != nil {
-						if or {
-							errors = append(errors, err)
-						} else {
-							return err
-						}
-					} else if !contains(v, float32(contain)) {
-						if or {
-							errors = append(errors, fmt.Errorf("value does not contain %v", contain))
-						} else {
-							return fmt.Errorf("value does not contain %v", contain)
-						}
-					}
-				case []float64:
-					contain, err := strconv.ParseFloat(condition, 64)
-					if err != nil {
-						if or {
-							errors = append(errors, err)
-						} else {
-							return err
-						}
-					} else if !contains(v, contain) {
-						if or {
-							errors = append(errors, fmt.Errorf("value does not contain %v", contain))
-						} else {
-							return fmt.Errorf("value does not contain %v", contain)
-						}
-					}
-				case []string:
-					if !contains(v, condition) {
-						if or {
-							errors = append(errors, fmt.Errorf("value does not contain %v", condition))
-						} else {
-							return fmt.Errorf("value does not contain %v", condition)
-						}
-					}
-				default:
-					return fmt.Errorf("type %v not supported", reflect.TypeOf(v))
-				}
-			}
-		case NONE:
-			return nil
-		case OR:
-			continue
-		default:
-			return fmt.Errorf("invalid condition type %s", conType)
-		}
-	}
-
-	if len(errors) >= len(c) {
-		return fmt.Errorf("no condition fulfilled, all errors: %v", errors)
-	}
-
-	return nil
+	return arrayOfType, nil
 }
 
 func getConditionType(s string) string {
