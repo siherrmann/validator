@@ -93,6 +93,12 @@ type TestStructInvalidGroupCondition struct {
 
 type TestRequestWrapperUpdate struct {
 	Data       interface{}
+	JsonUpdate map[string]interface{}
+	Error      bool
+}
+
+type TestRequestWrapperUpdateWithJson struct {
+	Data       interface{}
 	JsonUpdate string
 	Error      bool
 }
@@ -665,6 +671,104 @@ func TestStructValidator(t *testing.T) {
 				Float:  1.1,
 				Array:  []int{1},
 			},
+			map[string]interface{}{"string": "Blubb", "int": 2, "float": 1.2, "array": []int{2}},
+			false,
+		},
+		"invalidJsonStringUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			map[string]interface{}{"string": "Blubb", "int": 2, "float": "1.2", "array": []int{2}},
+			true,
+		},
+		"invalidTypeStringUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			map[string]interface{}{"string": 1, "int": 2, "float": 1.2, "array": []int{2}},
+			true,
+		},
+		"invalidJsonIntUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			map[string]interface{}{"string": "Blubb", "int": "Blubb", "float": 1.2, "array": []int{2}},
+			true,
+		},
+		"invalidTypeIntUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			map[string]interface{}{"string": "Blubb", "int": "2", "float": 1.2, "array": []int{2}},
+			true,
+		},
+		"invalidJsonFloatUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			map[string]interface{}{"string": "Blubb", "int": 2, "float": "Blubb", "array": []int{2}},
+			true,
+		},
+		"invalidTypeFloatUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			map[string]interface{}{"string": "Blubb", "int": 2, "float": "1.2", "array": []int{2}},
+			true,
+		},
+		"invalidJsonArrayUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			map[string]interface{}{"string": "Blubb", "int": 2, "float": "Blubb", "array": []int{2}},
+			true,
+		},
+		"invalidTypeArrayUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			map[string]interface{}{"string": "Blubb", "int": 2, "float": "1.2", "array": []string{"2"}},
+			true,
+		},
+	}
+
+	for k, v := range testCasesUpdate {
+		err := UnmarshalValidateAndUpdate(v.JsonUpdate, v.Data)
+		assertErrorUpdate(t, k, err, v.Error)
+	}
+
+	testCasesUpdateWithJson := map[string]*TestRequestWrapperUpdateWithJson{
+		"validUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
 			`{"string": "Blubb", "int": 2, "float": 1.2, "array": [2]}`,
 			false,
 		},
@@ -746,12 +850,12 @@ func TestStructValidator(t *testing.T) {
 				Array:  []int{1},
 			},
 			`{"string": "Blubb", "int": 2, "float": "1.2", "array": ["2"]}`,
-			false,
+			true,
 		},
 	}
 
-	for k, v := range testCasesUpdate {
-		err := UnmarshalValidateAndUpdate([]byte(v.JsonUpdate), v.Data)
+	for k, v := range testCasesUpdateWithJson {
+		err := UnmarshalValidateAndUpdateWithJson([]byte(v.JsonUpdate), v.Data)
 		assertErrorUpdate(t, k, err, v.Error)
 	}
 }

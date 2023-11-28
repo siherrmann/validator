@@ -222,7 +222,7 @@ func Validate(v any) error {
 	return nil
 }
 
-func UnmarshalValidateAndUpdate(jsonInput []byte, structToUpdate interface{}) error {
+func UnmarshalValidateAndUpdateWithJson(jsonInput []byte, structToUpdate interface{}) error {
 	jsonUnmarshaled := map[string]interface{}{}
 
 	err := json.Unmarshal(jsonInput, &jsonUnmarshaled)
@@ -235,6 +235,22 @@ func UnmarshalValidateAndUpdate(jsonInput []byte, structToUpdate interface{}) er
 	log.Printf("json update: %v", &jsonUnmarshaled)
 
 	err = ValidateAndUpdate(structToUpdate, jsonUnmarshaled)
+	if err != nil {
+		return fmt.Errorf("error updating struct: %v", err)
+	}
+
+	// TODO remove log, could contain sensitive data
+	log.Printf("struct updated: %v", structToUpdate)
+
+	return nil
+}
+
+func UnmarshalValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interface{}) error {
+	// TODO remove log, could contain sensitive data
+	log.Printf("struct old: %v", structToUpdate)
+	log.Printf("json update: %v", jsonInput)
+
+	err := ValidateAndUpdate(structToUpdate, jsonInput)
 	if err != nil {
 		return fmt.Errorf("error updating struct: %v", err)
 	}
@@ -578,61 +594,115 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 				return fmt.Errorf("input value has to be of type %v or %v, was %v of %v", reflect.Array, reflect.Slice, reflect.ValueOf(jsonValue).Kind(), reflect.TypeOf(jsonValue).Elem().Kind())
 			}
 
-			switch reflect.TypeOf(fv.Interface()).Elem().Kind() {
+			switch t := reflect.TypeOf(fv.Interface()).Elem().Kind(); t {
 			case reflect.Int:
-				newIntArray, err := ArrayOfInterfaceToArrayOf[int](jsonValue.([]interface{}))
-				if err != nil {
-					return err
+				if _, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := ArrayOfInterfaceToArrayOf[int](jsonValue.([]interface{}))
+					if err != nil {
+						return err
+					}
+					reflect.Copy(fv, reflect.ValueOf(typedArray))
+				} else if _, ok := jsonValue.([]int); ok {
+					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]int)))
+				} else {
+					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
-				reflect.Copy(fv, reflect.ValueOf(newIntArray))
 			case reflect.Int64:
-				newIntArray, err := ArrayOfInterfaceToArrayOf[int64](jsonValue.([]interface{}))
-				if err != nil {
-					return err
+				if _, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := ArrayOfInterfaceToArrayOf[int64](jsonValue.([]interface{}))
+					if err != nil {
+						return err
+					}
+					reflect.Copy(fv, reflect.ValueOf(typedArray))
+				} else if _, ok := jsonValue.([]int64); ok {
+					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]int64)))
+				} else {
+					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
-				reflect.Copy(fv, reflect.ValueOf(newIntArray))
 			case reflect.Int32:
-				newIntArray, err := ArrayOfInterfaceToArrayOf[int32](jsonValue.([]interface{}))
-				if err != nil {
-					return err
+				if _, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := ArrayOfInterfaceToArrayOf[int32](jsonValue.([]interface{}))
+					if err != nil {
+						return err
+					}
+					reflect.Copy(fv, reflect.ValueOf(typedArray))
+				} else if _, ok := jsonValue.([]int32); ok {
+					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]int32)))
+				} else {
+					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
-				reflect.Copy(fv, reflect.ValueOf(newIntArray))
 			case reflect.Int16:
-				newIntArray, err := ArrayOfInterfaceToArrayOf[int16](jsonValue.([]interface{}))
-				if err != nil {
-					return err
+				if _, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := ArrayOfInterfaceToArrayOf[int16](jsonValue.([]interface{}))
+					if err != nil {
+						return err
+					}
+					reflect.Copy(fv, reflect.ValueOf(typedArray))
+				} else if _, ok := jsonValue.([]int16); ok {
+					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]int16)))
+				} else {
+					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
-				reflect.Copy(fv, reflect.ValueOf(newIntArray))
 			case reflect.Int8:
-				newIntArray, err := ArrayOfInterfaceToArrayOf[int8](jsonValue.([]interface{}))
-				if err != nil {
-					return err
+				if _, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := ArrayOfInterfaceToArrayOf[int8](jsonValue.([]interface{}))
+					if err != nil {
+						return err
+					}
+					reflect.Copy(fv, reflect.ValueOf(typedArray))
+				} else if _, ok := jsonValue.([]int8); ok {
+					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]int8)))
+				} else {
+					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
-				reflect.Copy(fv, reflect.ValueOf(newIntArray))
-			case reflect.Float32:
-				newFloatArray, err := ArrayOfInterfaceToArrayOf[float32](jsonValue.([]interface{}))
-				if err != nil {
-					return err
-				}
-				reflect.Copy(fv, reflect.ValueOf(newFloatArray))
 			case reflect.Float64:
-				newFloatArray, err := ArrayOfInterfaceToArrayOf[float64](jsonValue.([]interface{}))
-				if err != nil {
-					return err
+				if _, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := ArrayOfInterfaceToArrayOf[float64](jsonValue.([]interface{}))
+					if err != nil {
+						return err
+					}
+					reflect.Copy(fv, reflect.ValueOf(typedArray))
+				} else if _, ok := jsonValue.([]float64); ok {
+					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]float64)))
+				} else {
+					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
-				reflect.Copy(fv, reflect.ValueOf(newFloatArray))
+			case reflect.Float32:
+				if _, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := ArrayOfInterfaceToArrayOf[float32](jsonValue.([]interface{}))
+					if err != nil {
+						return err
+					}
+					reflect.Copy(fv, reflect.ValueOf(typedArray))
+				} else if _, ok := jsonValue.([]float32); ok {
+					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]float32)))
+				} else {
+					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
+				}
 			case reflect.String:
-				newStringArray, err := ArrayOfInterfaceToArrayOf[string](jsonValue.([]interface{}))
-				if err != nil {
-					return err
+				if _, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := ArrayOfInterfaceToArrayOf[string](jsonValue.([]interface{}))
+					if err != nil {
+						return err
+					}
+					reflect.Copy(fv, reflect.ValueOf(typedArray))
+				} else if _, ok := jsonValue.([]string); ok {
+					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]string)))
+				} else {
+					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
-				reflect.Copy(fv, reflect.ValueOf(newStringArray))
 			case reflect.Bool:
-				newBoolArray, err := ArrayOfInterfaceToArrayOf[bool](jsonValue.([]interface{}))
-				if err != nil {
-					return err
+				if _, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := ArrayOfInterfaceToArrayOf[bool](jsonValue.([]interface{}))
+					if err != nil {
+						return err
+					}
+					reflect.Copy(fv, reflect.ValueOf(typedArray))
+				} else if _, ok := jsonValue.([]bool); ok {
+					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]bool)))
+				} else {
+					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
-				reflect.Copy(fv, reflect.ValueOf(newBoolArray))
 			default:
 				return fmt.Errorf("invalid array element type: %v", reflect.TypeOf(fv.Interface()).Elem().Kind())
 			}
