@@ -757,7 +757,7 @@ func TestStructValidator(t *testing.T) {
 	}
 
 	for k, v := range testCasesUpdate {
-		err := UnmarshalValidateAndUpdate(v.JsonUpdate, v.Data)
+		err := ValidateAndUpdate(v.JsonUpdate, v.Data)
 		assertErrorUpdate(t, k, err, v.Error)
 	}
 
@@ -855,7 +855,7 @@ func TestStructValidator(t *testing.T) {
 	}
 
 	for k, v := range testCasesUpdateWithJson {
-		err := UnmarshalValidateAndUpdateWithJson([]byte(v.JsonUpdate), v.Data)
+		err := UnmarshalValidateAndUpdate([]byte(v.JsonUpdate), v.Data)
 		assertErrorUpdate(t, k, err, v.Error)
 	}
 }

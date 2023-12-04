@@ -3,7 +3,6 @@ package validator
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -222,7 +221,7 @@ func Validate(v any) error {
 	return nil
 }
 
-func UnmarshalValidateAndUpdateWithJson(jsonInput []byte, structToUpdate interface{}) error {
+func UnmarshalValidateAndUpdate(jsonInput []byte, structToUpdate interface{}) error {
 	jsonUnmarshaled := map[string]interface{}{}
 
 	err := json.Unmarshal(jsonInput, &jsonUnmarshaled)
@@ -230,33 +229,10 @@ func UnmarshalValidateAndUpdateWithJson(jsonInput []byte, structToUpdate interfa
 		return fmt.Errorf("error unmarshaling: %v", err)
 	}
 
-	// TODO remove log, could contain sensitive data
-	log.Printf("struct old: %v", structToUpdate)
-	log.Printf("json update: %v", &jsonUnmarshaled)
-
-	err = ValidateAndUpdate(structToUpdate, jsonUnmarshaled)
+	err = ValidateAndUpdate(jsonUnmarshaled, structToUpdate)
 	if err != nil {
 		return fmt.Errorf("error updating struct: %v", err)
 	}
-
-	// TODO remove log, could contain sensitive data
-	log.Printf("struct updated: %v", structToUpdate)
-
-	return nil
-}
-
-func UnmarshalValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interface{}) error {
-	// TODO remove log, could contain sensitive data
-	log.Printf("struct old: %v", structToUpdate)
-	log.Printf("json update: %v", jsonInput)
-
-	err := ValidateAndUpdate(structToUpdate, jsonInput)
-	if err != nil {
-		return fmt.Errorf("error updating struct: %v", err)
-	}
-
-	// TODO remove log, could contain sensitive data
-	log.Printf("struct updated: %v", structToUpdate)
 
 	return nil
 }
@@ -298,9 +274,9 @@ func UnmarshalValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate
 //
 // In the case of rex the int and float input will get converted to a string (strconv.Itoa(int) and fmt.Sprintf("%f", f)).
 // If you want to check more complex cases you can obviously replace equ, neq, min, max and con with one regular expression.
-func ValidateAndUpdate(v any, jsonValues map[string]interface{}) error {
+func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interface{}) error {
 	// check if value is a pointer to a struct
-	value := reflect.ValueOf(v)
+	value := reflect.ValueOf(structToUpdate)
 	if value.Kind() != reflect.Ptr {
 		return fmt.Errorf("value has to be of kind pointer, was %T", value)
 	}
@@ -358,7 +334,7 @@ func ValidateAndUpdate(v any, jsonValues map[string]interface{}) error {
 		var ok bool
 		var err error
 		var jsonValue interface{}
-		if jsonValue, ok = jsonValues[jsonKey]; !ok {
+		if jsonValue, ok = jsonInput[jsonKey]; !ok {
 			for _, groupName := range groupsValue {
 				groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("json %v key not in map", jsonKey))
 			}
@@ -395,7 +371,7 @@ func ValidateAndUpdate(v any, jsonValues map[string]interface{}) error {
 				continue
 			}
 
-			fieldValue := reflect.ValueOf(v).Elem().FieldByName(fieldName)
+			fieldValue := reflect.ValueOf(structToUpdate).Elem().FieldByName(fieldName)
 			err = setStructValueByJson(fieldValue, jsonKey, jsonValue)
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("could not set field %v: %v", fieldName, err.Error())
@@ -424,7 +400,7 @@ func ValidateAndUpdate(v any, jsonValues map[string]interface{}) error {
 				continue
 			}
 
-			fieldValue := reflect.ValueOf(v).Elem().FieldByName(fieldName)
+			fieldValue := reflect.ValueOf(structToUpdate).Elem().FieldByName(fieldName)
 			err = setStructValueByJson(fieldValue, jsonKey, jsonValue)
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("could not set field %v: %v", fieldName, err.Error())
@@ -448,7 +424,7 @@ func ValidateAndUpdate(v any, jsonValues map[string]interface{}) error {
 				continue
 			}
 
-			fieldValue := reflect.ValueOf(v).Elem().FieldByName(fieldName)
+			fieldValue := reflect.ValueOf(structToUpdate).Elem().FieldByName(fieldName)
 			err = setStructValueByJson(fieldValue, jsonKey, jsonValue)
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("could not set field %v: %v", fieldName, err.Error())
@@ -462,7 +438,7 @@ func ValidateAndUpdate(v any, jsonValues map[string]interface{}) error {
 				return fmt.Errorf("input value has to be of type %v, was %v", structValueType, reflect.ValueOf(jsonValue).Kind())
 			}
 
-			fieldValue := reflect.ValueOf(v).Elem().FieldByName(fieldName)
+			fieldValue := reflect.ValueOf(structToUpdate).Elem().FieldByName(fieldName)
 			err = setStructValueByJson(fieldValue, jsonKey, jsonValue)
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("could not set field %v: %v", fieldName, err.Error())
@@ -483,8 +459,8 @@ func ValidateAndUpdate(v any, jsonValues map[string]interface{}) error {
 				continue
 			}
 
-			fieldValue := reflect.ValueOf(v).Elem().FieldByName(fieldName)
-			err = setStructValueByJson(fieldValue, jsonKey, jsonValues[jsonKey])
+			fieldValue := reflect.ValueOf(structToUpdate).Elem().FieldByName(fieldName)
+			err = setStructValueByJson(fieldValue, jsonKey, jsonInput[jsonKey])
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("could not set field %v: %v", fieldName, err.Error())
 			} else if err != nil {
