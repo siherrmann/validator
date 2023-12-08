@@ -8,7 +8,7 @@ import (
 )
 
 func checkString(s string, c []string, or bool) error {
-	if contains(c, NONE) || len(c) == 0 {
+	if Contains(c, NONE) || len(c) == 0 {
 		return nil
 	}
 

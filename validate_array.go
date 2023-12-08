@@ -7,7 +7,7 @@ import (
 )
 
 func checkArray(a reflect.Value, c []string, or bool) error {
-	if contains(c, NONE) || len(c) == 0 {
+	if Contains(c, NONE) || len(c) == 0 {
 		return nil
 	}
 
@@ -139,7 +139,7 @@ func checkArray(a reflect.Value, c []string, or bool) error {
 						} else {
 							return err
 						}
-					} else if !contains(v, contain) {
+					} else if !Contains(v, contain) {
 						if or {
 							errors = append(errors, fmt.Errorf("value does not contain %v", contain))
 						} else {
@@ -154,7 +154,7 @@ func checkArray(a reflect.Value, c []string, or bool) error {
 						} else {
 							return err
 						}
-					} else if !contains(v, float32(contain)) {
+					} else if !Contains(v, float32(contain)) {
 						if or {
 							errors = append(errors, fmt.Errorf("value does not contain %v", contain))
 						} else {
@@ -169,7 +169,7 @@ func checkArray(a reflect.Value, c []string, or bool) error {
 						} else {
 							return err
 						}
-					} else if !contains(v, contain) {
+					} else if !Contains(v, contain) {
 						if or {
 							errors = append(errors, fmt.Errorf("value does not contain %v", contain))
 						} else {
@@ -177,7 +177,7 @@ func checkArray(a reflect.Value, c []string, or bool) error {
 						}
 					}
 				case []string:
-					if !contains(v, condition) {
+					if !Contains(v, condition) {
 						if or {
 							errors = append(errors, fmt.Errorf("value does not contain %v", condition))
 						} else {

@@ -59,6 +59,13 @@ type TestStructMulti struct {
 	Array  []string `vld:"min3 max4"`
 }
 
+type TestStructMultiOr struct {
+	String string   `vld:"min4 || equte"`
+	Int    int      `vld:"min3 || equ0"`
+	Float  float64  `vld:"min3 || equ0"`
+	Array  []string `vld:"min3 || equ0"`
+}
+
 type TestStructEmptyCondition struct {
 	String string   `vld:"equ"`
 	Int    int      `vld:"neq"`
@@ -481,6 +488,68 @@ func TestStructValidator(t *testing.T) {
 				Int:    3,
 				Float:  3.0,
 				Array:  []string{"", "", "", "", ""},
+			},
+			"Array",
+		},
+	}
+
+	for k, v := range testCases {
+		err := Validate(v.Data)
+		assertError(t, k, err, v.InvalidField)
+	}
+
+	testCases = map[string]*TestRequestWrapper{
+		"validFirstCondition": {
+			&TestStructMultiOr{
+				String: "test",
+				Int:    3,
+				Float:  3.0,
+				Array:  []string{"", "", ""},
+			},
+			"",
+		},
+		"validSecondCondition": {
+			&TestStructMultiOr{
+				String: "te",
+				Int:    0,
+				Float:  0.0,
+				Array:  []string{},
+			},
+			"",
+		},
+		"failString": {
+			&TestStructMultiOr{
+				String: "ts",
+				Int:    3,
+				Float:  3.0,
+				Array:  []string{"", "", ""},
+			},
+			"String",
+		},
+		"failInt": {
+			&TestStructMultiOr{
+				String: "test",
+				Int:    2,
+				Float:  3.0,
+				Array:  []string{"", "", ""},
+			},
+			"Int",
+		},
+		"failFloat": {
+			&TestStructMultiOr{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+			},
+			"Float",
+		},
+		"failArray": {
+			&TestStructMultiOr{
+				String: "test",
+				Int:    3,
+				Float:  3.0,
+				Array:  []string{"", ""},
 			},
 			"Array",
 		},

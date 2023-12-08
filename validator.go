@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strconv"
 	"strings"
 )
 
@@ -98,22 +97,21 @@ func Validate(v any) error {
 
 	for i := 0; i < structFull.Type().NumField(); i++ {
 		tag := structFull.Type().Field(i).Tag.Get("vld")
-		if len(strings.TrimSpace(tag)) == 0 {
-			return fmt.Errorf("no validate tag found for field %s, to ignore the validation put a 'vld:\"-\"' into the tag", structFull.Type().Field(i).Name)
+		if len(strings.TrimSpace(tag)) == 0 || strings.TrimSpace(tag) == NONE {
+			continue
 		}
 
 		tagSplit := strings.Split(tag, ", ")
 
 		value := structFull.Field(i)
 		fieldName := structFull.Type().Field(i).Name
-		conditions := strings.Split(tagSplit[0], " ")
-
-		if contains(conditions, NONE) {
-			continue
-		}
 
 		or := false
-		if contains(conditions, OR) {
+		conditions := strings.Split(tagSplit[0], " ")
+		if Contains(conditions, OR) {
+			conditions = RemoveWhere[string](conditions, func(v string) bool {
+				return v == OR
+			})
 			or = true
 		}
 
@@ -181,41 +179,9 @@ func Validate(v any) error {
 		}
 	}
 
-	if len(groups) != 0 {
-		for groupName, groupCondition := range groups {
-			conType := getConditionType(groupCondition)
-
-			switch conType {
-			case MIN_VALUE:
-				condition, err := getConditionByType(groupCondition, MIN_VALUE)
-				if err != nil {
-					return err
-				}
-				if len(condition) != 0 {
-					minValue, err := strconv.Atoi(condition)
-					if err != nil {
-						return err
-					} else if (groupSize[groupName] - len(groupErrors[groupName])) < minValue {
-						return fmt.Errorf("less then %v in group without error, all errors: %v", minValue, groupErrors[groupName])
-					}
-				}
-			case MAX_VLAUE:
-				condition, err := getConditionByType(groupCondition, MAX_VLAUE)
-				if err != nil {
-					return err
-				}
-				if len(condition) != 0 {
-					maxValue, err := strconv.Atoi(condition)
-					if err != nil {
-						return err
-					} else if (groupSize[groupName] - len(groupErrors[groupName])) > maxValue {
-						return fmt.Errorf("more the %v in group without error, all errors: %v", maxValue, groupErrors[groupName])
-					}
-				}
-			default:
-				return fmt.Errorf("invalid group condition type %s", conType)
-			}
-		}
+	err := validateGroup(groups, groupSize, groupErrors)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -293,7 +259,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 
 	for i := 0; i < structFull.Type().NumField(); i++ {
 		tag := structFull.Type().Field(i).Tag.Get("upd")
-		if len(strings.TrimSpace(tag)) == 0 {
+		if len(strings.TrimSpace(tag)) == 0 || strings.TrimSpace(tag) == NONE {
 			continue
 		}
 
@@ -308,7 +274,10 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 		conditions := []string{}
 		if len(tagSplit) > 1 {
 			conditions = strings.Split(tagSplit[1], " ")
-			if contains(conditions, OR) {
+			if Contains(conditions, OR) {
+				conditions = RemoveWhere[string](conditions, func(v string) bool {
+					return v == OR
+				})
 				or = true
 			}
 		}
@@ -473,41 +442,9 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 		}
 	}
 
-	if len(groups) != 0 {
-		for groupName, groupCondition := range groups {
-			conType := getConditionType(groupCondition)
-
-			switch conType {
-			case MIN_VALUE:
-				condition, err := getConditionByType(groupCondition, MIN_VALUE)
-				if err != nil {
-					return err
-				}
-				if len(condition) != 0 {
-					minValue, err := strconv.Atoi(condition)
-					if err != nil {
-						return err
-					} else if (groupSize[groupName] - len(groupErrors[groupName])) < minValue {
-						return fmt.Errorf("less then %v in group without error, all errors: %v", minValue, groupErrors[groupName])
-					}
-				}
-			case MAX_VLAUE:
-				condition, err := getConditionByType(groupCondition, MAX_VLAUE)
-				if err != nil {
-					return err
-				}
-				if len(condition) != 0 {
-					maxValue, err := strconv.Atoi(condition)
-					if err != nil {
-						return err
-					} else if (groupSize[groupName] - len(groupErrors[groupName])) > maxValue {
-						return fmt.Errorf("more the %v in group without error, all errors: %v", maxValue, groupErrors[groupName])
-					}
-				}
-			default:
-				return fmt.Errorf("invalid group condition type %s", conType)
-			}
-		}
+	err := validateGroup(groups, groupSize, groupErrors)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -687,70 +624,4 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 		}
 	}
 	return nil
-}
-
-func ArrayOfInterfaceToArrayOf[T comparable](in []interface{}) ([]T, error) {
-	inReflect := reflect.ValueOf(in)
-	arrayOfType := []T{}
-	for i := 0; i < inReflect.Len(); i++ {
-		// This case is for the case that json.Unmarshal unmarshals an int value into a float64 value.
-		if (reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int || reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int8 || reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int16 || reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int32 || reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int64) && reflect.TypeOf(inReflect.Index(i).Interface()).Kind() == reflect.Float64 {
-			valueOfType, ok := inReflect.Index(i).Interface().(float64)
-			if !ok {
-				return []T{}, fmt.Errorf("invalid input array element type: %v, expected: %v", reflect.TypeOf(inReflect.Index(i).Interface()).Kind(), reflect.TypeOf(arrayOfType).Elem().Kind())
-			}
-			var newValueInterface interface{}
-			if reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int {
-				newValueInterface = int(valueOfType)
-				arrayOfType = append(arrayOfType, newValueInterface.(T))
-			} else if reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int8 {
-				newValueInterface = int8(valueOfType)
-				arrayOfType = append(arrayOfType, newValueInterface.(T))
-			} else if reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int16 {
-				newValueInterface = int16(valueOfType)
-				arrayOfType = append(arrayOfType, newValueInterface.(T))
-			} else if reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int32 {
-				newValueInterface = int32(valueOfType)
-				arrayOfType = append(arrayOfType, newValueInterface.(T))
-			} else if reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int64 {
-				newValueInterface = int64(valueOfType)
-				arrayOfType = append(arrayOfType, newValueInterface.(T))
-			}
-		} else {
-			valueOfType, ok := inReflect.Index(i).Interface().(T)
-			if !ok {
-				return []T{}, fmt.Errorf("invalid input array element type: %v, expected: %v", reflect.TypeOf(inReflect.Index(i).Interface()).Kind(), reflect.TypeOf(arrayOfType).Elem().Kind())
-			}
-			arrayOfType = append(arrayOfType, valueOfType)
-		}
-	}
-	return arrayOfType, nil
-}
-
-func getConditionType(s string) string {
-	if len(s) > 2 {
-		return s[:3]
-	}
-	return s
-}
-
-func getConditionByType(conditionFull string, conditionType string) (string, error) {
-	if len(conditionType) != 3 {
-		return "", fmt.Errorf("length of conditionType has to be 3: %s", conditionType)
-	}
-	condition := strings.TrimPrefix(conditionFull, conditionType)
-	if len(condition) == 0 {
-		return "", fmt.Errorf("empty %s value", conditionType)
-	}
-
-	return condition, nil
-}
-
-func contains[V comparable](list []V, v V) bool {
-	for _, s := range list {
-		if v == s {
-			return true
-		}
-	}
-	return false
 }
