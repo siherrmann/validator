@@ -1,4 +1,4 @@
-# structValidator
+# validator
 
 ## Description
 
