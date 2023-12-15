@@ -1,3 +1,3 @@
-module validator
+module github.com/siherrmann/validator
 
-go 1.21
+go 1.21.4
