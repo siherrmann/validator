@@ -138,7 +138,7 @@ func Validate(v any) error {
 			valueTemp := value.Int()
 			err := checkInt(int(valueTemp), conditions, or)
 			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
+				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error())
 			} else if err != nil {
 				for _, groupName := range groupsValue {
 					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
@@ -148,7 +148,7 @@ func Validate(v any) error {
 			valueTemp := value.Float()
 			err := checkFloat(valueTemp, conditions, or)
 			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
+				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error())
 			} else if err != nil {
 				for _, groupName := range groupsValue {
 					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
@@ -158,7 +158,7 @@ func Validate(v any) error {
 			valueTemp := value.String()
 			err := checkString(valueTemp, conditions, or)
 			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
+				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error())
 			} else if err != nil {
 				for _, groupName := range groupsValue {
 					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
@@ -168,7 +168,7 @@ func Validate(v any) error {
 			valueTemp := value
 			err := checkArray(valueTemp, conditions, or)
 			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
+				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error())
 			} else if err != nil {
 				for _, groupName := range groupsValue {
 					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
@@ -332,7 +332,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 
 			err = checkInt(int(newInt), conditions, or)
 			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
+				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
 			} else if err != nil {
 				for _, groupName := range groupsValue {
 					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
@@ -361,7 +361,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 
 			err = checkFloat(float64(newFloat), conditions, or)
 			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
+				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
 			} else if err != nil {
 				for _, groupName := range groupsValue {
 					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
@@ -385,7 +385,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 
 			err = checkString(jsonValue.(string), conditions, or)
 			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
+				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
 			} else if err != nil {
 				for _, groupName := range groupsValue {
 					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
@@ -420,7 +420,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 		case reflect.Array, reflect.Slice:
 			err = checkArray(reflect.ValueOf(jsonValue), conditions, or)
 			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("field %v invalid: %v", fieldName, err.Error())
+				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
 			} else if err != nil {
 				for _, groupName := range groupsValue {
 					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
