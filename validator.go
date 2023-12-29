@@ -175,7 +175,7 @@ func Validate(v any) error {
 				}
 			}
 		default:
-			return fmt.Errorf("invalid field type: %v", value.Type().Kind())
+			return fmt.Errorf("invalid field type for %v: %v", reflect.TypeOf(v), value.Type().Kind())
 		}
 	}
 
@@ -327,7 +327,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 			} else if _, ok := jsonValue.(int8); ok {
 				newInt = int64(jsonValue.(int8))
 			} else {
-				return fmt.Errorf("input value has to be of type %v, was %v", structValueType, reflect.ValueOf(jsonValue).Kind())
+				return fmt.Errorf("input value for %v has to be of type %v, was %v", reflect.TypeOf(structToUpdate), structValueType, reflect.ValueOf(jsonValue).Kind())
 			}
 
 			err = checkInt(int(newInt), conditions, or)
@@ -343,7 +343,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 			fieldValue := reflect.ValueOf(structToUpdate).Elem().FieldByName(fieldName)
 			err = setStructValueByJson(fieldValue, jsonKey, jsonValue)
 			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("could not set field %v: %v", fieldName, err.Error())
+				return fmt.Errorf("could not set field %v of %v: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
 			} else if err != nil {
 				for _, groupName := range groupsValue {
 					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("could not set field %v: %v", fieldName, err.Error()))
@@ -356,7 +356,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 			} else if fl, ok := jsonValue.(float32); ok {
 				newFloat = float64(fl)
 			} else {
-				return fmt.Errorf("input value has to be of type %v, was %v", structValueType, reflect.ValueOf(jsonValue).Kind())
+				return fmt.Errorf("input value for %v has to be of type %v, was %v", reflect.TypeOf(structToUpdate), structValueType, reflect.ValueOf(jsonValue).Kind())
 			}
 
 			err = checkFloat(float64(newFloat), conditions, or)
@@ -372,7 +372,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 			fieldValue := reflect.ValueOf(structToUpdate).Elem().FieldByName(fieldName)
 			err = setStructValueByJson(fieldValue, jsonKey, jsonValue)
 			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("could not set field %v: %v", fieldName, err.Error())
+				return fmt.Errorf("could not set field %v of %v: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
 			} else if err != nil {
 				for _, groupName := range groupsValue {
 					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("could not set field %v: %v", fieldName, err.Error()))
@@ -380,7 +380,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 			}
 		case reflect.String:
 			if _, ok := jsonValue.(string); !ok {
-				return fmt.Errorf("input value has to be of type %v, was %v", structValueType, reflect.ValueOf(jsonValue).Kind())
+				return fmt.Errorf("input value for %v has to be of type %v, was %v", reflect.TypeOf(structToUpdate), structValueType, reflect.ValueOf(jsonValue).Kind())
 			}
 
 			err = checkString(jsonValue.(string), conditions, or)
@@ -396,7 +396,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 			fieldValue := reflect.ValueOf(structToUpdate).Elem().FieldByName(fieldName)
 			err = setStructValueByJson(fieldValue, jsonKey, jsonValue)
 			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("could not set field %v: %v", fieldName, err.Error())
+				return fmt.Errorf("could not set field %v of %v: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
 			} else if err != nil {
 				for _, groupName := range groupsValue {
 					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("could not set field %v: %v", fieldName, err.Error()))
@@ -404,13 +404,13 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 			}
 		case reflect.Bool:
 			if _, ok := jsonValue.(bool); !ok {
-				return fmt.Errorf("input value has to be of type %v, was %v", structValueType, reflect.ValueOf(jsonValue).Kind())
+				return fmt.Errorf("input value for %v has to be of type %v, was %v", reflect.TypeOf(structToUpdate), structValueType, reflect.ValueOf(jsonValue).Kind())
 			}
 
 			fieldValue := reflect.ValueOf(structToUpdate).Elem().FieldByName(fieldName)
 			err = setStructValueByJson(fieldValue, jsonKey, jsonValue)
 			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("could not set field %v: %v", fieldName, err.Error())
+				return fmt.Errorf("could not set field %v of %v: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
 			} else if err != nil {
 				for _, groupName := range groupsValue {
 					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("could not set field %v: %v", fieldName, err.Error()))
@@ -431,14 +431,14 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 			fieldValue := reflect.ValueOf(structToUpdate).Elem().FieldByName(fieldName)
 			err = setStructValueByJson(fieldValue, jsonKey, jsonInput[jsonKey])
 			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("could not set field %v: %v", fieldName, err.Error())
+				return fmt.Errorf("could not set field %v of %v: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
 			} else if err != nil {
 				for _, groupName := range groupsValue {
 					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("could not set field %v: %v", fieldName, err.Error()))
 				}
 			}
 		default:
-			return fmt.Errorf("invalid field type: %v", value.Type().Kind())
+			return fmt.Errorf("invalid field type for %v: %v", reflect.TypeOf(structToUpdate), value.Type().Kind())
 		}
 	}
 
