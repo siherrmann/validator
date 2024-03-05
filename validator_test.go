@@ -3,6 +3,7 @@ package validator
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 type TestRequestWrapper struct {
@@ -111,10 +112,11 @@ type TestRequestWrapperUpdateWithJson struct {
 }
 
 type TestStructUpdate struct {
-	String string  `upd:"string, min1, gr1min1"`
-	Int    int     `upd:"int, min1, gr1min1"`
-	Float  float64 `upd:"float, min1, gr1min1"`
-	Array  []int   `upd:"array, min1, gr1min1"`
+	String string    `upd:"string, min1, gr1min5"`
+	Int    int       `upd:"int, min1, gr1min5"`
+	Float  float64   `upd:"float, min1, gr1min5"`
+	Array  []int     `upd:"array, min1, gr1min5"`
+	Date   time.Time `upd:"date, min1, gr1min5"`
 }
 
 func TestStructValidator(t *testing.T) {
@@ -739,8 +741,9 @@ func TestStructValidator(t *testing.T) {
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
+				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 2, "float": 1.2, "array": []int{2}},
+			map[string]interface{}{"string": "Blubb", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000"},
 			false,
 		},
 		"invalidJsonStringUpdate": {
@@ -749,8 +752,9 @@ func TestStructValidator(t *testing.T) {
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
+				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 2, "float": "1.2", "array": []int{2}},
+			map[string]interface{}{"string": "Blubb", "int": 2, "float": "1.2", "array": []int{2}, "date": "2022-01-03T15:04:05.000"},
 			true,
 		},
 		"invalidTypeStringUpdate": {
@@ -759,8 +763,9 @@ func TestStructValidator(t *testing.T) {
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
+				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": 1, "int": 2, "float": 1.2, "array": []int{2}},
+			map[string]interface{}{"string": 1, "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000"},
 			true,
 		},
 		"invalidJsonIntUpdate": {
@@ -769,8 +774,9 @@ func TestStructValidator(t *testing.T) {
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
+				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": "Blubb", "float": 1.2, "array": []int{2}},
+			map[string]interface{}{"string": "Blubb", "int": "Blubb", "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000"},
 			true,
 		},
 		"invalidTypeIntUpdate": {
@@ -779,8 +785,9 @@ func TestStructValidator(t *testing.T) {
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
+				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": "2", "float": 1.2, "array": []int{2}},
+			map[string]interface{}{"string": "Blubb", "int": "2", "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000"},
 			true,
 		},
 		"invalidJsonFloatUpdate": {
@@ -789,8 +796,9 @@ func TestStructValidator(t *testing.T) {
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
+				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 2, "float": "Blubb", "array": []int{2}},
+			map[string]interface{}{"string": "Blubb", "int": 2, "float": "Blubb", "array": []int{2}, "date": "2022-01-03T15:04:05.000"},
 			true,
 		},
 		"invalidTypeFloatUpdate": {
@@ -799,8 +807,9 @@ func TestStructValidator(t *testing.T) {
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
+				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 2, "float": "1.2", "array": []int{2}},
+			map[string]interface{}{"string": "Blubb", "int": 2, "float": "1.2", "array": []int{2}, "date": "2022-01-03T15:04:05.000"},
 			true,
 		},
 		"invalidJsonArrayUpdate": {
@@ -809,8 +818,9 @@ func TestStructValidator(t *testing.T) {
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
+				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 2, "float": "Blubb", "array": []int{2}},
+			map[string]interface{}{"string": "Blubb", "int": 2, "float": 1.2, "array": []int{}, "date": "2022-01-03T15:04:05.000"},
 			true,
 		},
 		"invalidTypeArrayUpdate": {
@@ -819,8 +829,31 @@ func TestStructValidator(t *testing.T) {
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
+				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 2, "float": "1.2", "array": []string{"2"}},
+			map[string]interface{}{"string": "Blubb", "int": 2, "float": 1.2, "array": []string{"2"}, "date": "2022-01-03T15:04:05.000"},
+			true,
+		},
+		"invalidJsonDateUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+				Date:   time.Time{},
+			},
+			map[string]interface{}{"string": "Blubb", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03 15:04:05.000"},
+			true,
+		},
+		"invalidTypeDateUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+				Date:   time.Time{},
+			},
+			map[string]interface{}{"string": "Blubb", "int": 2, "float": 1.2, "array": []string{"2"}, "date": 2024},
 			true,
 		},
 	}
@@ -838,7 +871,7 @@ func TestStructValidator(t *testing.T) {
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Blubb", "int": 2, "float": 1.2, "array": [2]}`,
+			`{"string": "Blubb", "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000"}`,
 			false,
 		},
 		"invalidJsonStringUpdate": {
@@ -848,7 +881,7 @@ func TestStructValidator(t *testing.T) {
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": Blubb, "int": 2, "float": 1.2, "array": [2]}`,
+			`{"string": Blubb, "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000"}`,
 			true,
 		},
 		"invalidTypeStringUpdate": {
@@ -858,7 +891,7 @@ func TestStructValidator(t *testing.T) {
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": 1, "int": 2, "float": 1.2, "array": [2]}`,
+			`{"string": 1, "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000"}`,
 			true,
 		},
 		"invalidJsonIntUpdate": {
@@ -868,7 +901,7 @@ func TestStructValidator(t *testing.T) {
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Blubb", "int": Blubb, "float": 1.2, "array": [2]}`,
+			`{"string": "Blubb", "int": Blubb, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000"}`,
 			true,
 		},
 		"invalidTypeIntUpdate": {
@@ -878,7 +911,7 @@ func TestStructValidator(t *testing.T) {
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Blubb", "int": "2", "float": 1.2, "array": [2]}`,
+			`{"string": "Blubb", "int": "2", "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000"}`,
 			true,
 		},
 		"invalidJsonFloatUpdate": {
@@ -888,7 +921,7 @@ func TestStructValidator(t *testing.T) {
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Blubb", "int": 2, "float": Blubb, "array": [2]}`,
+			`{"string": "Blubb", "int": 2, "float": Blubb, "array": [2], "date": "2022-01-03T15:04:05.000"}`,
 			true,
 		},
 		"invalidTypeFloatUpdate": {
@@ -898,7 +931,7 @@ func TestStructValidator(t *testing.T) {
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Blubb", "int": 2, "float": "1.2", "array": [2]}`,
+			`{"string": "Blubb", "int": 2, "float": "1.2", "array": [2], "date": "2022-01-03T15:04:05.000"}`,
 			true,
 		},
 		"invalidJsonArrayUpdate": {
@@ -908,7 +941,7 @@ func TestStructValidator(t *testing.T) {
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Blubb", "int": 2, "float": Blubb, "array": Blubb}`,
+			`{"string": "Blubb", "int": 2, "float": Blubb, "array": Blubb, "date": "2022-01-03T15:04:05.000"}`,
 			true,
 		},
 		"invalidTypeArrayUpdate": {
@@ -918,7 +951,27 @@ func TestStructValidator(t *testing.T) {
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Blubb", "int": 2, "float": "1.2", "array": ["2"]}`,
+			`{"string": "Blubb", "int": 2, "float": "1.2", "array": ["2"], "date": "2022-01-03T15:04:05.000"}`,
+			true,
+		},
+		"invalidJsonDateUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			`{"string": "Blubb", "int": 2, "float": Blubb, "array": Blubb, "date": "2022-01-03 15:04:05.000"}`,
+			true,
+		},
+		"invalidTypeDateUpdate": {
+			&TestStructUpdate{
+				String: "Bla",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+			},
+			`{"string": "Blubb", "int": 2, "float": "1.2", "array": ["2"], "date": 2022-01-03T15:04:05.000}`,
 			true,
 		},
 	}

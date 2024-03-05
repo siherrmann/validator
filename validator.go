@@ -424,6 +424,16 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 				return fmt.Errorf("input value for %v has to be of type %v, was %v", reflect.TypeOf(structToUpdate), structValueType, reflect.ValueOf(jsonValue).Kind())
 			}
 
+			err = checkString(jsonValue.(string), conditions, or)
+			if err != nil && len(groupsString) == 0 {
+				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
+			} else if err != nil {
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
+				}
+				continue
+			}
+
 			fieldValue := reflect.ValueOf(structToUpdate).Elem().FieldByName(fieldName)
 			err = setStructValueByJson(fieldValue, jsonKey, jsonValue)
 			if err != nil && len(groupsString) == 0 {
@@ -520,7 +530,7 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 
 			fv.SetBool(bool(jsonValue.(bool)))
 		case reflect.Struct:
-			if _, ok := jsonValue.(bool); !ok {
+			if _, ok := jsonValue.(string); !ok {
 				return fmt.Errorf("input value has to be of type %v, was %v", fv.Kind(), reflect.ValueOf(jsonValue).Kind())
 			}
 
