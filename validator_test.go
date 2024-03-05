@@ -743,7 +743,7 @@ func TestStructValidator(t *testing.T) {
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000"},
+			map[string]interface{}{"string": "Blubb", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000Z"},
 			false,
 		},
 		"invalidJsonStringUpdate": {

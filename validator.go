@@ -534,9 +534,16 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 				return fmt.Errorf("input value has to be of type %v, was %v", fv.Kind(), reflect.ValueOf(jsonValue).Kind())
 			}
 
-			date, err := time.Parse("2006-01-02T15:04:05.000", jsonValue.(string))
+			// Iso8601 date string in local time
+			layout := "2006-01-02T15:04:05.000"
+			if strings.HasSuffix(jsonValue.(string), "Z") {
+				// Iso8601 date string in UTC time
+				layout = "2006-01-02T15:04:05.000Z"
+			}
+
+			date, err := time.Parse(layout, jsonValue.(string))
 			if err != nil {
-				return fmt.Errorf("input value of type %v could not be converted to time.Time", reflect.ValueOf(jsonValue).Kind())
+				return fmt.Errorf("input value of type %v could not be converted to time.Time with err: %v", reflect.ValueOf(jsonValue).Kind(), err.Error())
 			}
 
 			fv.Set(reflect.ValueOf(date))
