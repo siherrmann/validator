@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 )
 
 const (
@@ -417,6 +418,22 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 				}
 				continue
 			}
+		case reflect.Struct:
+			// Only supported struct type is time.Time this far.
+			if _, ok := jsonValue.(string); !ok {
+				return fmt.Errorf("input value for %v has to be of type %v, was %v", reflect.TypeOf(structToUpdate), structValueType, reflect.ValueOf(jsonValue).Kind())
+			}
+
+			fieldValue := reflect.ValueOf(structToUpdate).Elem().FieldByName(fieldName)
+			err = setStructValueByJson(fieldValue, jsonKey, jsonValue)
+			if err != nil && len(groupsString) == 0 {
+				return fmt.Errorf("could not set field %v of %v: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
+			} else if err != nil {
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("could not set field %v: %v", fieldName, err.Error()))
+				}
+				continue
+			}
 		case reflect.Array, reflect.Slice:
 			err = checkArray(reflect.ValueOf(jsonValue), conditions, or)
 			if err != nil && len(groupsString) == 0 {
@@ -502,6 +519,17 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 			}
 
 			fv.SetBool(bool(jsonValue.(bool)))
+		case reflect.Struct:
+			if _, ok := jsonValue.(bool); !ok {
+				return fmt.Errorf("input value has to be of type %v, was %v", fv.Kind(), reflect.ValueOf(jsonValue).Kind())
+			}
+
+			date, err := time.Parse("2006-01-02T15:04:05.000", jsonValue.(string))
+			if err != nil {
+				return fmt.Errorf("input value of type %v could not be converted to time.Time", reflect.ValueOf(jsonValue).Kind())
+			}
+
+			fv.Set(reflect.ValueOf(date))
 		case reflect.Array, reflect.Slice:
 			if reflect.TypeOf(jsonValue).Kind() != reflect.Array && reflect.TypeOf(jsonValue).Kind() != reflect.Slice {
 				return fmt.Errorf("input value has to be of type %v or %v, was %v of %v", reflect.Array, reflect.Slice, reflect.ValueOf(jsonValue).Kind(), reflect.TypeOf(jsonValue).Elem().Kind())
