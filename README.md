@@ -53,3 +53,7 @@ Eg. for an array of int the condition must be convertable to int (bad: `` `vld:"
 
 In the case of rex the int and float input will get converted to a string (`strconv.Itoa(int)` and `fmt.Sprintf("%f", f)`).
 If you want to check more complex cases you can obviously replace **equ**, **neq**, **min**, **max** and **con** with one regular expression.
+
+## Benchmark
+
+To run benchmarks run `go test -bench . -count 100 > bench.txt` (with memory allocation would be `go test -bench . -benchmem -count 100 > bench.txt` but they are 0). To see the results in a nice way after the run install `go install golang.org/x/perf/cmd/benchstat@latest` and log the results to the console: `benchstat bench.txt`

@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"strconv"
 	"testing"
-	"time"
 )
 
 type TestStructNoValidation struct {
@@ -29,40 +28,27 @@ type TestStructValidation struct {
 	Array  []string `json:"array" vld:"min3, gr1min3"`
 }
 
-func TestPerformanceStructValidator(t *testing.T) {
+func BenchmarkUnmarshalToMap(b *testing.B) {
 	// unmarshal to map
 	jsonString := []byte(`{"string": "test", "int": 2, "float": 3.0, "array":  ["", "", ""]}`)
 	unmarshalToMap := &map[string]interface{}{}
-	start := time.Now()
 	err := json.Unmarshal(jsonString, unmarshalToMap)
 	if err != nil {
-		t.Logf("error unmarshalling %s: %v", jsonString, err)
+		b.Logf("error unmarshalling %s: %v", jsonString, err)
 	}
-	elapsed := time.Since(start)
-	t.Logf("unmarshal to map took %s", elapsed)
+}
 
+func BenchmarkUnmarshalToStruct(b *testing.B) {
 	// unmarshal to struct
-	jsonString = []byte(`{"string": "test", "int": 2, "float": 3.0, "array": ["", "", ""]}`)
+	jsonString := []byte(`{"string": "test", "int": 2, "float": 3.0, "array": ["", "", ""]}`)
 	unmarshalToStruct := &TestStructNoValidation{}
-	start = time.Now()
-	err = json.Unmarshal(jsonString, unmarshalToStruct)
+	err := json.Unmarshal(jsonString, unmarshalToStruct)
 	if err != nil {
-		t.Logf("error unmarshalling %s: %v", jsonString, err)
+		b.Logf("error unmarshalling %s: %v", jsonString, err)
 	}
-	elapsed = time.Since(start)
-	t.Logf("unmarshal to struct took %s", elapsed)
+}
 
-	// unmarshal to map
-	jsonString = []byte(`{"string": "test", "int": 2, "float": 3.0, "array":  ["", "", ""]}`)
-	unmarshalToMap = &map[string]interface{}{}
-	start = time.Now()
-	err = json.Unmarshal(jsonString, unmarshalToMap)
-	if err != nil {
-		t.Logf("error unmarshalling %s: %v", jsonString, err)
-	}
-	elapsed = time.Since(start)
-	t.Logf("unmarshal to map took %s", elapsed)
-
+func BenchmarkNoValidation(b *testing.B) {
 	// no validation in validator
 	noValidation := &TestStructNoValidation{
 		String: "test",
@@ -70,14 +56,13 @@ func TestPerformanceStructValidator(t *testing.T) {
 		Float:  3.0,
 		Array:  []string{"", "", ""},
 	}
-	start = time.Now()
-	err = Validate(noValidation)
+	err := Validate(noValidation)
 	if err != nil {
-		t.Logf("error no validation %v", err)
+		b.Logf("error no validation %v", err)
 	}
-	elapsed = time.Since(start)
-	t.Logf("no validation took %s", elapsed)
+}
 
+func BenchmarkValidationRex(b *testing.B) {
 	// validation with regex in validator
 	validationRex := &TestStructValidationRex{
 		String: "test",
@@ -85,14 +70,13 @@ func TestPerformanceStructValidator(t *testing.T) {
 		Float:  3.0,
 		Array:  []string{"", "", ""},
 	}
-	start = time.Now()
-	err = Validate(validationRex)
+	err := Validate(validationRex)
 	if err != nil {
-		t.Logf("error validation rex %v", err)
+		b.Logf("error validation rex %v", err)
 	}
-	elapsed = time.Since(start)
-	t.Logf("validation rex took %s", elapsed)
+}
 
+func BenchmarkManualValidationRex(b *testing.B) {
 	// manual validation with regex
 	var errors int
 	manualValidationRex := &TestStructValidationRex{
@@ -101,7 +85,6 @@ func TestPerformanceStructValidator(t *testing.T) {
 		Float:  3.0,
 		Array:  []string{"", "", ""},
 	}
-	start = time.Now()
 	match, err := regexp.MatchString("^[a-zA-Z0-9]+$", manualValidationRex.String)
 	if err != nil || !match {
 		errors++
@@ -118,11 +101,11 @@ func TestPerformanceStructValidator(t *testing.T) {
 		errors++
 	}
 	if errors > 1 {
-		t.Logf("error manual validation rex %v", err)
+		b.Logf("error manual validation rex %v", err)
 	}
-	elapsed = time.Since(start)
-	t.Logf("manual validation rex took %s", elapsed)
+}
 
+func BenchmarkValidatationMinimalRex(b *testing.B) {
 	// validation with minimal regex (only string) in validator
 	validation := &TestStructValidation{
 		String: "test",
@@ -130,23 +113,22 @@ func TestPerformanceStructValidator(t *testing.T) {
 		Float:  3.0,
 		Array:  []string{"", "", ""},
 	}
-	start = time.Now()
-	err = Validate(validation)
+	err := Validate(validation)
 	if err != nil {
-		t.Logf("error validation %v", err)
+		b.Logf("error validation %v", err)
 	}
-	elapsed = time.Since(start)
-	t.Logf("validation took %s", elapsed)
+}
 
+func BenchmarkManualValidationMinimalRex(b *testing.B) {
 	// manual validation with minimal regex (only string)
+	var errors int
 	manualValidation := &TestStructValidation{
 		String: "test",
 		Int:    2,
 		Float:  3.0,
 		Array:  []string{"", "", ""},
 	}
-	start = time.Now()
-	match, err = regexp.MatchString("^[a-zA-Z0-9]+$", manualValidation.String)
+	match, err := regexp.MatchString("^[a-zA-Z0-9]+$", manualValidation.String)
 	if err != nil || !match {
 		errors++
 	}
@@ -160,36 +142,32 @@ func TestPerformanceStructValidator(t *testing.T) {
 		errors++
 	}
 	if errors > 1 {
-		t.Logf("error manual validation %v", err)
+		b.Logf("error manual validation %v", err)
 	}
-	elapsed = time.Since(start)
-	t.Logf("manual validation took %s", elapsed)
+}
 
+func BenchmarkValidationWithNoValidation(b *testing.B) {
 	// no validation in validator
-	noValidation = &TestStructNoValidation{
+	noValidation := &TestStructNoValidation{
 		String: "test",
 		Int:    2,
 		Float:  3.0,
 		Array:  []string{"", "", ""},
 	}
-	start = time.Now()
-	err = Validate(noValidation)
+	err := Validate(noValidation)
 	if err != nil {
-		t.Logf("error no validation %v", err)
+		b.Logf("error no validation %v", err)
 	}
-	elapsed = time.Since(start)
-	t.Logf("no validation took %s", elapsed)
+}
 
+func BenchmarkUnmarshalAndValidate(b *testing.B) {
 	// unmarshal and validate
-	jsonString = []byte(`{"string": "test", "int": 2, "float": 3.0, "array": ["", "", ""]}`)
+	jsonString := []byte(`{"string": "test", "int": 2, "float": 3.0, "array": ["", "", ""]}`)
 	unmarshalAndValidate := &TestStructValidation{}
-	start = time.Now()
-	err = UnmarshalAndValidate(jsonString, unmarshalAndValidate)
+	err := UnmarshalAndValidate(jsonString, unmarshalAndValidate)
 	if err != nil {
-		t.Logf("error unmarshal and validate %v", err)
+		b.Logf("error unmarshal and validate %v", err)
 	}
-	elapsed = time.Since(start)
-	t.Logf("unmarshal and validate took %s with %v", elapsed, unmarshalAndValidate)
 
-	t.Error("test ended")
+	b.Error("test ended")
 }
