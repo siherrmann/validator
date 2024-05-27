@@ -418,28 +418,8 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 				}
 				continue
 			}
-		case reflect.Array, reflect.Slice:
-			err = checkArray(reflect.ValueOf(jsonValue), conditions, or)
-			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
-			} else if err != nil {
-				for _, groupName := range groupsValue {
-					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
-				}
-				continue
-			}
-
-			fieldValue := reflect.ValueOf(structToUpdate).Elem().FieldByName(fieldName)
-			err = setStructValueByJson(fieldValue, jsonKey, jsonInput[jsonKey])
-			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("could not set field %v of %v: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
-			} else if err != nil {
-				for _, groupName := range groupsValue {
-					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("could not set field %v: %v", fieldName, err.Error()))
-				}
-			}
 		case reflect.Struct:
-			// Only supported struct type is time.Time and custom structs with upd tag this far.
+			// Only supported struct type is time.Time and custom structs with upd tags this far.
 			if stringInput, ok := jsonValue.(string); ok {
 				err = checkString(stringInput, conditions, or)
 				if err != nil && len(groupsString) == 0 {
@@ -485,7 +465,50 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 			} else {
 				return fmt.Errorf("input value for %v has to be of type %v, was %v", reflect.TypeOf(structToUpdate), structValueType, reflect.ValueOf(jsonValue).Kind())
 			}
+		case reflect.Map:
+			if _, ok := jsonValue.(map[string]any); !ok {
+				return fmt.Errorf("input value for %v has to be of type %v, was %v", reflect.TypeOf(structToUpdate), structValueType, reflect.ValueOf(jsonValue).Kind())
+			}
 
+			err = checkMap(reflect.ValueOf(jsonValue), conditions, or)
+			if err != nil && len(groupsString) == 0 {
+				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
+			} else if err != nil {
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
+				}
+				continue
+			}
+
+			fieldValue := reflect.ValueOf(structToUpdate).Elem().FieldByName(fieldName)
+			err = setStructValueByJson(fieldValue, jsonKey, jsonInput[jsonKey])
+			if err != nil && len(groupsString) == 0 {
+				return fmt.Errorf("could not set field %v of %v: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
+			} else if err != nil {
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("could not set field %v: %v", fieldName, err.Error()))
+				}
+			}
+		case reflect.Array, reflect.Slice:
+			err = checkArray(reflect.ValueOf(jsonValue), conditions, or)
+			if err != nil && len(groupsString) == 0 {
+				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
+			} else if err != nil {
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
+				}
+				continue
+			}
+
+			fieldValue := reflect.ValueOf(structToUpdate).Elem().FieldByName(fieldName)
+			err = setStructValueByJson(fieldValue, jsonKey, jsonInput[jsonKey])
+			if err != nil && len(groupsString) == 0 {
+				return fmt.Errorf("could not set field %v of %v: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
+			} else if err != nil {
+				for _, groupName := range groupsValue {
+					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("could not set field %v: %v", fieldName, err.Error()))
+				}
+			}
 		default:
 			return fmt.Errorf("invalid field type for %v: %v", reflect.TypeOf(structToUpdate), value.Type().Kind())
 		}
@@ -569,6 +592,12 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 			} else {
 				fv.Set(reflect.ValueOf(jsonValue))
 			}
+		case reflect.Map:
+			if _, ok := jsonValue.(map[string]any); !ok {
+				return fmt.Errorf("input value has to be of type %v, was %v", fv.Kind(), reflect.ValueOf(jsonValue).Kind())
+			}
+
+			fv.Set(reflect.ValueOf(jsonValue))
 		case reflect.Array, reflect.Slice:
 			if reflect.TypeOf(jsonValue).Kind() != reflect.Array && reflect.TypeOf(jsonValue).Kind() != reflect.Slice {
 				return fmt.Errorf("input value has to be of type %v or %v, was %v of %v", reflect.Array, reflect.Slice, reflect.ValueOf(jsonValue).Kind(), reflect.TypeOf(jsonValue).Elem().Kind())

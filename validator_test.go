@@ -112,12 +112,13 @@ type TestRequestWrapperUpdateWithJson struct {
 }
 
 type TestUpdate struct {
-	String string          `upd:"string, min1, gr1min6"`
-	Int    int             `upd:"int, min1, gr1min6"`
-	Float  float64         `upd:"float, min1, gr1min6"`
-	Array  []int           `upd:"array, min1, gr1min6"`
-	Date   time.Time       `upd:"date, min1, gr1min6"`
-	Struct TestUpdateInner `upd:"struct, min1, gr1min6"`
+	String string          `upd:"string, min1, gr1min7"`
+	Int    int             `upd:"int, min1, gr1min7"`
+	Float  float64         `upd:"float, min1, gr1min7"`
+	Array  []int           `upd:"array, min1, gr1min7"`
+	Date   time.Time       `upd:"date, min1, gr1min7"`
+	Struct TestUpdateInner `upd:"struct, min1, gr1min7"`
+	Map    JsonMap         `upd:"map, min1 conkey, gr1min7"`
 }
 
 type TestUpdateInner struct {
@@ -742,148 +743,185 @@ func TestStructValidator(t *testing.T) {
 	testCasesUpdate := map[string]*TestRequestWrapperUpdate{
 		"validUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 				Date:   time.Time{},
 				Struct: TestUpdateInner{
-					String: "blubb",
+					String: "foo",
+				},
+				Map: JsonMap{
+					"key": "foo",
 				},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			false,
 		},
 		"invalidJsonStringUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 2, "float": "1.2", "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": "1.2", "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidTypeStringUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": 1, "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}},
+			map[string]interface{}{"string": 1, "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidJsonIntUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 0, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 0, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidTypeIntUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": "2", "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}},
+			map[string]interface{}{"string": "Bar", "int": "2", "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidJsonFloatUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 2, "float": 0.0, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 0.0, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidTypeFloatUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 2, "float": "1.2", "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": "1.2", "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidJsonArrayUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 2, "float": 1.2, "array": []int{}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidTypeArrayUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 2, "float": 1.2, "array": []string{"2"}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []string{"2"}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidJsonDateUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03 15:04:05.000", "struct": map[string]any{"string": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03 15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidTypeDateUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 2, "float": 1.2, "array": []int{2}, "date": 2024, "struct": map[string]any{"string": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{2}, "date": 2024, "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidJsonStructUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "testing"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "testing"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidTypeStructUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Blubb", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": 2},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": 2, "map": map[string]any{"key": "test"}},
+			true,
+		},
+		"invalidJsonMapUpdate": {
+			&TestUpdate{
+				String: "Foo",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+				Date:   time.Time{},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+				Map: JsonMap{
+					"key": "foo",
+				},
+			},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"test": "test"}},
+			true,
+		},
+		"invalidTypeMapUpdate": {
+			&TestUpdate{
+				String: "Foo",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+				Date:   time.Time{},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+				Map: JsonMap{
+					"key": "foo",
+				},
+			},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[int]any{2: "test"}},
 			true,
 		},
 	}
@@ -896,135 +934,161 @@ func TestStructValidator(t *testing.T) {
 	testCasesUpdateWithJson := map[string]*TestRequestWrapperUpdateWithJson{
 		"validUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 				Struct: TestUpdateInner{
-					String: "blubb",
+					String: "foo",
 				},
 			},
-			`{"string": "Blubb", "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}}`,
+			`{"string": "Bar", "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
 			false,
 		},
 		"invalidJsonStringUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": Blubb, "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}}`,
+			`{"string": Bar, "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
 			true,
 		},
 		"invalidTypeStringUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": 1, "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}}`,
+			`{"string": 1, "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
 			true,
 		},
 		"invalidJsonIntUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Blubb", "int": Blubb, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}}`,
+			`{"string": "Bar", "int": Bar, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
 			true,
 		},
 		"invalidTypeIntUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Blubb", "int": "2", "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}}`,
+			`{"string": "Bar", "int": "2", "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
 			true,
 		},
 		"invalidJsonFloatUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Blubb", "int": 2, "float": Blubb, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}}`,
+			`{"string": "Bar", "int": 2, "float": Bar, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
 			true,
 		},
 		"invalidTypeFloatUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Blubb", "int": 2, "float": "1.2", "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}}`,
+			`{"string": "Bar", "int": 2, "float": "1.2", "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
 			true,
 		},
 		"invalidJsonArrayUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Blubb", "int": 2, "float": 1.2, "array": Blubb, "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}}`,
+			`{"string": "Bar", "int": 2, "float": 1.2, "array": Bar, "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
 			true,
 		},
 		"invalidTypeArrayUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Blubb", "int": 2, "float": 1.2, "array": ["2"], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}}`,
+			`{"string": "Bar", "int": 2, "float": 1.2, "array": ["2"], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
 			true,
 		},
 		"invalidJsonDateUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Blubb", "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03 15:04:05.000", "struct": {"string": "test"}}`,
+			`{"string": "Bar", "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03 15:04:05.000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
 			true,
 		},
 		"invalidTypeDateUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Blubb", "int": 2, "float": 1.2, "array": [2], "date": 2022-01-03T15:04:05.000, "struct": {"string": "test"}}`,
+			`{"string": "Bar", "int": 2, "float": 1.2, "array": [2], "date": 2022-01-03T15:04:05.000, "struct": {"string": "test"}, "map": {"key": "test"}}`,
 			true,
 		},
 		"invalidJsonStructUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Blubb", "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "testing"}}`,
+			`{"string": "Bar", "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "testing"}, "map": {"key": "test"}}`,
 			true,
 		},
 		"invalidTypeStructUpdate": {
 			&TestUpdate{
-				String: "Bla",
+				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Blubb", "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": 1}`,
+			`{"string": "Bar", "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": 1, "map": {"key": "test"}}`,
+			true,
+		},
+		"invalidJsonMapUpdate": {
+			&TestUpdate{
+				String: "Foo",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			`{"string": "Bar", "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {"test": "test"}}`,
+			true,
+		},
+		"invalidTypeMapUpdate": {
+			&TestUpdate{
+				String: "Foo",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			`{"string": "Bar", "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {2: "test"}}`,
 			true,
 		},
 	}
