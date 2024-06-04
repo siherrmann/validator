@@ -176,7 +176,7 @@ func Validate(v any) error {
 				}
 			}
 		default:
-			return fmt.Errorf("invalid field type for %v: %v", reflect.TypeOf(v), value.Type().Kind())
+			return fmt.Errorf("invalid field type for %v in %v: %v", fieldName, reflect.TypeOf(v), value.Type().Kind())
 		}
 	}
 
@@ -510,7 +510,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 				}
 			}
 		default:
-			return fmt.Errorf("invalid field type for %v: %v", reflect.TypeOf(structToUpdate), value.Type().Kind())
+			return fmt.Errorf("invalid field type for %v in %v: %v", fieldName, reflect.TypeOf(structToUpdate), value.Type().Kind())
 		}
 	}
 
@@ -716,7 +716,7 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 				return fmt.Errorf("invalid array element type: %v", reflect.TypeOf(fv.Interface()).Elem().Kind())
 			}
 		default:
-			return fmt.Errorf("invalid field type: %v", reflect.TypeOf(jsonValue).Elem().Kind())
+			return fmt.Errorf("invalid field type of %v: %v", jsonKey, reflect.TypeOf(jsonValue).Elem().Kind())
 		}
 	}
 	return nil
