@@ -10,30 +10,69 @@ func ArrayOfInterfaceToArrayOf[T comparable](in []interface{}) ([]T, error) {
 	inReflect := reflect.ValueOf(in)
 	arrayOfType := []T{}
 	for i := 0; i < inReflect.Len(); i++ {
-		// This case is for the case that json.Unmarshal unmarshals an int value into a float64 value.
-		if (reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int || reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int8 || reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int16 || reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int32 || reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int64) && reflect.TypeOf(inReflect.Index(i).Interface()).Kind() == reflect.Float64 {
+		var newValueInterface interface{}
+		switch reflect.TypeOf(arrayOfType).Elem().Kind() {
+		case reflect.Int:
 			valueOfType, ok := inReflect.Index(i).Interface().(float64)
-			if !ok {
-				return []T{}, fmt.Errorf("invalid input array element type: %v, expected: %v", reflect.TypeOf(inReflect.Index(i).Interface()).Kind(), reflect.TypeOf(arrayOfType).Elem().Kind())
-			}
-			var newValueInterface interface{}
-			if reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int {
+			if ok {
 				newValueInterface = int(valueOfType)
 				arrayOfType = append(arrayOfType, newValueInterface.(T))
-			} else if reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int8 {
+			} else {
+				valueOfType, ok := inReflect.Index(i).Interface().(T)
+				if !ok {
+					return []T{}, fmt.Errorf("invalid input array element type: %v, expected: %v", reflect.TypeOf(inReflect.Index(i).Interface()).Kind(), reflect.TypeOf(arrayOfType).Elem().Kind())
+				}
+				arrayOfType = append(arrayOfType, valueOfType)
+			}
+		case reflect.Int8:
+			valueOfType, ok := inReflect.Index(i).Interface().(float64)
+			if ok {
 				newValueInterface = int8(valueOfType)
 				arrayOfType = append(arrayOfType, newValueInterface.(T))
-			} else if reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int16 {
+			} else {
+				valueOfType, ok := inReflect.Index(i).Interface().(T)
+				if !ok {
+					return []T{}, fmt.Errorf("invalid input array element type: %v, expected: %v", reflect.TypeOf(inReflect.Index(i).Interface()).Kind(), reflect.TypeOf(arrayOfType).Elem().Kind())
+				}
+				arrayOfType = append(arrayOfType, valueOfType)
+			}
+		case reflect.Int16:
+			valueOfType, ok := inReflect.Index(i).Interface().(float64)
+			if ok {
 				newValueInterface = int16(valueOfType)
 				arrayOfType = append(arrayOfType, newValueInterface.(T))
-			} else if reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int32 {
+			} else {
+				valueOfType, ok := inReflect.Index(i).Interface().(T)
+				if !ok {
+					return []T{}, fmt.Errorf("invalid input array element type: %v, expected: %v", reflect.TypeOf(inReflect.Index(i).Interface()).Kind(), reflect.TypeOf(arrayOfType).Elem().Kind())
+				}
+				arrayOfType = append(arrayOfType, valueOfType)
+			}
+		case reflect.Int32:
+			valueOfType, ok := inReflect.Index(i).Interface().(float64)
+			if ok {
 				newValueInterface = int32(valueOfType)
 				arrayOfType = append(arrayOfType, newValueInterface.(T))
-			} else if reflect.TypeOf(arrayOfType).Elem().Kind() == reflect.Int64 {
+			} else {
+				valueOfType, ok := inReflect.Index(i).Interface().(T)
+				if !ok {
+					return []T{}, fmt.Errorf("invalid input array element type: %v, expected: %v", reflect.TypeOf(inReflect.Index(i).Interface()).Kind(), reflect.TypeOf(arrayOfType).Elem().Kind())
+				}
+				arrayOfType = append(arrayOfType, valueOfType)
+			}
+		case reflect.Int64:
+			valueOfType, ok := inReflect.Index(i).Interface().(float64)
+			if ok {
 				newValueInterface = int64(valueOfType)
 				arrayOfType = append(arrayOfType, newValueInterface.(T))
+			} else {
+				valueOfType, ok := inReflect.Index(i).Interface().(T)
+				if !ok {
+					return []T{}, fmt.Errorf("invalid input array element type: %v, expected: %v", reflect.TypeOf(inReflect.Index(i).Interface()).Kind(), reflect.TypeOf(arrayOfType).Elem().Kind())
+				}
+				arrayOfType = append(arrayOfType, valueOfType)
 			}
-		} else {
+		default:
 			valueOfType, ok := inReflect.Index(i).Interface().(T)
 			if !ok {
 				return []T{}, fmt.Errorf("invalid input array element type: %v, expected: %v", reflect.TypeOf(inReflect.Index(i).Interface()).Kind(), reflect.TypeOf(arrayOfType).Elem().Kind())
