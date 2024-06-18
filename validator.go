@@ -610,9 +610,9 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 					if err != nil {
 						return err
 					}
-					reflect.Copy(fv, reflect.ValueOf(typedArray))
+					fv.Set(reflect.ValueOf(typedArray))
 				} else if _, ok := jsonValue.([]int); ok {
-					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]int)))
+					fv.Set(reflect.ValueOf(jsonValue.([]int)))
 				} else {
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
@@ -622,9 +622,9 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 					if err != nil {
 						return err
 					}
-					reflect.Copy(fv, reflect.ValueOf(typedArray))
+					fv.Set(reflect.ValueOf(typedArray))
 				} else if _, ok := jsonValue.([]int64); ok {
-					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]int64)))
+					fv.Set(reflect.ValueOf(jsonValue.([]int64)))
 				} else {
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
@@ -634,9 +634,9 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 					if err != nil {
 						return err
 					}
-					reflect.Copy(fv, reflect.ValueOf(typedArray))
+					fv.Set(reflect.ValueOf(typedArray))
 				} else if _, ok := jsonValue.([]int32); ok {
-					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]int32)))
+					fv.Set(reflect.ValueOf(jsonValue.([]int32)))
 				} else {
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
@@ -646,9 +646,9 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 					if err != nil {
 						return err
 					}
-					reflect.Copy(fv, reflect.ValueOf(typedArray))
+					fv.Set(reflect.ValueOf(typedArray))
 				} else if _, ok := jsonValue.([]int16); ok {
-					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]int16)))
+					fv.Set(reflect.ValueOf(jsonValue.([]int16)))
 				} else {
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
@@ -658,9 +658,9 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 					if err != nil {
 						return err
 					}
-					reflect.Copy(fv, reflect.ValueOf(typedArray))
+					fv.Set(reflect.ValueOf(typedArray))
 				} else if _, ok := jsonValue.([]int8); ok {
-					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]int8)))
+					fv.Set(reflect.ValueOf(jsonValue.([]int8)))
 				} else {
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
@@ -670,9 +670,9 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 					if err != nil {
 						return err
 					}
-					reflect.Copy(fv, reflect.ValueOf(typedArray))
+					fv.Set(reflect.ValueOf(typedArray))
 				} else if _, ok := jsonValue.([]float64); ok {
-					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]float64)))
+					fv.Set(reflect.ValueOf(jsonValue.([]float64)))
 				} else {
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
@@ -682,9 +682,9 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 					if err != nil {
 						return err
 					}
-					reflect.Copy(fv, reflect.ValueOf(typedArray))
+					fv.Set(reflect.ValueOf(typedArray))
 				} else if _, ok := jsonValue.([]float32); ok {
-					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]float32)))
+					fv.Set(reflect.ValueOf(jsonValue.([]float32)))
 				} else {
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
@@ -694,9 +694,9 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 					if err != nil {
 						return err
 					}
-					reflect.Copy(fv, reflect.ValueOf(typedArray))
+					fv.Set(reflect.ValueOf(typedArray))
 				} else if _, ok := jsonValue.([]string); ok {
-					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]string)))
+					fv.Set(reflect.ValueOf(jsonValue.([]string)))
 				} else {
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
@@ -706,9 +706,9 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 					if err != nil {
 						return err
 					}
-					reflect.Copy(fv, reflect.ValueOf(typedArray))
+					fv.Set(reflect.ValueOf(typedArray))
 				} else if _, ok := jsonValue.([]bool); ok {
-					reflect.Copy(fv, reflect.ValueOf(jsonValue.([]bool)))
+					fv.Set(reflect.ValueOf(jsonValue.([]bool)))
 				} else {
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}

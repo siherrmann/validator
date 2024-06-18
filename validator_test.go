@@ -121,6 +121,16 @@ type TestUpdate struct {
 	Map    JsonMap         `upd:"map, min1 conkey, gr1min7"`
 }
 
+type TestUpdatePartial struct {
+	String string `upd:"string, min1, gr1min2"`
+	Int    int
+	Float  float64
+	Array  []int `upd:"array, min1, gr1min2"`
+	Date   time.Time
+	Struct TestUpdateInner
+	Map    JsonMap
+}
+
 type TestUpdateInner struct {
 	String string `upd:"string, equtest"`
 }
@@ -746,7 +756,6 @@ func TestStructValidator(t *testing.T) {
 				String: "Foo",
 				Int:    1,
 				Float:  1.1,
-				Array:  []int{1},
 				Date:   time.Time{},
 				Struct: TestUpdateInner{
 					String: "foo",
@@ -755,7 +764,7 @@ func TestStructValidator(t *testing.T) {
 					"key": "foo",
 				},
 			},
-			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []interface{}{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			false,
 		},
 		"invalidJsonStringUpdate": {
@@ -927,6 +936,74 @@ func TestStructValidator(t *testing.T) {
 	}
 
 	for k, v := range testCasesUpdate {
+		err := ValidateAndUpdate(v.JsonUpdate, v.Data)
+		assertErrorUpdate(t, k, err, v.Error)
+	}
+
+	testCasesUpdatePartial := map[string]*TestRequestWrapperUpdate{
+		"validUpdate": {
+			&TestUpdate{
+				String: "Foo",
+				Int:    1,
+				Float:  1.1,
+				Date:   time.Time{},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+				Map: JsonMap{
+					"key": "foo",
+				},
+			},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []interface{}{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			false,
+		},
+		"invalidJsonStringUpdate": {
+			&TestUpdate{
+				String: "Foo",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+				Date:   time.Time{},
+			},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": "1.2", "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			true,
+		},
+		"invalidTypeStringUpdate": {
+			&TestUpdate{
+				String: "Foo",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+				Date:   time.Time{},
+			},
+			map[string]interface{}{"string": 1, "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			true,
+		},
+		"invalidJsonArrayUpdate": {
+			&TestUpdate{
+				String: "Foo",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+				Date:   time.Time{},
+			},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			true,
+		},
+		"invalidTypeArrayUpdate": {
+			&TestUpdate{
+				String: "Foo",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+				Date:   time.Time{},
+			},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []string{"2"}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			true,
+		},
+	}
+
+	for k, v := range testCasesUpdatePartial {
 		err := ValidateAndUpdate(v.JsonUpdate, v.Data)
 		assertErrorUpdate(t, k, err, v.Error)
 	}
