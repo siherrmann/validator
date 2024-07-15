@@ -576,11 +576,11 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 			fv.SetBool(bool(jsonValue.(bool)))
 		case reflect.Struct:
 			if _, ok := jsonValue.(string); ok {
-				// Iso8601 date string in local time
-				layout := "2006-01-02T15:04:05.000"
+				// Iso8601 date string in local time (yyyy-MM-ddTHH:mm:ss.mmmuuu)
+				layout := "2006-01-02T15:04:05.000000"
 				if strings.HasSuffix(jsonValue.(string), "Z") {
-					// Iso8601 date string in UTC time
-					layout = "2006-01-02T15:04:05.000Z"
+					// Iso8601 date string in UTC time (yyyy-MM-ddTHH:mm:ss.mmmuuuZ)
+					layout = "2006-01-02T15:04:05.000000Z"
 				}
 
 				date, err := time.Parse(layout, jsonValue.(string))
