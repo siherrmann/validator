@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -575,15 +577,44 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 
 			fv.SetBool(bool(jsonValue.(bool)))
 		case reflect.Struct:
-			if _, ok := jsonValue.(string); ok {
+			if v, ok := jsonValue.(string); ok {
+				// Unix seconds date string
+				match, _ := regexp.MatchString("^[0-9]{1,}$", v)
+				if match {
+					seconds, err := strconv.ParseInt(v, 10, 64)
+					if err != nil {
+						panic(err)
+					}
+					fv.Set(reflect.ValueOf(time.Unix(seconds, 0)))
+					return nil
+				}
+
+				layout := ""
 				// Iso8601 date string in local time (yyyy-MM-ddTHH:mm:ss.mmmuuu)
-				layout := "2006-01-02T15:04:05.000000"
-				if strings.HasSuffix(jsonValue.(string), "Z") {
-					// Iso8601 date string in UTC time (yyyy-MM-ddTHH:mm:ss.mmmuuuZ)
+				match, _ = regexp.MatchString("^[-:.T0-9]{26}$", v)
+				if match {
+					layout = "2006-01-02T15:04:05.000000"
+				}
+
+				// Iso8601 date string in UTC time (yyyy-MM-ddTHH:mm:ss.mmmuuuZ)
+				match, _ = regexp.MatchString("^[-:.T0-9]{26}Z$", v)
+				if match {
 					layout = "2006-01-02T15:04:05.000000Z"
 				}
 
-				date, err := time.Parse(layout, jsonValue.(string))
+				// Iso8601 date string in local time without microseconds (yyyy-MM-ddTHH:mm:ss.mmm)
+				match, _ = regexp.MatchString("^[-:.T0-9]{23}$", v)
+				if match {
+					layout = "2006-01-02T15:04:05.000"
+				}
+
+				// Iso8601 date string in UTC time without microseconds (yyyy-MM-ddTHH:mm:ss.mmmZ)
+				match, _ = regexp.MatchString("^[-:.T0-9]{23}Z$", v)
+				if match {
+					layout = "2006-01-02T15:04:05.000Z"
+				}
+
+				date, err := time.Parse(layout, v)
 				if err != nil {
 					return fmt.Errorf("input value of type %v could not be converted to time.Time with err: %v", reflect.ValueOf(jsonValue).Kind(), err.Error())
 				}

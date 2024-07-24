@@ -1009,7 +1009,20 @@ func TestStructValidator(t *testing.T) {
 	}
 
 	testCasesUpdateWithJson := map[string]*TestRequestWrapperUpdateWithJson{
-		"validUpdate": {
+		"validUpdateDateUnix": {
+			&TestUpdate{
+				String: "Foo",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			`{"string": "Bar", "int": 2, "float": 1.2, "array": [2], "date": "234767127", "struct": {"string": "test"}, "map": {"key": "test"}}`,
+			false,
+		},
+		"validUpdateDateIso8601": {
 			&TestUpdate{
 				String: "Foo",
 				Int:    1,
@@ -1020,6 +1033,45 @@ func TestStructValidator(t *testing.T) {
 				},
 			},
 			`{"string": "Bar", "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
+			false,
+		},
+		"validUpdateDateIso8601Utc": {
+			&TestUpdate{
+				String: "Foo",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			`{"string": "Bar", "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000Z", "struct": {"string": "test"}, "map": {"key": "test"}}`,
+			false,
+		},
+		"validUpdateDateIso8601WithMicro": {
+			&TestUpdate{
+				String: "Foo",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			`{"string": "Bar", "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
+			false,
+		},
+		"validUpdateDateIso8601WithMicroUtc": {
+			&TestUpdate{
+				String: "Foo",
+				Int:    1,
+				Float:  1.1,
+				Array:  []int{1},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			`{"string": "Bar", "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000000Z", "struct": {"string": "test"}, "map": {"key": "test"}}`,
 			false,
 		},
 		"invalidJsonStringUpdate": {
