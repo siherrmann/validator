@@ -102,6 +102,18 @@ func getConditionByType(conditionFull string, conditionType string) (string, err
 	return condition, nil
 }
 
+func getConditionsAndOrFromString(in string) ([]string, bool) {
+	or := false
+	conditions := strings.Split(in, " ")
+	if Contains(conditions, OR) {
+		conditions = RemoveWhere(conditions, func(v string) bool {
+			return v == OR
+		})
+		or = true
+	}
+	return conditions, or
+}
+
 func Contains[V comparable](list []V, v V) bool {
 	for _, s := range list {
 		if v == s {

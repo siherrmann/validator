@@ -4,10 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"regexp"
-	"strconv"
 	"strings"
-	"time"
 )
 
 const (
@@ -109,14 +106,7 @@ func Validate(v any) error {
 		value := structFull.Field(i)
 		fieldName := structFull.Type().Field(i).Name
 
-		or := false
-		conditions := strings.Split(tagSplit[0], " ")
-		if Contains(conditions, OR) {
-			conditions = RemoveWhere[string](conditions, func(v string) bool {
-				return v == OR
-			})
-			or = true
-		}
+		conditions, or := getConditionsAndOrFromString(tagSplit[0])
 
 		groupsValue := []string{}
 		groupsString := []string{}
@@ -276,13 +266,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 		or := false
 		conditions := []string{}
 		if len(tagSplit) > 1 {
-			conditions = strings.Split(tagSplit[1], " ")
-			if Contains(conditions, OR) {
-				conditions = RemoveWhere[string](conditions, func(v string) bool {
-					return v == OR
-				})
-				or = true
-			}
+			conditions, or = getConditionsAndOrFromString(tagSplit[1])
 		}
 
 		groupsValue := []string{}
@@ -568,57 +552,18 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 			if _, ok := jsonValue.(string); !ok {
 				return fmt.Errorf("input value has to be of type %v, was %v", fv.Kind(), reflect.ValueOf(jsonValue).Kind())
 			}
-
 			fv.SetString(string(jsonValue.(string)))
 		case reflect.Bool:
 			if _, ok := jsonValue.(bool); !ok {
 				return fmt.Errorf("input value has to be of type %v, was %v", fv.Kind(), reflect.ValueOf(jsonValue).Kind())
 			}
-
 			fv.SetBool(bool(jsonValue.(bool)))
 		case reflect.Struct:
 			if v, ok := jsonValue.(string); ok {
-				// Unix seconds date string
-				match, _ := regexp.MatchString("^[0-9]{1,}$", v)
-				if match {
-					seconds, err := strconv.ParseInt(v, 10, 64)
-					if err != nil {
-						panic(err)
-					}
-					fv.Set(reflect.ValueOf(time.Unix(seconds, 0)))
-					return nil
-				}
-
-				layout := ""
-				// Iso8601 date string in local time (yyyy-MM-ddTHH:mm:ss.mmmuuu)
-				match, _ = regexp.MatchString("^[-:.T0-9]{26}$", v)
-				if match {
-					layout = "2006-01-02T15:04:05.000000"
-				}
-
-				// Iso8601 date string in UTC time (yyyy-MM-ddTHH:mm:ss.mmmuuuZ)
-				match, _ = regexp.MatchString("^[-:.T0-9]{26}Z$", v)
-				if match {
-					layout = "2006-01-02T15:04:05.000000Z"
-				}
-
-				// Iso8601 date string in local time without microseconds (yyyy-MM-ddTHH:mm:ss.mmm)
-				match, _ = regexp.MatchString("^[-:.T0-9]{23}$", v)
-				if match {
-					layout = "2006-01-02T15:04:05.000"
-				}
-
-				// Iso8601 date string in UTC time without microseconds (yyyy-MM-ddTHH:mm:ss.mmmZ)
-				match, _ = regexp.MatchString("^[-:.T0-9]{23}Z$", v)
-				if match {
-					layout = "2006-01-02T15:04:05.000Z"
-				}
-
-				date, err := time.Parse(layout, v)
+				date, err := Time.InterfaceFromString(v, "")
 				if err != nil {
-					return fmt.Errorf("input value of type %v could not be converted to time.Time with err: %v", reflect.ValueOf(jsonValue).Kind(), err.Error())
+					return err
 				}
-
 				fv.Set(reflect.ValueOf(date))
 			} else {
 				fv.Set(reflect.ValueOf(jsonValue))
@@ -627,7 +572,6 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 			if _, ok := jsonValue.(map[string]any); !ok {
 				return fmt.Errorf("input value has to be of type %v, was %v", fv.Kind(), reflect.ValueOf(jsonValue).Kind())
 			}
-
 			fv.Set(reflect.ValueOf(jsonValue))
 		case reflect.Array, reflect.Slice:
 			if reflect.TypeOf(jsonValue).Kind() != reflect.Array && reflect.TypeOf(jsonValue).Kind() != reflect.Slice {
