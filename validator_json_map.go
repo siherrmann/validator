@@ -61,6 +61,10 @@ func InterfaceFromString(in string, inType model.ValidatorType, condition string
 		}
 		return out, nil
 	case model.Bool:
+		// case for html forms
+		if in == "on" {
+			return true, nil
+		}
 		out, err := strconv.ParseBool(in)
 		if err != nil {
 			return nil, err
