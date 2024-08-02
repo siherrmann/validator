@@ -1,9 +1,8 @@
-package validator
+package helper
 
 import (
 	"fmt"
 	"reflect"
-	"strings"
 )
 
 func ArrayOfInterfaceToArrayOf[T comparable](in []interface{}) ([]T, error) {
@@ -81,54 +80,4 @@ func ArrayOfInterfaceToArrayOf[T comparable](in []interface{}) ([]T, error) {
 		}
 	}
 	return arrayOfType, nil
-}
-
-func getConditionType(s string) string {
-	if len(s) > 2 {
-		return s[:3]
-	}
-	return s
-}
-
-func getConditionByType(conditionFull string, conditionType string) (string, error) {
-	if len(conditionType) != 3 {
-		return "", fmt.Errorf("length of conditionType has to be 3: %s", conditionType)
-	}
-	condition := strings.TrimPrefix(conditionFull, conditionType)
-	if len(condition) == 0 {
-		return "", fmt.Errorf("empty %s value", conditionType)
-	}
-
-	return condition, nil
-}
-
-func getConditionsAndOrFromString(in string) ([]string, bool) {
-	or := false
-	conditions := strings.Split(in, " ")
-	if Contains(conditions, OR) {
-		conditions = RemoveWhere(conditions, func(v string) bool {
-			return v == OR
-		})
-		or = true
-	}
-	return conditions, or
-}
-
-func Contains[V comparable](list []V, v V) bool {
-	for _, s := range list {
-		if v == s {
-			return true
-		}
-	}
-	return false
-}
-
-func RemoveWhere[V comparable](list []V, f func(V) bool) []V {
-	var res []V
-	for _, v := range list {
-		if !f(v) {
-			res = append(res, v)
-		}
-	}
-	return res
 }

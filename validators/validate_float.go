@@ -1,23 +1,26 @@
-package validator
+package validators
 
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
+
+	"github.com/siherrmann/validator/model"
 )
 
-func checkFloat(f float64, c []string, or bool) error {
-	if Contains(c, NONE) || len(c) == 0 {
+func CheckFloat(f float64, c []string, or bool) error {
+	if slices.Contains(c, model.NONE) || len(c) == 0 {
 		return nil
 	}
 
 	var errors []error
 	for _, conFull := range c {
-		conType := getConditionType(conFull)
+		conType := model.GetConditionType(conFull)
 
 		switch conType {
-		case EQUAL:
-			condition, err := getConditionByType(conFull, EQUAL)
+		case model.EQUAL:
+			condition, err := model.GetConditionByType(conFull, model.EQUAL)
 			if err != nil {
 				if or {
 					errors = append(errors, err)
@@ -41,8 +44,8 @@ func checkFloat(f float64, c []string, or bool) error {
 					}
 				}
 			}
-		case NOT_EQUAL:
-			condition, err := getConditionByType(conFull, NOT_EQUAL)
+		case model.NOT_EQUAL:
+			condition, err := model.GetConditionByType(conFull, model.NOT_EQUAL)
 			if err != nil {
 				if or {
 					errors = append(errors, err)
@@ -66,8 +69,8 @@ func checkFloat(f float64, c []string, or bool) error {
 					}
 				}
 			}
-		case MIN_VALUE:
-			condition, err := getConditionByType(conFull, MIN_VALUE)
+		case model.MIN_VALUE:
+			condition, err := model.GetConditionByType(conFull, model.MIN_VALUE)
 			if err != nil {
 				if or {
 					errors = append(errors, err)
@@ -91,8 +94,8 @@ func checkFloat(f float64, c []string, or bool) error {
 					}
 				}
 			}
-		case MAX_VLAUE:
-			condition, err := getConditionByType(conFull, MAX_VLAUE)
+		case model.MAX_VLAUE:
+			condition, err := model.GetConditionByType(conFull, model.MAX_VLAUE)
 			if err != nil {
 				if or {
 					errors = append(errors, err)
@@ -116,8 +119,86 @@ func checkFloat(f float64, c []string, or bool) error {
 					}
 				}
 			}
-		case REGX:
-			condition, err := getConditionByType(conFull, REGX)
+		case model.FROM:
+			condition, err := model.GetConditionByType(conFull, model.FROM)
+			if err != nil {
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
+			}
+			if len(condition) != 0 {
+				fromValues, err := model.GetArrayFromCondition(condition)
+				if err != nil {
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
+				}
+				foundInFromValues := false
+				for _, fromValue := range fromValues {
+					from, err := strconv.ParseFloat(fromValue, 64)
+					if err != nil {
+						if or {
+							errors = append(errors, err)
+						} else {
+							return err
+						}
+					}
+					if f == from {
+						foundInFromValues = true
+						break
+					}
+				}
+				if !foundInFromValues {
+					if or {
+						errors = append(errors, fmt.Errorf("value not found in %v", fromValues))
+					} else {
+						return fmt.Errorf("value not found in %v", fromValues)
+					}
+				}
+			}
+		case model.NOT_FROM:
+			condition, err := model.GetConditionByType(conFull, model.NOT_FROM)
+			if err != nil {
+				if or {
+					errors = append(errors, err)
+				} else {
+					return err
+				}
+			}
+			if len(condition) != 0 {
+				notFromValues, err := model.GetArrayFromCondition(condition)
+				if err != nil {
+					if or {
+						errors = append(errors, err)
+					} else {
+						return err
+					}
+				}
+				for _, notFromValue := range notFromValues {
+					notFrom, err := strconv.ParseFloat(notFromValue, 64)
+					if err != nil {
+						if or {
+							errors = append(errors, err)
+						} else {
+							return err
+						}
+					}
+					if f == notFrom {
+						if or {
+							errors = append(errors, fmt.Errorf("value found in %v", notFromValues))
+						} else {
+							return fmt.Errorf("value found in %v", notFromValues)
+						}
+						break
+					}
+				}
+			}
+		case model.REGX:
+			condition, err := model.GetConditionByType(conFull, model.REGX)
 			if err != nil {
 				if or {
 					errors = append(errors, err)
@@ -141,9 +222,9 @@ func checkFloat(f float64, c []string, or bool) error {
 					}
 				}
 			}
-		case NONE:
+		case model.NONE:
 			return nil
-		case OR:
+		case model.OR:
 			continue
 		default:
 			return fmt.Errorf("invalid condition type %s", conType)

@@ -1,18 +1,20 @@
-package validator
+package validators
 
 import (
 	"fmt"
 	"strconv"
+
+	"github.com/siherrmann/validator/model"
 )
 
-func validateGroup(groups map[string]string, groupSize map[string]int, groupErrors map[string][]error) error {
+func ValidateGroup(groups map[string]string, groupSize map[string]int, groupErrors map[string][]error) error {
 	if len(groups) != 0 {
 		for groupName, groupCondition := range groups {
-			conType := getConditionType(groupCondition)
+			conType := model.GetConditionType(groupCondition)
 
 			switch conType {
-			case MIN_VALUE:
-				condition, err := getConditionByType(groupCondition, MIN_VALUE)
+			case model.MIN_VALUE:
+				condition, err := model.GetConditionByType(groupCondition, model.MIN_VALUE)
 				if err != nil {
 					return err
 				}
@@ -24,8 +26,8 @@ func validateGroup(groups map[string]string, groupSize map[string]int, groupErro
 						return fmt.Errorf("less then %v in group %s without error, all errors: %v", minValue, groupName, groupErrors[groupName])
 					}
 				}
-			case MAX_VLAUE:
-				condition, err := getConditionByType(groupCondition, MAX_VLAUE)
+			case model.MAX_VLAUE:
+				condition, err := model.GetConditionByType(groupCondition, model.MAX_VLAUE)
 				if err != nil {
 					return err
 				}

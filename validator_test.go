@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/siherrmann/validator/model"
 )
 
 type TestRequestWrapper struct {
@@ -44,6 +46,27 @@ type TestStructCon struct {
 	Int    int      `vld:"-"`
 	Float  float64  `vld:"-"`
 	Array  []string `vld:"con@"`
+}
+
+type TestStructNotCon struct {
+	String string   `vld:"nco@"`
+	Int    int      `vld:"-"`
+	Float  float64  `vld:"-"`
+	Array  []string `vld:"nco@"`
+}
+
+type TestStructFrom struct {
+	String string   `vld:"frm@,$"`
+	Int    int      `vld:"frm1,200"`
+	Float  float64  `vld:"frm0.5,1"`
+	Array  []string `vld:"frm@,$"`
+}
+
+type TestStructNotFrom struct {
+	String string   `vld:"nfr@,$"`
+	Int    int      `vld:"nfr1,2"`
+	Float  float64  `vld:"nfr0.5,0.8"`
+	Array  []string `vld:"nfr@,$"`
 }
 
 type TestStructRex struct {
@@ -118,7 +141,7 @@ type TestUpdate struct {
 	Array  []int           `upd:"array, min1, gr1min7"`
 	Date   time.Time       `upd:"date, min1, gr1min7"`
 	Struct TestUpdateInner `upd:"struct, min1, gr1min7"`
-	Map    JsonMap         `upd:"map, min1 conkey, gr1min7"`
+	Map    model.JsonMap   `upd:"map, min1 conkey, gr1min7"`
 }
 
 type TestUpdatePartial struct {
@@ -128,7 +151,7 @@ type TestUpdatePartial struct {
 	Array  []int `upd:"array, min1, gr1min2"`
 	Date   time.Time
 	Struct TestUpdateInner
-	Map    JsonMap
+	Map    model.JsonMap
 }
 
 type TestUpdateInner struct {
@@ -373,6 +396,156 @@ func TestStructValidator(t *testing.T) {
 				Int:    4,
 				Float:  4.0,
 				Array:  []string{"", ""},
+			},
+			"Array",
+		},
+	}
+
+	for k, v := range testCases {
+		err := Validate(v.Data)
+		assertError(t, k, err, v.InvalidField)
+	}
+
+	testCases = map[string]*TestRequestWrapper{
+		"valid": {
+			&TestStructNotCon{
+				String: "test",
+				Int:    4,
+				Float:  4.0,
+				Array:  []string{"", ""},
+			},
+			"",
+		},
+		"containingString": {
+			&TestStructNotCon{
+				String: "test@",
+				Int:    4,
+				Float:  4.0,
+				Array:  []string{"", ""},
+			},
+			"String",
+		},
+		"containingArray": {
+			&TestStructNotCon{
+				String: "test",
+				Int:    4,
+				Float:  4.0,
+				Array:  []string{"@", ""},
+			},
+			"Array",
+		},
+	}
+
+	for k, v := range testCases {
+		err := Validate(v.Data)
+		assertError(t, k, err, v.InvalidField)
+	}
+
+	testCases = map[string]*TestRequestWrapper{
+		"valid": {
+			&TestStructFrom{
+				String: "@",
+				Int:    1,
+				Float:  0.5,
+				Array:  []string{"@", "@", "@", "@"},
+			},
+			"",
+		},
+		"valid2": {
+			&TestStructFrom{
+				String: "$",
+				Int:    200,
+				Float:  1,
+				Array:  []string{"$", "$", "$", "@"},
+			},
+			"",
+		},
+		"notFromString": {
+			&TestStructFrom{
+				String: "test",
+				Int:    200,
+				Float:  1,
+				Array:  []string{"$", "$", "$", "@"},
+			},
+			"String",
+		},
+		"notFromInt": {
+			&TestStructFrom{
+				String: "@",
+				Int:    4,
+				Float:  1,
+				Array:  []string{"$", "$", "$", "@"},
+			},
+			"Int",
+		},
+		"notFromFloat": {
+			&TestStructFrom{
+				String: "@",
+				Int:    200,
+				Float:  1.5,
+				Array:  []string{"$", "$", "$", "@"},
+			},
+			"Float",
+		},
+		"notFromArray": {
+			&TestStructFrom{
+				String: "$",
+				Int:    200,
+				Float:  1,
+				Array:  []string{"test", "@", "$", "@"},
+			},
+			"Array",
+		},
+	}
+
+	for k, v := range testCases {
+		err := Validate(v.Data)
+		assertError(t, k, err, v.InvalidField)
+	}
+
+	testCases = map[string]*TestRequestWrapper{
+		"valid": {
+			&TestStructNotFrom{
+				String: "test",
+				Int:    4,
+				Float:  2,
+				Array:  []string{"test", "test", "test", "test"},
+			},
+			"",
+		},
+		"fromString": {
+			&TestStructNotFrom{
+				String: "@",
+				Int:    4,
+				Float:  2,
+				Array:  []string{"test", "test", "test", "test"},
+			},
+			"String",
+		},
+		"fromInt": {
+			&TestStructNotFrom{
+				String: "test",
+				Int:    1,
+				Float:  2,
+				Array:  []string{"test", "test", "test", "test"},
+			},
+			"Int",
+		},
+		"fromFloat": {
+			&TestStructNotFrom{
+				String: "test",
+				Int:    4,
+				Float:  0.5,
+				Array:  []string{"test", "test", "test", "test"},
+			},
+			"Float",
+		},
+		"fromArray": {
+			&TestStructNotFrom{
+				String: "test",
+				Int:    4,
+				Float:  2,
+				Array:  []string{"@", "test", "test", "test"},
 			},
 			"Array",
 		},
@@ -760,7 +933,7 @@ func TestStructValidator(t *testing.T) {
 				Struct: TestUpdateInner{
 					String: "foo",
 				},
-				Map: JsonMap{
+				Map: model.JsonMap{
 					"key": "foo",
 				},
 			},
@@ -909,7 +1082,7 @@ func TestStructValidator(t *testing.T) {
 				Struct: TestUpdateInner{
 					String: "foo",
 				},
-				Map: JsonMap{
+				Map: model.JsonMap{
 					"key": "foo",
 				},
 			},
@@ -926,7 +1099,7 @@ func TestStructValidator(t *testing.T) {
 				Struct: TestUpdateInner{
 					String: "foo",
 				},
-				Map: JsonMap{
+				Map: model.JsonMap{
 					"key": "foo",
 				},
 			},
@@ -950,7 +1123,7 @@ func TestStructValidator(t *testing.T) {
 				Struct: TestUpdateInner{
 					String: "foo",
 				},
-				Map: JsonMap{
+				Map: model.JsonMap{
 					"key": "foo",
 				},
 			},

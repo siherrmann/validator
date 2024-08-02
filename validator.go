@@ -5,17 +5,10 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-)
 
-const (
-	NONE      string = "-"
-	EQUAL     string = "equ"
-	NOT_EQUAL string = "neq"
-	MIN_VALUE string = "min"
-	MAX_VLAUE string = "max"
-	CONTAINS  string = "con"
-	REGX      string = "rex"
-	OR        string = "||"
+	"github.com/siherrmann/validator/helper"
+	"github.com/siherrmann/validator/model"
+	"github.com/siherrmann/validator/validators"
 )
 
 type StructValue struct {
@@ -24,7 +17,7 @@ type StructValue struct {
 }
 
 // UnmarshalAndValidate unmarshals given json ([]byte) into pointer v.
-// For more information to Validate look at Validate(value any).
+// For more information to Validate look at [Validate(v any) error].
 func UnmarshalAndValidate(data []byte, v any) error {
 	value := reflect.ValueOf(v)
 	if value.Kind() != reflect.Ptr {
@@ -97,7 +90,7 @@ func Validate(v any) error {
 
 	for i := 0; i < structFull.Type().NumField(); i++ {
 		tag := structFull.Type().Field(i).Tag.Get("vld")
-		if len(strings.TrimSpace(tag)) == 0 || strings.TrimSpace(tag) == NONE {
+		if len(strings.TrimSpace(tag)) == 0 || strings.TrimSpace(tag) == model.NONE {
 			continue
 		}
 
@@ -106,7 +99,7 @@ func Validate(v any) error {
 		value := structFull.Field(i)
 		fieldName := structFull.Type().Field(i).Name
 
-		conditions, or := getConditionsAndOrFromString(tagSplit[0])
+		conditions, or := model.GetConditionsAndOrFromString(tagSplit[0])
 
 		groupsValue := []string{}
 		groupsString := []string{}
@@ -114,8 +107,8 @@ func Validate(v any) error {
 			groupsString = strings.Split(tagSplit[1], " ")
 
 			for _, g := range groupsString {
-				group := getConditionType(g)
-				condition, err := getConditionByType(g, group)
+				group := model.GetConditionType(g)
+				condition, err := model.GetConditionByType(g, group)
 				if err != nil {
 					return fmt.Errorf("error extracting group: %v", err)
 				}
@@ -129,7 +122,7 @@ func Validate(v any) error {
 		switch value.Type().Kind() {
 		case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
 			valueTemp := value.Int()
-			err := checkInt(int(valueTemp), conditions, or)
+			err := validators.CheckInt(int(valueTemp), conditions, or)
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error())
 			} else if err != nil {
@@ -139,7 +132,7 @@ func Validate(v any) error {
 			}
 		case reflect.Float64, reflect.Float32:
 			valueTemp := value.Float()
-			err := checkFloat(valueTemp, conditions, or)
+			err := validators.CheckFloat(valueTemp, conditions, or)
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error())
 			} else if err != nil {
@@ -149,7 +142,7 @@ func Validate(v any) error {
 			}
 		case reflect.String:
 			valueTemp := value.String()
-			err := checkString(valueTemp, conditions, or)
+			err := validators.CheckString(valueTemp, conditions, or)
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error())
 			} else if err != nil {
@@ -159,7 +152,7 @@ func Validate(v any) error {
 			}
 		case reflect.Array, reflect.Slice:
 			valueTemp := value
-			err := checkArray(valueTemp, conditions, or)
+			err := validators.CheckArray(valueTemp, conditions, or)
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error())
 			} else if err != nil {
@@ -172,7 +165,7 @@ func Validate(v any) error {
 		}
 	}
 
-	err := validateGroup(groups, groupSize, groupErrors)
+	err := validators.ValidateGroup(groups, groupSize, groupErrors)
 	if err != nil {
 		return err
 	}
@@ -180,6 +173,8 @@ func Validate(v any) error {
 	return nil
 }
 
+// [UnmarshalValidateAndUpdate] unmarshals given json ([]byte) into pointer v.
+// For more information to ValidateAndUpdate look at [ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interface{}) error].
 func UnmarshalValidateAndUpdate(jsonInput []byte, structToUpdate interface{}) error {
 	jsonUnmarshaled := map[string]interface{}{}
 
@@ -252,7 +247,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 
 	for i := 0; i < structFull.Type().NumField(); i++ {
 		tag := structFull.Type().Field(i).Tag.Get("upd")
-		if len(strings.TrimSpace(tag)) == 0 || strings.TrimSpace(tag) == NONE {
+		if len(strings.TrimSpace(tag)) == 0 || strings.TrimSpace(tag) == model.NONE {
 			continue
 		}
 
@@ -266,7 +261,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 		or := false
 		conditions := []string{}
 		if len(tagSplit) > 1 {
-			conditions, or = getConditionsAndOrFromString(tagSplit[1])
+			conditions, or = model.GetConditionsAndOrFromString(tagSplit[1])
 		}
 
 		groupsValue := []string{}
@@ -275,8 +270,8 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 			groupsString = strings.Split(tagSplit[2], " ")
 
 			for _, g := range groupsString {
-				group := getConditionType(g)
-				condition, err := getConditionByType(g, group)
+				group := model.GetConditionType(g)
+				condition, err := model.GetConditionByType(g, group)
 				if err != nil {
 					return fmt.Errorf("error extracting group: %v", err)
 				}
@@ -317,7 +312,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 				return fmt.Errorf("input value for %v has to be of type %v, was %v", reflect.TypeOf(structToUpdate), structValueType, reflect.ValueOf(jsonValue).Kind())
 			}
 
-			err = checkInt(int(newInt), conditions, or)
+			err = validators.CheckInt(int(newInt), conditions, or)
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
 			} else if err != nil {
@@ -346,7 +341,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 				return fmt.Errorf("input value for %v has to be of type %v, was %v", reflect.TypeOf(structToUpdate), structValueType, reflect.ValueOf(jsonValue).Kind())
 			}
 
-			err = checkFloat(float64(newFloat), conditions, or)
+			err = validators.CheckFloat(float64(newFloat), conditions, or)
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
 			} else if err != nil {
@@ -370,7 +365,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 				return fmt.Errorf("input value for %v has to be of type %v, was %v", reflect.TypeOf(structToUpdate), structValueType, reflect.ValueOf(jsonValue).Kind())
 			}
 
-			err = checkString(jsonValue.(string), conditions, or)
+			err = validators.CheckString(jsonValue.(string), conditions, or)
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
 			} else if err != nil {
@@ -407,7 +402,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 		case reflect.Struct:
 			// Only supported struct type is time.Time and custom structs with upd tags this far.
 			if stringInput, ok := jsonValue.(string); ok {
-				err = checkString(stringInput, conditions, or)
+				err = validators.CheckString(stringInput, conditions, or)
 				if err != nil && len(groupsString) == 0 {
 					return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
 				} else if err != nil {
@@ -456,7 +451,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 				return fmt.Errorf("input value for %v has to be of type %v, was %v", reflect.TypeOf(structToUpdate), structValueType, reflect.ValueOf(jsonValue).Kind())
 			}
 
-			err = checkMap(reflect.ValueOf(jsonValue), conditions, or)
+			err = validators.CheckMap(reflect.ValueOf(jsonValue), conditions, or)
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
 			} else if err != nil {
@@ -476,7 +471,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 				}
 			}
 		case reflect.Array, reflect.Slice:
-			err = checkArray(reflect.ValueOf(jsonValue), conditions, or)
+			err = validators.CheckArray(reflect.ValueOf(jsonValue), conditions, or)
 			if err != nil && len(groupsString) == 0 {
 				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
 			} else if err != nil {
@@ -500,7 +495,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 		}
 	}
 
-	err := validateGroup(groups, groupSize, groupErrors)
+	err := validators.ValidateGroup(groups, groupSize, groupErrors)
 	if err != nil {
 		return err
 	}
@@ -560,7 +555,7 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 			fv.SetBool(bool(jsonValue.(bool)))
 		case reflect.Struct:
 			if v, ok := jsonValue.(string); ok {
-				date, err := Time.InterfaceFromString(v, "")
+				date, err := InterfaceFromString(v, model.Time, "")
 				if err != nil {
 					return err
 				}
@@ -581,7 +576,7 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 			switch t := reflect.TypeOf(fv.Interface()).Elem().Kind(); t {
 			case reflect.Int:
 				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := ArrayOfInterfaceToArrayOf[int](jsonValue.([]interface{}))
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int](jsonValue.([]interface{}))
 					if err != nil {
 						return err
 					}
@@ -593,7 +588,7 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 				}
 			case reflect.Int64:
 				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := ArrayOfInterfaceToArrayOf[int64](jsonValue.([]interface{}))
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int64](jsonValue.([]interface{}))
 					if err != nil {
 						return err
 					}
@@ -605,7 +600,7 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 				}
 			case reflect.Int32:
 				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := ArrayOfInterfaceToArrayOf[int32](jsonValue.([]interface{}))
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int32](jsonValue.([]interface{}))
 					if err != nil {
 						return err
 					}
@@ -617,7 +612,7 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 				}
 			case reflect.Int16:
 				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := ArrayOfInterfaceToArrayOf[int16](jsonValue.([]interface{}))
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int16](jsonValue.([]interface{}))
 					if err != nil {
 						return err
 					}
@@ -629,7 +624,7 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 				}
 			case reflect.Int8:
 				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := ArrayOfInterfaceToArrayOf[int8](jsonValue.([]interface{}))
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int8](jsonValue.([]interface{}))
 					if err != nil {
 						return err
 					}
@@ -641,7 +636,7 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 				}
 			case reflect.Float64:
 				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := ArrayOfInterfaceToArrayOf[float64](jsonValue.([]interface{}))
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[float64](jsonValue.([]interface{}))
 					if err != nil {
 						return err
 					}
@@ -653,7 +648,7 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 				}
 			case reflect.Float32:
 				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := ArrayOfInterfaceToArrayOf[float32](jsonValue.([]interface{}))
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[float32](jsonValue.([]interface{}))
 					if err != nil {
 						return err
 					}
@@ -665,7 +660,7 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 				}
 			case reflect.String:
 				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := ArrayOfInterfaceToArrayOf[string](jsonValue.([]interface{}))
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[string](jsonValue.([]interface{}))
 					if err != nil {
 						return err
 					}
@@ -677,7 +672,7 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 				}
 			case reflect.Bool:
 				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := ArrayOfInterfaceToArrayOf[bool](jsonValue.([]interface{}))
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[bool](jsonValue.([]interface{}))
 					if err != nil {
 						return err
 					}
