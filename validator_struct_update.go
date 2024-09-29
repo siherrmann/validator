@@ -85,7 +85,7 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 
 	for i := 0; i < structFull.Type().NumField(); i++ {
 		tag := structFull.Type().Field(i).Tag.Get("upd")
-		if len(strings.TrimSpace(tag)) == 0 || strings.TrimSpace(tag) == model.NONE {
+		if len(strings.TrimSpace(tag)) == 0 || strings.TrimSpace(tag) == string(model.NONE) {
 			continue
 		}
 
@@ -108,10 +108,14 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 			groupsString = strings.Split(tagSplit[2], " ")
 
 			for _, g := range groupsString {
-				group := model.GetConditionType(g)
-				condition, err := model.GetConditionByType(g, group)
+				group, err := model.GetGroup(g)
 				if err != nil {
 					return fmt.Errorf("error extracting group: %v", err)
+				}
+
+				condition, err := model.GetConditionByType(g, model.ConditionType(group))
+				if err != nil {
+					return fmt.Errorf("error extracting group condition: %v", err)
 				}
 
 				groupsValue = append(groupsValue, group)

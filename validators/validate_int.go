@@ -10,13 +10,20 @@ import (
 )
 
 func CheckInt(i int, c []string, or bool) error {
-	if slices.Contains(c, model.NONE) || len(c) == 0 {
+	if slices.Contains(c, string(model.NONE)) || len(c) == 0 {
 		return nil
 	}
 
 	var errors []error
 	for _, conFull := range c {
-		conType := model.GetConditionType(conFull)
+		conType, err := model.GetConditionType(conFull)
+		if err != nil {
+			if or {
+				errors = append(errors, err)
+			} else {
+				return err
+			}
+		}
 
 		switch conType {
 		case model.EQUAL:

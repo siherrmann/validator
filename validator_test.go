@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/siherrmann/validator/model"
+	"github.com/siherrmann/validator/parser"
 )
 
 type TestRequestWrapper struct {
@@ -914,7 +915,7 @@ func TestStructValidator(t *testing.T) {
 				Float:  3.0,
 				Array:  []string{"", "", ""},
 			},
-			"group",
+			"condition type",
 		},
 	}
 
@@ -1418,5 +1419,19 @@ func assertErrorUpdate(t testing.TB, testCase string, err error, errorExpected b
 		t.Errorf("test case: %s - wanted no error, got error: %v", testCase, err)
 	} else if errorExpected && err == nil {
 		t.Errorf("test case: %s - wanted error, got no error", testCase)
+	}
+}
+
+func TestParser(t *testing.T) {
+	lexer := parser.NewLexer("min1 max2 || (max0) && equ90")
+	p := parser.NewParser(lexer)
+	r, err := p.ParseValidation()
+	if r.RootValue == nil {
+		t.Log(r.RootValue)
+	} else {
+		t.Logf("group: %#v", (*r.RootValue).ConditionGroup[2])
+	}
+	if err != nil {
+		t.Errorf("test parser - wanted no error, got error: %v", err)
 	}
 }

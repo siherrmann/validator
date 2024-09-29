@@ -10,7 +10,10 @@ import (
 func ValidateGroup(groups map[string]string, groupSize map[string]int, groupErrors map[string][]error) error {
 	if len(groups) != 0 {
 		for groupName, groupCondition := range groups {
-			conType := model.GetConditionType(groupCondition)
+			conType, err := model.GetConditionType(groupCondition)
+			if err != nil {
+				return err
+			}
 
 			switch conType {
 			case model.MIN_VALUE:
