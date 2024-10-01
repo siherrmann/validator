@@ -137,57 +137,24 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 		case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
 			if fl, ok := jsonValue.(float64); ok {
 				// This case is for the case that json.Unmarshal unmarshals an int value into a float64 value.
-				// TODO update to only parsing
-				// err = ValidateValueWithoutParser(reflect.ValueOf(jsonValue), conditions, or, validators.CheckInt)
 				err = ValidateValueWithParser(reflect.ValueOf(int64(fl)), requirement, validators.CheckInt)
 			} else {
-				// TODO update to only parsing
-				// err = ValidateValueWithoutParser(reflect.ValueOf(jsonValue), conditions, or, validators.CheckInt)
 				err = ValidateValueWithParser(reflect.ValueOf(jsonValue), requirement, validators.CheckInt)
 			}
 		case reflect.Float64, reflect.Float32:
-			// TODO update to only parsing
-			// err = ValidateValueWithoutParser(reflect.ValueOf(jsonValue), conditions, or, validators.CheckFloat)
 			err = ValidateValueWithParser(reflect.ValueOf(jsonValue), requirement, validators.CheckFloat)
 		case reflect.String:
-			// TODO update to only parsing
-			// err = ValidateValueWithoutParser(reflect.ValueOf(jsonValue), conditions, or, validators.CheckString)
 			err = ValidateValueWithParser(reflect.ValueOf(jsonValue), requirement, validators.CheckString)
 		case reflect.Map:
-			// TODO update to only parsing
-			// err = ValidateValueWithoutParser(reflect.ValueOf(jsonValue), conditions, or, validators.CheckMap)
 			err = ValidateValueWithParser(reflect.ValueOf(jsonValue), requirement, validators.CheckMap)
 		case reflect.Bool:
-			// TODO update to only parsing
-			// err = ValidateValueWithoutParser(reflect.ValueOf(jsonValue), conditions, or, validators.CheckBool)
 			err = ValidateValueWithParser(reflect.ValueOf(jsonValue), requirement, validators.CheckBool)
 		case reflect.Array, reflect.Slice:
-			// TODO update to only parsing
-			// err = ValidateValueWithoutParser(reflect.ValueOf(jsonValue), conditions, or, validators.CheckArray)
 			err = ValidateValueWithParser(reflect.ValueOf(jsonValue), requirement, validators.CheckArray)
 		case reflect.Struct:
-			// Only supported struct type is time.Time and custom structs with upd tags this far.
+			// Only supported struct types are time.Time and custom structs with upd tags this far.
 			if _, ok := jsonValue.(string); ok {
-				err := ValidateValueWithParser(reflect.ValueOf(jsonValue), requirement, validators.CheckString)
-				if err != nil && len(groupsString) == 0 {
-					return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
-				} else if err != nil {
-					for _, groupName := range groupsValue {
-						groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
-					}
-					continue
-				}
-
-				fieldValue := reflect.ValueOf(structToUpdate).Elem().FieldByName(fieldName)
-				err = setStructValueByJson(fieldValue, jsonKey, jsonValue)
-				if err != nil && len(groupsString) == 0 {
-					return fmt.Errorf("could not set field %v of %v: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
-				} else if err != nil {
-					for _, groupName := range groupsValue {
-						groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("could not set field %v: %v", fieldName, err.Error()))
-					}
-					continue
-				}
+				err = ValidateValueWithParser(reflect.ValueOf(jsonValue), requirement, validators.CheckString)
 			} else if mapInput, ok := jsonValue.(map[string]any); ok {
 				fieldValue := reflect.ValueOf(structToUpdate).Elem().FieldByName(fieldName)
 				err = ValidateAndUpdate(mapInput, fieldValue.Addr().Interface())
@@ -209,10 +176,10 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 					}
 					continue
 				}
+				continue
 			} else {
 				return fmt.Errorf("input value for %v has to be of type %v, was %v", reflect.TypeOf(structToUpdate), structValueType, reflect.ValueOf(jsonValue).Kind())
 			}
-			continue
 		default:
 			return fmt.Errorf("invalid field type for %v in %v: %v", fieldName, reflect.TypeOf(structToUpdate), value.Type().Kind())
 		}

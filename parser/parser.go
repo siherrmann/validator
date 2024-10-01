@@ -52,22 +52,18 @@ func (p *Parser) ParseValidation() (model.RootNode, error) {
 func (p *Parser) nextToken() {
 	p.currentToken = p.peekToken
 	p.peekToken = p.lexer.NextToken()
-	// // TODO remove log
-	// fmt.Printf("current token: %v\n", p.peekToken)
 }
 
 func (p *Parser) currentTokenTypeIs(t model.TokenType) bool {
 	return p.currentToken.Type == t
 }
 
-// [parseGroup] is called when an open left brace `(` token is found or a validation starts without a '('.
+// [parseGroup] is called when an open left brace `(` token is found or a requirement starts without a '('.
 func (p *Parser) parseGroup() *model.AstValue {
 	group := &model.AstValue{Type: model.GROUP}
 	grpState := GrpStart
 
 	for !p.currentTokenTypeIs(model.LexerEOF) && grpState != GrpEnd {
-		// // TODO remove log
-		// fmt.Printf("current group state: %v\n", grpState)
 		switch grpState {
 		case GrpStart:
 			if p.currentTokenTypeIs(model.LexerLeftBrace) {

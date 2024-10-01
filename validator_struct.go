@@ -53,9 +53,9 @@ func UnmarshalAndValidate(data []byte, v any) error {
 //
 // Conditions have different usages per variable type:
 //
-// equ - int/float/string == condition, len(array) == condition
+// equ - int/float/string/bool == condition, len(array) == condition
 //
-// neq - int/float/string != condition, len(array) != condition
+// neq - int/float/string/bool != condition, len(array) != condition
 //
 // min - int/float >= condition, len(string/array) >= condition
 //
@@ -94,9 +94,9 @@ func Validate(v any) error {
 		}
 
 		tagSplit := strings.Split(tag, ", ")
-		condition := "-"
+		requirement := "-"
 		if len(tagSplit) > 0 {
-			condition = tagSplit[0]
+			requirement = tagSplit[0]
 		}
 
 		value := structFull.Field(i)
@@ -127,35 +127,26 @@ func Validate(v any) error {
 		var err error
 		switch value.Type().Kind() {
 		case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
-			// TODO update to only parsing
-			// err = ValidateValueWithoutParser(value, conditions, or, validators.CheckInt)
-			err = ValidateValueWithParser(value, condition, validators.CheckInt)
+			err = ValidateValueWithParser(value, requirement, validators.CheckInt)
 		case reflect.Float64, reflect.Float32:
-			// TODO update to only parsing
-			// err = ValidateValueWithoutParser(value, conditions, or, validators.CheckFloat)
-			err = ValidateValueWithParser(value, condition, validators.CheckFloat)
+			err = ValidateValueWithParser(value, requirement, validators.CheckFloat)
 		case reflect.String:
-			// TODO update to only parsing
-			// err = ValidateValueWithoutParser(value, conditions, or, validators.CheckString)
-			err = ValidateValueWithParser(value, condition, validators.CheckString)
+			err = ValidateValueWithParser(value, requirement, validators.CheckString)
+		case reflect.Bool:
+			err = ValidateValueWithParser(value, requirement, validators.CheckBool)
 		case reflect.Array, reflect.Slice:
-			// TODO update to only parsing
-			// err = ValidateValueWithoutParser(value, conditions, or, validators.CheckArray)
-			err = ValidateValueWithParser(value, condition, validators.CheckArray)
+			err = ValidateValueWithParser(value, requirement, validators.CheckArray)
 		case reflect.Map:
 			// TODO validate?
-			// TODO update to only parsing
-			// err = ValidateValueWithoutParser(value, conditions, or, validators.CheckMap)
-			err = ValidateValueWithParser(value, condition, validators.CheckMap)
+			err = ValidateValueWithParser(value, requirement, validators.CheckMap)
 		case reflect.Struct:
 			// TODO validate?
-			// TODO update to only parsing
-			// err = ValidateValueWithoutParser(value, conditions, or, validators.CheckStruct)
-			err = ValidateValueWithParser(value, condition, validators.CheckTime)
+			err = ValidateValueWithParser(value, requirement, validators.CheckTime)
 		default:
 			return fmt.Errorf("invalid field type for %v in %v: %v", fieldName, reflect.TypeOf(v), value.Type().Kind())
 		}
 
+		// unified error handling for the switch cases without continue
 		if err != nil && len(groupsString) == 0 {
 			return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error())
 		} else if err != nil {
