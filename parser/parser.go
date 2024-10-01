@@ -62,7 +62,7 @@ func (p *Parser) currentTokenTypeIs(t model.TokenType) bool {
 
 // [parseGroup] is called when an open left brace `(` token is found or a validation starts without a '('.
 func (p *Parser) parseGroup() *model.Value {
-	obj := &model.Value{Type: "Group"}
+	group := &model.Value{Type: "Group"}
 	objState := GrpStart
 
 	for !p.currentTokenTypeIs(model.LexerEOF) {
@@ -72,11 +72,11 @@ func (p *Parser) parseGroup() *model.Value {
 		case GrpStart:
 			if p.currentTokenTypeIs(model.LexerLeftBrace) {
 				objState = GrpOpen
-				// obj.Start = p.currentToken.Start
+				group.Start = p.currentToken.Start
 				p.nextToken()
 			} else if p.currentTokenTypeIs(model.LexerConditionType) {
 				objState = GrpOpen
-				// obj.Start = p.currentToken.Start
+				group.Start = p.currentToken.Start
 			} else {
 				p.parseError(fmt.Sprintf(
 					"error parsing validation group, expected `(` or condition, got: %s",
@@ -86,30 +86,20 @@ func (p *Parser) parseGroup() *model.Value {
 			}
 		case GrpOpen:
 			if p.currentTokenTypeIs(model.LexerRightBrace) {
+				group.End = p.currentToken.Start
 				p.nextToken()
-				// obj.End = p.currentToken.Start
-				return obj
+				return group
 			} else if p.currentTokenTypeIs(model.LexerLeftBrace) {
-				group := p.parseGroup()
-				obj.ConditionGroup = append(obj.ConditionGroup, group)
-				objState = GrpOpen
+				innerGroup := p.parseGroup()
+				group.ConditionGroup = append(group.ConditionGroup, innerGroup)
 			} else if p.currentTokenTypeIs(model.LexerConditionType) {
 				condition := p.parseCondition()
-				obj.ConditionGroup = append(obj.ConditionGroup, condition)
-				objState = GrpOpen
+				group.ConditionGroup = append(group.ConditionGroup, condition)
 			} else if p.currentTokenTypeIs(model.LexerOperator) {
-				operator, err := p.parseOperator()
-				if err != nil {
-					p.parseError(fmt.Sprintf(
-						"error parsing operator type %s with error: %v",
-						p.currentToken.Literal,
-						err.Error(),
-					))
+				operator := p.parseOperator()
+				if len(group.ConditionGroup) > 0 {
+					group.ConditionGroup[len(group.ConditionGroup)-1].Operator = operator
 				}
-				if len(obj.ConditionGroup) > 0 {
-					obj.ConditionGroup[len(obj.ConditionGroup)-1].Operator = operator
-				}
-				objState = GrpOpen
 				p.nextToken()
 			} else {
 				p.parseError(fmt.Sprintf(
@@ -122,9 +112,9 @@ func (p *Parser) parseGroup() *model.Value {
 		}
 	}
 
-	// obj.End = p.currentToken.Start
+	group.End = p.currentToken.Start
 
-	return obj
+	return group
 }
 
 // [parseCondition] is used to parse a condition and setting the `conditionType`:`condition` pair.
@@ -137,15 +127,7 @@ func (p *Parser) parseCondition() *model.Value {
 		case ConType:
 			if p.currentTokenTypeIs(model.LexerConditionType) {
 				conditionState = ConValue
-				var err error
-				condition.ConditionType, err = p.parseConditionType()
-				if err != nil {
-					p.parseError(fmt.Sprintf(
-						"error parsing condition type %s with error: %v",
-						p.currentToken.Literal,
-						err.Error(),
-					))
-				}
+				condition.ConditionType = p.parseConditionType()
 				p.nextToken()
 			} else {
 				p.parseError(fmt.Sprintf(
@@ -170,23 +152,31 @@ func (p *Parser) parseCondition() *model.Value {
 }
 
 // [parseOperator] is used to parse the condition type.
-func (p *Parser) parseOperator() (model.Operator, error) {
+func (p *Parser) parseOperator() model.Operator {
 	operator := model.Operator(p.currentToken.Literal)
 	err := model.LookupOperator(operator)
 	if err != nil {
-		return operator, err
+		p.parseError(fmt.Sprintf(
+			"error parsing operator type %s with error: %v",
+			p.currentToken.Literal,
+			err.Error(),
+		))
 	}
-	return operator, nil
+	return operator
 }
 
 // [parseConditionType] is used to parse the condition type.
-func (p *Parser) parseConditionType() (model.ConditionType, error) {
+func (p *Parser) parseConditionType() model.ConditionType {
 	conType := model.ConditionType(p.currentToken.Literal)
 	err := model.LookupConditionType(conType)
 	if err != nil {
-		return conType, err
+		p.parseError(fmt.Sprintf(
+			"error parsing condition type %s with error: %v",
+			p.currentToken.Literal,
+			err.Error(),
+		))
 	}
-	return conType, nil
+	return conType
 }
 
 // [parseConditionValue] is used to parse the condition value (eg. 10 if min length of string is 10 (min10)).

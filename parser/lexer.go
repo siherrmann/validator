@@ -93,7 +93,7 @@ func (l *Lexer) NextToken() model.Token {
 			l.lastTokenType = model.LexerConditionValue
 			return t
 		}
-		t = newToken(model.LexerIllegal, l.line, 1, 2, l.char)
+		t = newToken(model.LexerIllegal, l.line, l.position, l.position, l.char)
 	}
 
 	l.readChar()

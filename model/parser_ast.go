@@ -1,6 +1,9 @@
 package model
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // RootNode is what starts every parsed AST.
 type RootNode struct {
@@ -15,6 +18,30 @@ type Value struct {
 	ConditionValue string
 	ConditionGroup []*Value
 	Operator       Operator
+	Start          int
+	End            int
+}
+
+func (r Value) AstGroupToString() string {
+	groupConditions := []string{}
+	groupString := ""
+	for _, v := range r.ConditionGroup {
+		if v.Type == "Group" {
+			groupConditions = append(groupConditions, "("+v.AstGroupToString()+")")
+		} else if v.Type == "Condition" {
+			groupConditions = append(groupConditions, v.AstConditionToString())
+		}
+	}
+	groupString = strings.Join(groupConditions, " ")
+	return groupString
+}
+
+func (r Value) AstConditionToString() string {
+	if len(r.Operator) > 0 {
+		return fmt.Sprintf(`%v%v "%v"`, r.ConditionType, r.ConditionValue, r.Operator)
+	} else {
+		return fmt.Sprintf(`%v"%v"`, r.ConditionType, r.ConditionValue)
+	}
 }
 
 // [ConditionType] is the type for all available condition types.
