@@ -9,256 +9,97 @@ import (
 	"github.com/siherrmann/validator/model"
 )
 
-func CheckArray(a reflect.Value, c []string, or bool) error {
-	if slices.Contains(c, string(model.NONE)) || len(c) == 0 {
-		return nil
+func CheckArray(v reflect.Value, c *model.AstValue) error {
+	if v.Type().Kind() != reflect.Array && v.Type().Kind() != reflect.Slice {
+		return fmt.Errorf("value to validate has to be a array or slice, was %v", v.Type().Kind())
 	}
 
-	if a.Type().Kind() != reflect.Array && a.Type().Kind() != reflect.Slice {
-		return fmt.Errorf("value to validate has to be a array or slice, was %v", a.Type().Kind())
-	}
-
-	var errors []error
-	for _, conFull := range c {
-		conType, err := model.GetConditionType(conFull)
-		if err != nil {
-			if or {
-				errors = append(errors, err)
-			} else {
+	switch c.ConditionType {
+	case model.EQUAL:
+		if len(c.ConditionValue) != 0 {
+			equal, err := strconv.Atoi(c.ConditionValue)
+			if err != nil {
+				return err
+			} else if v.Len() != equal {
+				return fmt.Errorf("value shorter than %v", equal)
+			}
+		}
+	case model.NOT_EQUAL:
+		if len(c.ConditionValue) != 0 {
+			notEqual, err := strconv.Atoi(c.ConditionValue)
+			if err != nil {
+				return err
+			} else if v.Len() == notEqual {
+				return fmt.Errorf("value longer than %v", notEqual)
+			}
+		}
+	case model.MIN_VALUE:
+		if len(c.ConditionValue) != 0 {
+			minValue, err := strconv.Atoi(c.ConditionValue)
+			if err != nil {
+				return err
+			} else if v.Len() < minValue {
+				return fmt.Errorf("value shorter than %v", minValue)
+			}
+		}
+	case model.MAX_VLAUE:
+		if len(c.ConditionValue) != 0 {
+			maxValue, err := strconv.Atoi(c.ConditionValue)
+			if err != nil {
+				return err
+			} else if v.Len() > maxValue {
+				return fmt.Errorf("value longer than %v", maxValue)
+			}
+		}
+	case model.CONTAINS:
+		if len(c.ConditionValue) != 0 {
+			contains, err := ValueContains(v, c.ConditionValue)
+			if err != nil {
+				return err
+			} else if len(contains) == 0 {
+				return fmt.Errorf("value does not contain %v", contains)
+			}
+		}
+	case model.NOT_CONTAINS:
+		if len(c.ConditionValue) != 0 {
+			contains, err := ValueContains(v, c.ConditionValue)
+			if err != nil {
+				return err
+			} else if len(contains) != 0 {
+				return fmt.Errorf("value does contain %v", contains)
+			}
+		}
+	case model.FROM:
+		if len(c.ConditionValue) != 0 {
+			fromValues, err := model.GetArrayFromCondition(c.ConditionValue)
+			if err != nil {
 				return err
 			}
+			notFound, err := ValueFrom(v, fromValues, true)
+			if err != nil {
+				return err
+			} else if len(notFound) != 0 {
+				return fmt.Errorf("from values do not contain %v", notFound)
+			}
 		}
-
-		switch conType {
-		case model.EQUAL:
-			condition, err := model.GetConditionByType(conFull, model.EQUAL)
+	case model.NOT_FROM:
+		if len(c.ConditionValue) != 0 {
+			notFromValues, err := model.GetArrayFromCondition(c.ConditionValue)
 			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
+				return err
 			}
-			if len(condition) != 0 {
-				equal, err := strconv.Atoi(condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if a.Len() != equal {
-					if or {
-						errors = append(errors, fmt.Errorf("value shorter than %v", equal))
-					} else {
-						return fmt.Errorf("value shorter than %v", equal)
-					}
-				}
-			}
-		case model.NOT_EQUAL:
-			condition, err := model.GetConditionByType(conFull, model.NOT_EQUAL)
+			found, err := ValueFrom(v, notFromValues, false)
 			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
+				return err
+			} else if len(found) != 0 {
+				return fmt.Errorf("notFrom values do contain %v", found)
 			}
-			if len(condition) != 0 {
-				notEqual, err := strconv.Atoi(condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if a.Len() == notEqual {
-					if or {
-						errors = append(errors, fmt.Errorf("value longer than %v", notEqual))
-					} else {
-						return fmt.Errorf("value longer than %v", notEqual)
-					}
-				}
-			}
-		case model.MIN_VALUE:
-			condition, err := model.GetConditionByType(conFull, model.MIN_VALUE)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				minValue, err := strconv.Atoi(condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if a.Len() < minValue {
-					if or {
-						errors = append(errors, fmt.Errorf("value shorter than %v", minValue))
-					} else {
-						return fmt.Errorf("value shorter than %v", minValue)
-					}
-				}
-			}
-		case model.MAX_VLAUE:
-			condition, err := model.GetConditionByType(conFull, model.MAX_VLAUE)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				maxValue, err := strconv.Atoi(condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if a.Len() > maxValue {
-					if or {
-						errors = append(errors, fmt.Errorf("value longer than %v", maxValue))
-					} else {
-						return fmt.Errorf("value longer than %v", maxValue)
-					}
-				}
-			}
-		case model.CONTAINS:
-			condition, err := model.GetConditionByType(conFull, model.CONTAINS)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				contains, err := ValueContains(a, condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if len(contains) == 0 {
-					if or {
-						errors = append(errors, fmt.Errorf("value does not contain %v", contains))
-					} else {
-						return fmt.Errorf("value does not contain %v", contains)
-					}
-				}
-			}
-		case model.NOT_CONTAINS:
-			condition, err := model.GetConditionByType(conFull, model.NOT_CONTAINS)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				contains, err := ValueContains(a, condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if len(contains) != 0 {
-					if or {
-						errors = append(errors, fmt.Errorf("value does contain %v", contains))
-					} else {
-						return fmt.Errorf("value does contain %v", contains)
-					}
-				}
-			}
-		case model.FROM:
-			condition, err := model.GetConditionByType(conFull, model.FROM)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				fromValues, err := model.GetArrayFromCondition(condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				}
-				notFound, err := ValueFrom(a, fromValues, true)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if len(notFound) != 0 {
-					if or {
-						errors = append(errors, fmt.Errorf("from values do not contain %v", notFound))
-					} else {
-						return fmt.Errorf("from values do not contain %v", notFound)
-					}
-				}
-			}
-		case model.NOT_FROM:
-			condition, err := model.GetConditionByType(conFull, model.NOT_FROM)
-			if err != nil {
-				if or {
-					errors = append(errors, err)
-				} else {
-					return err
-				}
-			}
-			if len(condition) != 0 {
-				notFromValues, err := model.GetArrayFromCondition(condition)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				}
-				found, err := ValueFrom(a, notFromValues, false)
-				if err != nil {
-					if or {
-						errors = append(errors, err)
-					} else {
-						return err
-					}
-				} else if len(found) != 0 {
-					if or {
-						errors = append(errors, fmt.Errorf("notFrom values do contain %v", found))
-					} else {
-						return fmt.Errorf("notFrom values do contain %v", found)
-					}
-				}
-			}
-		case model.NONE:
-			return nil
-		case model.OR:
-			continue
-		default:
-			return fmt.Errorf("invalid condition type %s", conType)
 		}
+	case model.NONE:
+		return nil
+	default:
+		return fmt.Errorf("invalid condition type %s", c.ConditionType)
 	}
-
-	if len(errors) >= len(c) {
-		return fmt.Errorf("no condition fulfilled, all errors: %v", errors)
-	}
-
 	return nil
 }
 

@@ -22,8 +22,9 @@ const (
 	LexerRightBrace TokenType = "GROUP_CLOSE"
 
 	// Literals
-	LexerConditionType  TokenType = "CONDITION_TYPE"
-	LexerConditionValue TokenType = "CONDITION_VALUE"
+	LexerConditionType        TokenType = "CONDITION_TYPE"
+	LexerConditionValue       TokenType = "CONDITION_VALUE"
+	LexerConditionValueString TokenType = "CONDITION_VALUE_STRING"
 
 	// Operators
 	LexerOperator TokenType = "OPERATOR"

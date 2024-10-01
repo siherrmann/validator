@@ -2,33 +2,48 @@ package model
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 )
 
 // RootNode is what starts every parsed AST.
 type RootNode struct {
-	RootValue *Value
+	RootValue *AstValue
 }
 
-// Value holds a Type ("Condition" or "Group") as well as a `ConditionType` and `ConditionValue`.
+// AstValue holds a Type ("Condition" or "Group") as well as a `ConditionType` and `ConditionValue`.
 // The ConditionType is a [model.ConditionType] and the ConditionValue is any string (numbers are also represented as string).
-type Value struct {
-	Type           string // "Condition"
+type AstValue struct {
+	Type           AstValueType
 	ConditionType  ConditionType
 	ConditionValue string
-	ConditionGroup []*Value
+	ConditionGroup ConditionGroup
 	Operator       Operator
 	Start          int
 	End            int
 }
 
-func (r Value) AstGroupToString() string {
+type AstValueType string
+
+const (
+	GROUP     AstValueType = "Group"
+	CONDITION AstValueType = "Condition"
+)
+
+type ConditionGroup []*AstValue
+
+func (r AstValue) AstGroupToString() string {
 	groupConditions := []string{}
 	groupString := ""
 	for _, v := range r.ConditionGroup {
-		if v.Type == "Group" {
-			groupConditions = append(groupConditions, "("+v.AstGroupToString()+")")
-		} else if v.Type == "Condition" {
+		if v.Type == GROUP {
+			if len(v.Operator) > 0 {
+				groupConditions = append(groupConditions, fmt.Sprintf("(%v) %v", v.AstGroupToString(), v.Operator))
+			} else {
+				groupConditions = append(groupConditions, fmt.Sprintf("(%v)", v.AstGroupToString()))
+			}
+
+		} else if v.Type == CONDITION {
 			groupConditions = append(groupConditions, v.AstConditionToString())
 		}
 	}
@@ -36,12 +51,37 @@ func (r Value) AstGroupToString() string {
 	return groupString
 }
 
-func (r Value) AstConditionToString() string {
+func (r AstValue) AstConditionToString() string {
 	if len(r.Operator) > 0 {
-		return fmt.Sprintf(`%v%v "%v"`, r.ConditionType, r.ConditionValue, r.Operator)
+		return fmt.Sprintf("%v'%v' %v", r.ConditionType, r.ConditionValue, r.Operator)
 	} else {
-		return fmt.Sprintf(`%v"%v"`, r.ConditionType, r.ConditionValue)
+		return fmt.Sprintf("%v'%v'", r.ConditionType, r.ConditionValue)
 	}
+}
+
+func (r AstValue) RunFuncOnConditionGroup(input reflect.Value, f func(reflect.Value, *AstValue) error) error {
+	var errors []error
+	for i, v := range r.ConditionGroup {
+		var err error
+		if v.Type == GROUP {
+			err = v.RunFuncOnConditionGroup(input, f)
+		} else if v.Type == CONDITION {
+			err = f(input, v)
+		}
+		if err != nil && i == 0 && v.Operator == OR {
+			errors = append(errors, err)
+		} else if err != nil && i == 0 && v.Operator == AND {
+			return err
+		} else if err != nil && i > 0 && r.ConditionGroup[i-1].Operator == OR {
+			errors = append(errors, err)
+		} else if err != nil {
+			return err
+		}
+	}
+	if len(errors) >= len(r.ConditionGroup) {
+		return fmt.Errorf("no condition fulfilled, all errors: %v", errors)
+	}
+	return nil
 }
 
 // [ConditionType] is the type for all available condition types.
@@ -59,8 +99,6 @@ const (
 	FROM         ConditionType = "frm"
 	NOT_FROM     ConditionType = "nfr"
 	REGX         ConditionType = "rex"
-	AND          ConditionType = "&&"
-	OR           ConditionType = "||"
 )
 
 var ValidConditionTypes = map[ConditionType]int{
@@ -74,7 +112,6 @@ var ValidConditionTypes = map[ConditionType]int{
 	FROM:         7,
 	NOT_FROM:     8,
 	REGX:         9,
-	OR:           10,
 }
 
 // [LookupConditionType] checks our validConditionType map for the scanned condition type.
@@ -92,13 +129,13 @@ type Operator string
 // Available operators.
 const (
 	// Group states
-	And Operator = "&&"
-	Or  Operator = "||"
+	AND Operator = "&&"
+	OR  Operator = "||"
 )
 
 var validOperator = map[Operator]int{
-	And: 0,
-	Or:  1,
+	AND: 0,
+	OR:  1,
 }
 
 // [LookupOperator] checks our validOperator map for the scanned operator.

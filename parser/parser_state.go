@@ -8,6 +8,7 @@ const (
 	// Group states
 	GrpStart state = iota
 	GrpOpen
+	GrpEnd
 
 	// Condition states
 	ConType

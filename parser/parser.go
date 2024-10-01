@@ -35,7 +35,7 @@ func (p *Parser) ParseValidation() (model.RootNode, error) {
 	var rootNode model.RootNode
 
 	val := p.parseGroup()
-	if val == nil {
+	if val == nil || len(p.Errors()) > 0 {
 		p.parseError(fmt.Sprintf(
 			"error parsing validation, expected a value, got: %v:",
 			p.currentToken.Literal,
@@ -52,8 +52,8 @@ func (p *Parser) ParseValidation() (model.RootNode, error) {
 func (p *Parser) nextToken() {
 	p.currentToken = p.peekToken
 	p.peekToken = p.lexer.NextToken()
-	// TODO remove log
-	fmt.Printf("current token: %v\n", p.peekToken)
+	// // TODO remove log
+	// fmt.Printf("current token: %v\n", p.peekToken)
 }
 
 func (p *Parser) currentTokenTypeIs(t model.TokenType) bool {
@@ -61,22 +61,22 @@ func (p *Parser) currentTokenTypeIs(t model.TokenType) bool {
 }
 
 // [parseGroup] is called when an open left brace `(` token is found or a validation starts without a '('.
-func (p *Parser) parseGroup() *model.Value {
-	group := &model.Value{Type: "Group"}
-	objState := GrpStart
+func (p *Parser) parseGroup() *model.AstValue {
+	group := &model.AstValue{Type: model.GROUP}
+	grpState := GrpStart
 
-	for !p.currentTokenTypeIs(model.LexerEOF) {
-		// TODO remove log
-		fmt.Printf("current object state: %v\n", objState)
-		switch objState {
+	for !p.currentTokenTypeIs(model.LexerEOF) && grpState != GrpEnd {
+		// // TODO remove log
+		// fmt.Printf("current group state: %v\n", grpState)
+		switch grpState {
 		case GrpStart:
 			if p.currentTokenTypeIs(model.LexerLeftBrace) {
-				objState = GrpOpen
 				group.Start = p.currentToken.Start
 				p.nextToken()
+				grpState = GrpOpen
 			} else if p.currentTokenTypeIs(model.LexerConditionType) {
-				objState = GrpOpen
 				group.Start = p.currentToken.Start
+				grpState = GrpOpen
 			} else {
 				p.parseError(fmt.Sprintf(
 					"error parsing validation group, expected `(` or condition, got: %s",
@@ -88,13 +88,19 @@ func (p *Parser) parseGroup() *model.Value {
 			if p.currentTokenTypeIs(model.LexerRightBrace) {
 				group.End = p.currentToken.Start
 				p.nextToken()
-				return group
+				grpState = GrpEnd
 			} else if p.currentTokenTypeIs(model.LexerLeftBrace) {
 				innerGroup := p.parseGroup()
 				group.ConditionGroup = append(group.ConditionGroup, innerGroup)
+				if len(group.ConditionGroup) > 1 && len(group.ConditionGroup[len(group.ConditionGroup)-2].Operator) == 0 {
+					group.ConditionGroup[len(group.ConditionGroup)-2].Operator = model.AND
+				}
 			} else if p.currentTokenTypeIs(model.LexerConditionType) {
 				condition := p.parseCondition()
 				group.ConditionGroup = append(group.ConditionGroup, condition)
+				if len(group.ConditionGroup) > 1 && len(group.ConditionGroup[len(group.ConditionGroup)-2].Operator) == 0 {
+					group.ConditionGroup[len(group.ConditionGroup)-2].Operator = model.AND
+				}
 			} else if p.currentTokenTypeIs(model.LexerOperator) {
 				operator := p.parseOperator()
 				if len(group.ConditionGroup) > 0 {
@@ -118,36 +124,39 @@ func (p *Parser) parseGroup() *model.Value {
 }
 
 // [parseCondition] is used to parse a condition and setting the `conditionType`:`condition` pair.
-func (p *Parser) parseCondition() *model.Value {
-	condition := &model.Value{Type: "Condition"}
+func (p *Parser) parseCondition() *model.AstValue {
+	condition := &model.AstValue{Type: model.CONDITION}
 	conditionState := ConType
 
 	for conditionState != ConEnd {
 		switch conditionState {
 		case ConType:
 			if p.currentTokenTypeIs(model.LexerConditionType) {
-				conditionState = ConValue
 				condition.ConditionType = p.parseConditionType()
 				p.nextToken()
+				conditionState = ConValue
 			} else {
 				p.parseError(fmt.Sprintf(
 					"error parsing condition type, expected CndType token, got: %s",
 					p.currentToken.Literal,
 				))
+				return condition
 			}
 		case ConValue:
-			if p.currentTokenTypeIs(model.LexerConditionValue) {
-				conditionState = ConEnd
+			if p.currentTokenTypeIs(model.LexerConditionValue) || p.currentTokenTypeIs(model.LexerConditionValueString) {
 				condition.ConditionValue = p.parseConditionValue()
 				p.nextToken()
+				conditionState = ConEnd
 			} else {
 				p.parseError(fmt.Sprintf(
 					"error parsing condition, expected ConValue token, got: %s",
 					p.currentToken.Literal,
 				))
+				return condition
 			}
 		}
 	}
+
 	return condition
 }
 

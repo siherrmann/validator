@@ -94,11 +94,13 @@ func Validate(v any) error {
 		}
 
 		tagSplit := strings.Split(tag, ", ")
+		condition := "-"
+		if len(tagSplit) > 0 {
+			condition = tagSplit[0]
+		}
 
 		value := structFull.Field(i)
 		fieldName := structFull.Type().Field(i).Name
-
-		conditions, or := model.GetConditionsAndOrFromString(tagSplit[0])
 
 		groupsValue := []string{}
 		groupsString := []string{}
@@ -122,49 +124,44 @@ func Validate(v any) error {
 			}
 		}
 
+		var err error
 		switch value.Type().Kind() {
 		case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
-			valueTemp := value.Int()
-			err := validators.CheckInt(int(valueTemp), conditions, or)
-			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error())
-			} else if err != nil {
-				for _, groupName := range groupsValue {
-					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
-				}
-			}
+			// TODO update to only parsing
+			// err = ValidateValueWithoutParser(value, conditions, or, validators.CheckInt)
+			err = ValidateValueWithParser(value, condition, validators.CheckInt)
 		case reflect.Float64, reflect.Float32:
-			valueTemp := value.Float()
-			err := validators.CheckFloat(valueTemp, conditions, or)
-			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error())
-			} else if err != nil {
-				for _, groupName := range groupsValue {
-					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
-				}
-			}
+			// TODO update to only parsing
+			// err = ValidateValueWithoutParser(value, conditions, or, validators.CheckFloat)
+			err = ValidateValueWithParser(value, condition, validators.CheckFloat)
 		case reflect.String:
-			valueTemp := value.String()
-			err := validators.CheckString(valueTemp, conditions, or)
-			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error())
-			} else if err != nil {
-				for _, groupName := range groupsValue {
-					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
-				}
-			}
+			// TODO update to only parsing
+			// err = ValidateValueWithoutParser(value, conditions, or, validators.CheckString)
+			err = ValidateValueWithParser(value, condition, validators.CheckString)
 		case reflect.Array, reflect.Slice:
-			valueTemp := value
-			err := validators.CheckArray(valueTemp, conditions, or)
-			if err != nil && len(groupsString) == 0 {
-				return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error())
-			} else if err != nil {
-				for _, groupName := range groupsValue {
-					groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
-				}
-			}
+			// TODO update to only parsing
+			// err = ValidateValueWithoutParser(value, conditions, or, validators.CheckArray)
+			err = ValidateValueWithParser(value, condition, validators.CheckArray)
+		case reflect.Map:
+			// TODO validate?
+			// TODO update to only parsing
+			// err = ValidateValueWithoutParser(value, conditions, or, validators.CheckMap)
+			err = ValidateValueWithParser(value, condition, validators.CheckMap)
+		case reflect.Struct:
+			// TODO validate?
+			// TODO update to only parsing
+			// err = ValidateValueWithoutParser(value, conditions, or, validators.CheckStruct)
+			err = ValidateValueWithParser(value, condition, validators.CheckTime)
 		default:
 			return fmt.Errorf("invalid field type for %v in %v: %v", fieldName, reflect.TypeOf(v), value.Type().Kind())
+		}
+
+		if err != nil && len(groupsString) == 0 {
+			return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error())
+		} else if err != nil {
+			for _, groupName := range groupsValue {
+				groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
+			}
 		}
 	}
 

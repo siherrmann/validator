@@ -71,9 +71,9 @@ type TestStructNotFrom struct {
 }
 
 type TestStructRex struct {
-	String string   `vld:"rex^[a-zA-Z0-9]+$"`
-	Int    int      `vld:"rex^(2|3)$"`
-	Float  float64  `vld:"rex^(2.000|3.000)$"`
+	String string   `vld:"rex'^[a-zA-Z0-9]+$'"`
+	Int    int      `vld:"rex'^(2|3)$'"`
+	Float  float64  `vld:"rex'^(2.000|3.000)$'"`
 	Array  []string `vld:"-"`
 }
 
@@ -99,7 +99,7 @@ type TestStructEmptyCondition struct {
 }
 
 type TestStructPassword struct {
-	String string `vld:"min8 max30 rex^(.*[A-Z])+(.*)$ rex^(.*[a-z])+(.*)$ rex^(.*\\d)+(.*)$ rex^(.*[\x60!@#$%^&*()_+={};':\"|\\,.<>/?~-])+(.*)$"`
+	String string `vld:"min8 max30 rex'^(.*[A-Z])+(.*)$' rex'^(.*[a-z])+(.*)$' rex'^(.*\\d)+(.*)$' rex'^(.*[\x60!@#$%^&*()_+={};/':\"|\\,.<>/?~-])+(.*)$'"`
 }
 
 type TestStructGroup struct {
@@ -772,7 +772,7 @@ func TestStructValidator(t *testing.T) {
 	testCases = map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructPassword{
-				String: "Password123.4",
+				String: "Password123'4",
 			},
 			"",
 		},
@@ -1423,7 +1423,7 @@ func assertErrorUpdate(t testing.TB, testCase string, err error, errorExpected b
 }
 
 func TestParser(t *testing.T) {
-	lexer := parser.NewLexer(`min1 max2 || ((max0) && equ90 || rex")(sa jkdnf")`)
+	lexer := parser.NewLexer(`min1 max2 || ((max0) && equ90 || rex')(sa jkdnf')`)
 	p := parser.NewParser(lexer)
 	r, err := p.ParseValidation()
 	if r.RootValue == nil {

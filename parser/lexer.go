@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"strings"
+
 	"github.com/siherrmann/validator/model"
 )
 
@@ -34,8 +36,8 @@ func (l *Lexer) readChar() {
 	l.nextPosition++
 }
 
-// NextToken switches through the lexer's current char and creates a new model.
-// It then it calls readChar() to advance the lexer and it returns the token
+// [NextToken] switches through the lexer's current char and creates a new model.
+// It then it calls [readChar] to advance the lexer and it returns the token.
 func (l *Lexer) NextToken() model.Token {
 	var t model.Token
 
@@ -55,7 +57,7 @@ func (l *Lexer) NextToken() model.Token {
 
 		t.Type = model.LexerOperator
 		l.lastTokenType = model.LexerOperator
-	case '"':
+	case '\'':
 		t.Literal = l.readString()
 
 		t.Line = l.line
@@ -72,17 +74,7 @@ func (l *Lexer) NextToken() model.Token {
 		t.Type = model.LexerEOF
 		l.lastTokenType = model.LexerEOF
 	default:
-		if isLetter(l.char) {
-			t.Literal = l.readConditionType()
-
-			t.Line = l.line
-			t.Start = l.position
-			t.End = l.position
-
-			t.Type = model.LexerConditionType
-			l.lastTokenType = model.LexerConditionType
-			return t
-		} else if l.lastTokenType == model.LexerConditionType {
+		if l.lastTokenType == model.LexerConditionType {
 			t.Literal = l.readConditionValue()
 
 			t.Line = l.line
@@ -91,6 +83,16 @@ func (l *Lexer) NextToken() model.Token {
 
 			t.Type = model.LexerConditionValue
 			l.lastTokenType = model.LexerConditionValue
+			return t
+		} else if isLetter(l.char) {
+			t.Literal = l.readConditionType()
+
+			t.Line = l.line
+			t.Start = l.position
+			t.End = l.position
+
+			t.Type = model.LexerConditionType
+			l.lastTokenType = model.LexerConditionType
 			return t
 		}
 		t = newToken(model.LexerIllegal, l.line, l.position, l.position, l.char)
@@ -128,7 +130,7 @@ func isOperator(char rune) bool {
 	return char == '|' || char == '&'
 }
 
-// readOperator sets a start position and reads through two characters to get a full operator
+// [readOperator] sets a start position and reads through two characters to get a full operator
 func (l *Lexer) readOperator() string {
 	position := l.position
 	for isOperator(l.char) && l.position < position+2 {
@@ -137,21 +139,26 @@ func (l *Lexer) readOperator() string {
 	return string(l.Input[position:l.position])
 }
 
-// readString sets a start position and reads through characters
-// When it finds a closing `"`, it stops consuming characters and
+// [readString] sets a start position and reads through characters
+// until it finds a closing `'`. It stops consuming characters and
 // returns the string between the start and end positions.
+// The charakter`'` inside the string is escaped with a '/'
+// and the '/' is removed after reading the string.
 func (l *Lexer) readString() string {
 	position := l.position + 1
 	for {
 		prevChar := l.char
 		l.readChar()
-		if (l.char == '"' && prevChar != '\\') || l.char == 0 {
+		if (l.char == '\'' && prevChar != '/') || l.char == 0 {
 			break
 		}
 	}
-	return string(l.Input[position:l.position])
+	// remove custom escaped `'`
+	return strings.ReplaceAll(string(l.Input[position:l.position]), "/'", "'")
 }
 
+// [readConditionType] sets a start position and reads through 3 characters
+// to get a condition type (unvalidated).
 func (l *Lexer) readConditionType() string {
 	position := l.position
 	for isLetter(l.char) && l.position < position+3 {
@@ -160,6 +167,8 @@ func (l *Lexer) readConditionType() string {
 	return string(l.Input[position:l.position])
 }
 
+// [readConditionValue] sets a start position and reads through characters
+// until any kind of whitespace to get a condition value (unvalidated).
 func (l *Lexer) readConditionValue() string {
 	position := l.position
 	for l.char != ' ' && l.char != '\t' && l.char != '\n' && l.char != '\r' && l.char != ')' && l.char != 0 {

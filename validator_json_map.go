@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
-	"time"
 
 	"github.com/siherrmann/validator/model"
 	"github.com/siherrmann/validator/validators"
@@ -61,36 +60,21 @@ func ValidateJsonMap(jsonMap model.JsonMap, validation ...model.Validation) erro
 }
 
 func ValidateInterface(in interface{}, inType model.ValidatorType, condition string) error {
-	or := false
-	conditions, or := model.GetConditionsAndOrFromString(condition)
-
 	switch inType {
 	case model.String:
-		inString, ok := in.(string)
-		if !ok {
-			return fmt.Errorf("invalid string: %v", in)
-		}
-		err := validators.CheckString(inString, conditions, or)
+		err := ValidateValueWithParser(reflect.ValueOf(in), condition, validators.CheckString)
 		if err != nil {
 			return err
 		}
 		return nil
 	case model.Int:
-		inInt, ok := in.(int)
-		if !ok {
-			return fmt.Errorf("invalid int: %v", in)
-		}
-		err := validators.CheckInt(inInt, conditions, or)
+		err := ValidateValueWithParser(reflect.ValueOf(in), condition, validators.CheckInt)
 		if err != nil {
 			return err
 		}
 		return nil
 	case model.Float:
-		inFloat, ok := in.(float64)
-		if !ok {
-			return fmt.Errorf("invalid float: %v", in)
-		}
-		err := validators.CheckFloat(inFloat, conditions, or)
+		err := ValidateValueWithParser(reflect.ValueOf(in), condition, validators.CheckFloat)
 		if err != nil {
 			return err
 		}
@@ -102,21 +86,13 @@ func ValidateInterface(in interface{}, inType model.ValidatorType, condition str
 		}
 		return nil
 	case model.Map:
-		inMap, ok := in.(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("invalid map: %v", in)
-		}
-		err := validators.CheckMap(reflect.ValueOf(inMap), conditions, or)
+		err := ValidateValueWithParser(reflect.ValueOf(in), condition, validators.CheckMap)
 		if err != nil {
 			return err
 		}
 		return nil
 	case model.Time:
-		inTime, ok := in.(time.Time)
-		if !ok {
-			return fmt.Errorf("invalid time: %v", in)
-		}
-		err := validators.CheckTime(inTime, conditions, or)
+		err := ValidateValueWithParser(reflect.ValueOf(in), condition, validators.CheckTime)
 		if err != nil {
 			return err
 		}

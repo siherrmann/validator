@@ -28,7 +28,6 @@ func GetConditionByType(conditionFull string, conditionType ConditionType) (stri
 	if len(condition) == 0 {
 		return "", fmt.Errorf("empty %s value", conditionType)
 	}
-
 	return condition, nil
 }
 
@@ -37,7 +36,6 @@ func GetArrayFromCondition(condition string) ([]string, error) {
 	if len(conditionList) == 0 {
 		return []string{}, fmt.Errorf("empty condition list %s value", condition)
 	}
-
 	return conditionList, nil
 }
 
