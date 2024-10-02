@@ -36,8 +36,8 @@ func (l *Lexer) readChar() {
 	l.nextPosition++
 }
 
-// [NextToken] switches through the lexer's current char and creates a new model.
-// It then it calls [readChar] to advance the lexer and it returns the token.
+// NextToken switches through the lexer's current char and creates a new model.
+// It then it calls readChar to advance the lexer and it returns the token.
 func (l *Lexer) NextToken() model.Token {
 	var t model.Token
 
@@ -130,7 +130,7 @@ func isOperator(char rune) bool {
 	return char == '|' || char == '&'
 }
 
-// [readOperator] sets a start position and reads through two characters to get a full operator
+// readOperator sets a start position and reads through two characters to get a full operator
 func (l *Lexer) readOperator() string {
 	position := l.position
 	for isOperator(l.char) && l.position < position+2 {
@@ -139,7 +139,7 @@ func (l *Lexer) readOperator() string {
 	return string(l.Input[position:l.position])
 }
 
-// [readString] sets a start position and reads through characters
+// readString sets a start position and reads through characters
 // until it finds a closing `'`. It stops consuming characters and
 // returns the string between the start and end positions.
 // The charakter`'` inside the string is escaped with a '/'
@@ -157,7 +157,7 @@ func (l *Lexer) readString() string {
 	return strings.ReplaceAll(string(l.Input[position:l.position]), "/'", "'")
 }
 
-// [readConditionType] sets a start position and reads through 3 characters
+// readConditionType sets a start position and reads through 3 characters
 // to get a condition type (unvalidated).
 func (l *Lexer) readConditionType() string {
 	position := l.position
@@ -167,7 +167,7 @@ func (l *Lexer) readConditionType() string {
 	return string(l.Input[position:l.position])
 }
 
-// [readConditionValue] sets a start position and reads through characters
+// readConditionValue sets a start position and reads through characters
 // until any kind of whitespace to get a condition value (unvalidated).
 func (l *Lexer) readConditionValue() string {
 	position := l.position

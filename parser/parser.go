@@ -8,7 +8,7 @@ import (
 	"github.com/siherrmann/validator/model"
 )
 
-// [Parser] holds a [Lexer], errors, the [currentToken], and the [peekToken] (next token).
+// Parser holds a Lexer, errors, the currentToken, and the peekToken (next token).
 // Parser methods handle iterating through tokens and building and AST.
 type Parser struct {
 	lexer        *Lexer
@@ -17,8 +17,8 @@ type Parser struct {
 	peekToken    model.Token
 }
 
-// New takes a [Lexer], creates a [Parser] with that [Lexer], sets the current token and
-// the peek token and returns the [Parser].
+// New takes a Lexer, creates a Parser with that Lexer, sets the current token and
+// the peek token and returns the Parser.
 func NewParser(l *Lexer) *Parser {
 	p := &Parser{lexer: l}
 
@@ -29,8 +29,8 @@ func NewParser(l *Lexer) *Parser {
 	return p
 }
 
-// [ParseValidation] parses tokens and creates an AST. It returns the [RootNode]
-// which holds a [Value] and in it the rest of the tree.
+// ParseValidation parses tokens and creates an AST. It returns the RootNode
+// which holds a Value and in it the rest of the tree.
 func (p *Parser) ParseValidation() (model.RootNode, error) {
 	var rootNode model.RootNode
 
@@ -47,8 +47,8 @@ func (p *Parser) ParseValidation() (model.RootNode, error) {
 	return rootNode, nil
 }
 
-// [nextToken] sets our current token to the [peekToken] and the [peekToken] to
-// [p.lexer.NextToken()] which scans and returns the next token.
+// nextToken sets our current token to the peekToken and the peekToken to
+// p.lexer.NextToken() which scans and returns the next token.
 func (p *Parser) nextToken() {
 	p.currentToken = p.peekToken
 	p.peekToken = p.lexer.NextToken()
@@ -58,7 +58,7 @@ func (p *Parser) currentTokenTypeIs(t model.TokenType) bool {
 	return p.currentToken.Type == t
 }
 
-// [parseGroup] is called when an open left brace `(` token is found or a requirement starts without a '('.
+// parseGroup is called when an open left brace `(` token is found or a requirement starts without a '('.
 func (p *Parser) parseGroup() *model.AstValue {
 	group := &model.AstValue{Type: model.GROUP}
 	grpState := GrpStart
@@ -119,7 +119,7 @@ func (p *Parser) parseGroup() *model.AstValue {
 	return group
 }
 
-// [parseCondition] is used to parse a condition and setting the `conditionType`:`condition` pair.
+// parseCondition is used to parse a condition and setting the `conditionType`:`condition` pair.
 func (p *Parser) parseCondition() *model.AstValue {
 	condition := &model.AstValue{Type: model.CONDITION}
 	conditionState := ConType
@@ -156,7 +156,7 @@ func (p *Parser) parseCondition() *model.AstValue {
 	return condition
 }
 
-// [parseOperator] is used to parse the condition type.
+// parseOperator is used to parse the condition type.
 func (p *Parser) parseOperator() model.Operator {
 	operator := model.Operator(p.currentToken.Literal)
 	err := model.LookupOperator(operator)
@@ -170,7 +170,7 @@ func (p *Parser) parseOperator() model.Operator {
 	return operator
 }
 
-// [parseConditionType] is used to parse the condition type.
+// parseConditionType is used to parse the condition type.
 func (p *Parser) parseConditionType() model.ConditionType {
 	conType := model.ConditionType(p.currentToken.Literal)
 	err := model.LookupConditionType(conType)
@@ -184,7 +184,7 @@ func (p *Parser) parseConditionType() model.ConditionType {
 	return conType
 }
 
-// [parseConditionValue] is used to parse the condition value (eg. 10 if min length of string is 10 (min10)).
+// parseConditionValue is used to parse the condition value (eg. 10 if min length of string is 10 (min10)).
 func (p *Parser) parseConditionValue() string {
 	return p.currentToken.Literal
 }

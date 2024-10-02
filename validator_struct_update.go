@@ -11,8 +11,8 @@ import (
 	"github.com/siherrmann/validator/validators"
 )
 
-// [UnmarshalValidateAndUpdate] unmarshals given json ([]byte) into pointer v.
-// For more information to ValidateAndUpdate look at [ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interface{}) error].
+// UnmarshalValidateAndUpdate unmarshals given json ([]byte) into pointer v.
+// For more information to ValidateAndUpdate look at ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interface{}) error.
 func UnmarshalValidateAndUpdate(jsonInput []byte, structToUpdate interface{}) error {
 	jsonUnmarshaled := map[string]interface{}{}
 

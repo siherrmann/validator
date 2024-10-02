@@ -84,7 +84,7 @@ func (r AstValue) RunFuncOnConditionGroup(input reflect.Value, f func(reflect.Va
 	return nil
 }
 
-// [ConditionType] is the type for all available condition types.
+// ConditionType is the type for all available condition types.
 type ConditionType string
 
 // Available condition types.
@@ -114,7 +114,7 @@ var ValidConditionTypes = map[ConditionType]int{
 	REGX:         9,
 }
 
-// [LookupConditionType] checks our validConditionType map for the scanned condition type.
+// LookupConditionType checks our validConditionType map for the scanned condition type.
 // If not found, an error is returned.
 func LookupConditionType(conType ConditionType) error {
 	if _, ok := ValidConditionTypes[conType]; ok {
@@ -123,7 +123,7 @@ func LookupConditionType(conType ConditionType) error {
 	return fmt.Errorf("expected a valid condition type, found: %s", conType)
 }
 
-// [Operator] is the type for all available operators.
+// Operator is the type for all available operators.
 type Operator string
 
 // Available operators.
@@ -138,7 +138,7 @@ var validOperator = map[Operator]int{
 	OR:  1,
 }
 
-// [LookupOperator] checks our validOperator map for the scanned operator.
+// LookupOperator checks our validOperator map for the scanned operator.
 // If not found, an error is returned.
 func LookupOperator(operator Operator) error {
 	if _, ok := validOperator[operator]; ok {
