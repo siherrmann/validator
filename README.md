@@ -18,6 +18,7 @@ If you want to ignore one field in the validator you can add `vld:"-"`.
 If you don't add the vld tag to every field the function will fail with an error.
 
 ## Update
+
 You can add a validate tag with the syntax `upd:"[json_key], [requirement], [groups]"`.
 The json key has to be a valid key from given json for unmarshalling or a key from a given map (eg. `gr1min1 gr2max1`).
 Groups are seperated by a space (eg. `gr1min1 gr2max1`).
