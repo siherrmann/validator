@@ -44,6 +44,8 @@ func (l *Lexer) NextToken() model.Token {
 	l.skipWhitespace()
 
 	switch l.char {
+	case '-':
+		t = newToken(model.LexerEmptyRequirement, l.line, l.position, l.position+1, l.char)
 	case '(':
 		t = newToken(model.LexerLeftBrace, l.line, l.position, l.position+1, l.char)
 	case ')':

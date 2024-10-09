@@ -14,6 +14,9 @@ const (
 	// Token/character we don't know about
 	LexerIllegal TokenType = "ILLEGAL"
 
+	// Empty condition
+	LexerEmptyRequirement TokenType = "EMPTY"
+
 	// End of file
 	LexerEOF TokenType = "EOF"
 

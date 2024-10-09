@@ -50,17 +50,3 @@ func GetConditionsAndOrFromString(in string) ([]string, bool) {
 	}
 	return conditions, or
 }
-
-func GetGroup(s string) (string, error) {
-	var group string
-	if len(s) > 2 {
-		group = s[:3]
-	} else {
-		group = s
-	}
-
-	if !strings.HasPrefix(group, "gr") {
-		return "", fmt.Errorf("invalid group: %s", group)
-	}
-	return group, nil
-}

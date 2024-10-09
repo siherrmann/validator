@@ -7,22 +7,13 @@ import (
 	"github.com/siherrmann/validator/model"
 )
 
-func ValidateGroup(groups map[string]string, groupSize map[string]int, groupErrors map[string][]error) error {
+func ValidateGroups(groups map[string]*model.Group, groupSize map[string]int, groupErrors map[string][]error) error {
 	if len(groups) != 0 {
-		for groupName, groupCondition := range groups {
-			conType, err := model.GetConditionType(groupCondition)
-			if err != nil {
-				return err
-			}
-
-			switch conType {
+		for groupName, group := range groups {
+			switch group.ConditionType {
 			case model.MIN_VALUE:
-				condition, err := model.GetConditionByType(groupCondition, model.MIN_VALUE)
-				if err != nil {
-					return err
-				}
-				if len(condition) != 0 {
-					minValue, err := strconv.Atoi(condition)
+				if len(group.ConditionValue) != 0 {
+					minValue, err := strconv.Atoi(group.ConditionValue)
 					if err != nil {
 						return err
 					} else if (groupSize[groupName] - len(groupErrors[groupName])) < minValue {
@@ -30,12 +21,8 @@ func ValidateGroup(groups map[string]string, groupSize map[string]int, groupErro
 					}
 				}
 			case model.MAX_VLAUE:
-				condition, err := model.GetConditionByType(groupCondition, model.MAX_VLAUE)
-				if err != nil {
-					return err
-				}
-				if len(condition) != 0 {
-					maxValue, err := strconv.Atoi(condition)
+				if len(group.ConditionValue) != 0 {
+					maxValue, err := strconv.Atoi(group.ConditionValue)
 					if err != nil {
 						return err
 					} else if (groupSize[groupName] - len(groupErrors[groupName])) > maxValue {
@@ -43,7 +30,7 @@ func ValidateGroup(groups map[string]string, groupSize map[string]int, groupErro
 					}
 				}
 			default:
-				return fmt.Errorf("invalid group condition type %s", conType)
+				return fmt.Errorf("invalid group condition type %s", group.ConditionType)
 			}
 		}
 	}

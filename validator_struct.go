@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/siherrmann/validator/model"
 	"github.com/siherrmann/validator/validators"
@@ -72,91 +71,49 @@ func UnmarshalAndValidate(data []byte, v any) error {
 // If you want to check more complex cases you can obviously replace equ, neq, min, max and con with one regular expression.
 func Validate(v any) error {
 	// check if value is a pointer to a struct
-	value := reflect.ValueOf(v)
-	if value.Kind() != reflect.Ptr {
-		return fmt.Errorf("value has to be of kind pointer, was %T", value)
+	structValue := reflect.ValueOf(v)
+	if structValue.Kind() != reflect.Ptr {
+		return fmt.Errorf("structValue has to be of kind pointer, was %T", structValue)
 	}
-	if value.Elem().Kind() != reflect.Struct {
-		return fmt.Errorf("value has to be of kind struct, was %T", value)
+	if structValue.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("structValue has to be of kind struct, was %T", structValue)
 	}
 
-	// get valid reflect value of struct
-	structFull := value.Elem()
+	// get valid reflect structValue of struct
+	structFull := structValue.Elem()
 
-	groups := map[string]string{}
+	groups := map[string]*model.Group{}
 	groupSize := map[string]int{}
 	groupErrors := map[string][]error{}
 
 	for i := 0; i < structFull.Type().NumField(); i++ {
-		tag := structFull.Type().Field(i).Tag.Get("vld")
-		if len(strings.TrimSpace(tag)) == 0 || strings.TrimSpace(tag) == string(model.NONE) {
-			continue
-		}
-
-		tagSplit := strings.Split(tag, ", ")
-		requirement := "-"
-		if len(tagSplit) > 0 {
-			requirement = tagSplit[0]
-		}
-
 		value := structFull.Field(i)
 		fieldName := structFull.Type().Field(i).Name
+		tag := structFull.Type().Field(i).Tag.Get(string(model.VLD))
 
-		groupsValue := []string{}
-		groupsString := []string{}
-		if len(tagSplit) > 1 {
-			groupsString = strings.Split(tagSplit[1], " ")
-
-			for _, g := range groupsString {
-				group, err := model.GetGroup(g)
-				if err != nil {
-					return fmt.Errorf("error extracting group: %v", err)
-				}
-
-				condition, err := model.GetConditionByType(g, model.ConditionType(group))
-				if err != nil {
-					return fmt.Errorf("error extracting group condition: %v", err)
-				}
-
-				groupsValue = append(groupsValue, group)
-				groups[group] = condition
-				groupSize[group]++
-			}
+		validation := &model.Validation{}
+		err := validation.Fill(tag, model.VLD, value)
+		if err != nil {
+			return err
 		}
 
-		var err error
-		switch value.Type().Kind() {
-		case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
-			err = ValidateValueWithParser(value, requirement, validators.CheckInt)
-		case reflect.Float64, reflect.Float32:
-			err = ValidateValueWithParser(value, requirement, validators.CheckFloat)
-		case reflect.String:
-			err = ValidateValueWithParser(value, requirement, validators.CheckString)
-		case reflect.Bool:
-			err = ValidateValueWithParser(value, requirement, validators.CheckBool)
-		case reflect.Array, reflect.Slice:
-			err = ValidateValueWithParser(value, requirement, validators.CheckArray)
-		case reflect.Map:
-			// TODO validate?
-			err = ValidateValueWithParser(value, requirement, validators.CheckMap)
-		case reflect.Struct:
-			// TODO validate?
-			err = ValidateValueWithParser(value, requirement, validators.CheckTime)
-		default:
-			return fmt.Errorf("invalid field type for %v in %v: %v", fieldName, reflect.TypeOf(v), value.Type().Kind())
+		for _, g := range validation.Groups {
+			groups[g.Name] = g
+			groupSize[g.Name]++
 		}
 
-		// unified error handling for the switch cases without continue
-		if err != nil && len(groupsString) == 0 {
+		_, err = ValidateValueWithParser(value, validation)
+		if err != nil && len(validation.Groups) == 0 {
 			return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error())
 		} else if err != nil {
-			for _, groupName := range groupsValue {
-				groupErrors[groupName] = append(groupErrors[groupName], fmt.Errorf("field %v invalid: %v", fieldName, err.Error()))
+			for _, group := range validation.Groups {
+				groupErrors[group.Name] = append(groupErrors[group.Name], fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error()))
+				continue
 			}
 		}
 	}
 
-	err := validators.ValidateGroup(groups, groupSize, groupErrors)
+	err := validators.ValidateGroups(groups, groupSize, groupErrors)
 	if err != nil {
 		return err
 	}

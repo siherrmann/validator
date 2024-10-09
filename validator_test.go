@@ -103,24 +103,30 @@ type TestStructPassword struct {
 }
 
 type TestStructGroup struct {
-	String string   `vld:"min3, gr1min1 gr2min2"`
-	Int    int      `vld:"min3, gr1min1 gr2min2"`
-	Float  float64  `vld:"min3, gr1min1"`
-	Array  []string `vld:"min3, gr1min1"`
+	String string            `vld:"min3, gr1min1 gr2min2"`
+	Int    int               `vld:"min3, gr1min1 gr2min2"`
+	Float  float64           `vld:"min3, gr1min1"`
+	Array  []string          `vld:"min3, gr1min1"`
+	Map    map[string]string `vld:"min3, gr1min1"`
+	Struct time.Time         `vld:"min1728000000, gr1min1"`
 }
 
 type TestStructGroupNoGroup struct {
-	String string   `vld:"min3"`
-	Int    int      `vld:"min3, gr3min1"`
-	Float  float64  `vld:"min3, gr3min1"`
-	Array  []string `vld:"min3, gr3min1"`
+	String string            `vld:"min3"`
+	Int    int               `vld:"min3, gr3min5"`
+	Float  float64           `vld:"min3, gr3min5"`
+	Array  []string          `vld:"min3, gr3min5"`
+	Map    map[string]string `vld:"min3, gr3min5"`
+	Struct time.Time         `vld:"min1728000000, gr3min5"`
 }
 
 type TestStructInvalidGroupCondition struct {
-	String string   `vld:"min3, gr4min1 gr5min2"`
-	Int    int      `vld:"min3, gr4min1 gr5min2"`
-	Float  float64  `vld:"min3, gr4min1"`
-	Array  []string `vld:"min3, gr40min1"`
+	String string            `vld:"min3, gr4min1 gr5min2"`
+	Int    int               `vld:"min3, gr4min1 gr5min2"`
+	Float  float64           `vld:"min3, gr4min1"`
+	Array  []string          `vld:"min3, gr4min1"`
+	Map    map[string]string `vld:"min3, gr4min1"`
+	Struct time.Time         `vld:"min1728000000, gr40min1"`
 }
 
 type TestRequestWrapperUpdate struct {
@@ -159,7 +165,7 @@ type TestUpdateInner struct {
 	String string `upd:"string, equtest"`
 }
 
-func TestStructValidator(t *testing.T) {
+func TestCaseStructEqual(t *testing.T) {
 	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructEqual{
@@ -212,8 +218,10 @@ func TestStructValidator(t *testing.T) {
 		err := Validate(v.Data)
 		assertError(t, k, err, v.InvalidField)
 	}
+}
 
-	testCases = map[string]*TestRequestWrapper{
+func TestCaseStructNotEqual(t *testing.T) {
+	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructNotEqual{
 				String: "tes",
@@ -265,8 +273,10 @@ func TestStructValidator(t *testing.T) {
 		err := Validate(v.Data)
 		assertError(t, k, err, v.InvalidField)
 	}
+}
 
-	testCases = map[string]*TestRequestWrapper{
+func TestCaseStructMin(t *testing.T) {
+	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructMin{
 				String: "test",
@@ -318,8 +328,10 @@ func TestStructValidator(t *testing.T) {
 		err := Validate(v.Data)
 		assertError(t, k, err, v.InvalidField)
 	}
+}
 
-	testCases = map[string]*TestRequestWrapper{
+func TestCaseStructMax(t *testing.T) {
+	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructMax{
 				String: "test",
@@ -371,8 +383,10 @@ func TestStructValidator(t *testing.T) {
 		err := Validate(v.Data)
 		assertError(t, k, err, v.InvalidField)
 	}
+}
 
-	testCases = map[string]*TestRequestWrapper{
+func TestCaseStructCon(t *testing.T) {
+	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructCon{
 				String: "test@",
@@ -406,8 +420,10 @@ func TestStructValidator(t *testing.T) {
 		err := Validate(v.Data)
 		assertError(t, k, err, v.InvalidField)
 	}
+}
 
-	testCases = map[string]*TestRequestWrapper{
+func TestCaseStructNotCon(t *testing.T) {
+	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructNotCon{
 				String: "test",
@@ -441,8 +457,10 @@ func TestStructValidator(t *testing.T) {
 		err := Validate(v.Data)
 		assertError(t, k, err, v.InvalidField)
 	}
+}
 
-	testCases = map[string]*TestRequestWrapper{
+func TestCaseStructFrom(t *testing.T) {
+	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructFrom{
 				String: "@",
@@ -503,8 +521,10 @@ func TestStructValidator(t *testing.T) {
 		err := Validate(v.Data)
 		assertError(t, k, err, v.InvalidField)
 	}
+}
 
-	testCases = map[string]*TestRequestWrapper{
+func TestCaseStructNotFrom(t *testing.T) {
+	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructNotFrom{
 				String: "test",
@@ -556,8 +576,10 @@ func TestStructValidator(t *testing.T) {
 		err := Validate(v.Data)
 		assertError(t, k, err, v.InvalidField)
 	}
+}
 
-	testCases = map[string]*TestRequestWrapper{
+func TestCaseStructRex(t *testing.T) {
+	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructRex{
 				String: "test",
@@ -600,8 +622,10 @@ func TestStructValidator(t *testing.T) {
 		err := Validate(v.Data)
 		assertError(t, k, err, v.InvalidField)
 	}
+}
 
-	testCases = map[string]*TestRequestWrapper{
+func TestCaseStructMulti(t *testing.T) {
+	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructMulti{
 				String: "tes",
@@ -689,8 +713,10 @@ func TestStructValidator(t *testing.T) {
 		err := Validate(v.Data)
 		assertError(t, k, err, v.InvalidField)
 	}
+}
 
-	testCases = map[string]*TestRequestWrapper{
+func TestCaseStructMultiOr(t *testing.T) {
+	testCases := map[string]*TestRequestWrapper{
 		"validFirstCondition": {
 			&TestStructMultiOr{
 				String: "test",
@@ -751,8 +777,10 @@ func TestStructValidator(t *testing.T) {
 		err := Validate(v.Data)
 		assertError(t, k, err, v.InvalidField)
 	}
+}
 
-	testCases = map[string]*TestRequestWrapper{
+func TestCaseTestStructEmptyCondition(t *testing.T) {
+	testCases := map[string]*TestRequestWrapper{
 		"emptyConditon": {
 			&TestStructEmptyCondition{
 				String: "test@",
@@ -768,8 +796,10 @@ func TestStructValidator(t *testing.T) {
 		err := Validate(v.Data)
 		assertError(t, k, err, v.InvalidField)
 	}
+}
 
-	testCases = map[string]*TestRequestWrapper{
+func TestCaseStructPassword(t *testing.T) {
+	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructPassword{
 				String: "Password123'4",
@@ -818,8 +848,10 @@ func TestStructValidator(t *testing.T) {
 		err := Validate(v.Data)
 		assertError(t, k, err, v.InvalidField)
 	}
+}
 
-	testCases = map[string]*TestRequestWrapper{
+func TestCaseStructGroup(t *testing.T) {
+	testCases := map[string]*TestRequestWrapper{
 		"validAll": {
 			&TestStructGroup{
 				String: "test",
@@ -863,22 +895,20 @@ func TestStructValidator(t *testing.T) {
 		assertError(t, k, err, v.InvalidField)
 	}
 
-	testCases = map[string]*TestRequestWrapper{
+}
+
+func TestCaseStructGroupNoGroup(t *testing.T) {
+	testTimeValid, _ := time.Parse("2006-01-02T15:04:05.000000", "2025-01-02T15:04:05.000000")
+	testTimeInvalid, _ := time.Parse("2006-01-02T15:04:05.000000", "2024-01-02T15:04:05.000000")
+	testCases := map[string]*TestRequestWrapper{
 		"validAll": {
 			&TestStructGroupNoGroup{
 				String: "test",
 				Int:    3,
 				Float:  3.0,
 				Array:  []string{"", "", ""},
-			},
-			"",
-		},
-		"validOnlyOneOfGroup": {
-			&TestStructGroupNoGroup{
-				String: "test",
-				Int:    3,
-				Float:  2.0,
-				Array:  []string{"", ""},
+				Map:    map[string]string{"i": "j", "k": "l", "m": "n"},
+				Struct: testTimeValid,
 			},
 			"",
 		},
@@ -886,8 +916,10 @@ func TestStructValidator(t *testing.T) {
 			&TestStructGroupNoGroup{
 				String: "te",
 				Int:    3,
-				Float:  2.0,
-				Array:  []string{"", ""},
+				Float:  3.0,
+				Array:  []string{"", "", ""},
+				Map:    map[string]string{"i": "j", "k": "l", "m": "n"},
+				Struct: testTimeValid,
 			},
 			"String",
 		},
@@ -897,6 +929,8 @@ func TestStructValidator(t *testing.T) {
 				Int:    2,
 				Float:  2.0,
 				Array:  []string{"", ""},
+				Map:    map[string]string{"i": "j", "k": "l"},
+				Struct: testTimeInvalid,
 			},
 			"group",
 		},
@@ -906,13 +940,15 @@ func TestStructValidator(t *testing.T) {
 		err := Validate(v.Data)
 		assertError(t, k, err, v.InvalidField)
 	}
+}
 
-	testCases = map[string]*TestRequestWrapper{
+func TestCaseStructInvalidGroupCondition(t *testing.T) {
+	testCases := map[string]*TestRequestWrapper{
 		"invalidGroupConditionLast": {
 			&TestStructInvalidGroupCondition{
 				String: "test",
 				Int:    3,
-				Float:  3.0,
+				Float:  2.0,
 				Array:  []string{"", "", ""},
 			},
 			"condition type",
@@ -923,7 +959,9 @@ func TestStructValidator(t *testing.T) {
 		err := Validate(v.Data)
 		assertError(t, k, err, v.InvalidField)
 	}
+}
 
+func TestCaseUpdate(t *testing.T) {
 	testCasesUpdate := map[string]*TestRequestWrapperUpdate{
 		"validUpdate": {
 			&TestUpdate{
@@ -949,7 +987,7 @@ func TestStructValidator(t *testing.T) {
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Bar", "int": 2, "float": "1.2", "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			map[string]interface{}{"string": "", "int": 2, "float": "1.2", "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidTypeStringUpdate": {
@@ -974,17 +1012,18 @@ func TestStructValidator(t *testing.T) {
 			map[string]interface{}{"string": "Bar", "int": 0, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
-		"invalidTypeIntUpdate": {
-			&TestUpdate{
-				String: "Foo",
-				Int:    1,
-				Float:  1.1,
-				Array:  []int{1},
-				Date:   time.Time{},
-			},
-			map[string]interface{}{"string": "Bar", "int": "2", "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
-			true,
-		},
+		// TODO add strict case/case for json or url values?
+		// "invalidTypeIntUpdate": {
+		// 	&TestUpdate{
+		// 		String: "Foo",
+		// 		Int:    1,
+		// 		Float:  1.1,
+		// 		Array:  []int{1},
+		// 		Date:   time.Time{},
+		// 	},
+		// 	map[string]interface{}{"string": "Bar", "int": "2", "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+		// 	true,
+		// },
 		"invalidJsonFloatUpdate": {
 			&TestUpdate{
 				String: "Foo",
@@ -996,17 +1035,18 @@ func TestStructValidator(t *testing.T) {
 			map[string]interface{}{"string": "Bar", "int": 2, "float": 0.0, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
-		"invalidTypeFloatUpdate": {
-			&TestUpdate{
-				String: "Foo",
-				Int:    1,
-				Float:  1.1,
-				Array:  []int{1},
-				Date:   time.Time{},
-			},
-			map[string]interface{}{"string": "Bar", "int": 2, "float": "1.2", "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
-			true,
-		},
+		// TODO add strict case/case for json or url values?
+		// "invalidTypeFloatUpdate": {
+		// 	&TestUpdate{
+		// 		String: "Foo",
+		// 		Int:    1,
+		// 		Float:  1.1,
+		// 		Array:  []int{1},
+		// 		Date:   time.Time{},
+		// 	},
+		// 	map[string]interface{}{"string": "Bar", "int": 2, "float": "1.2", "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+		// 	true,
+		// },
 		"invalidJsonArrayUpdate": {
 			&TestUpdate{
 				String: "Foo",
@@ -1040,17 +1080,18 @@ func TestStructValidator(t *testing.T) {
 			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03 15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
-		"invalidTypeDateUpdate": {
-			&TestUpdate{
-				String: "Foo",
-				Int:    1,
-				Float:  1.1,
-				Array:  []int{1},
-				Date:   time.Time{},
-			},
-			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{2}, "date": 2024, "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
-			true,
-		},
+		// TODO add case for time.Time with timeUnix in tag
+		// "invalidTypeDateUpdate": {
+		// 	&TestUpdate{
+		// 		String: "Foo",
+		// 		Int:    1,
+		// 		Float:  1.1,
+		// 		Array:  []int{1},
+		// 		Date:   time.Time{},
+		// 	},
+		// 	map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{2}, "date": 2024, "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+		// 	true,
+		// },
 		"invalidJsonStructUpdate": {
 			&TestUpdate{
 				String: "Foo",
@@ -1113,7 +1154,9 @@ func TestStructValidator(t *testing.T) {
 		err := ValidateAndUpdate(v.JsonUpdate, v.Data)
 		assertErrorUpdate(t, k, err, v.Error)
 	}
+}
 
+func TestCaseUpdatePartial(t *testing.T) {
 	testCasesUpdatePartial := map[string]*TestRequestWrapperUpdate{
 		"validUpdate": {
 			&TestUpdate{
@@ -1139,7 +1182,7 @@ func TestStructValidator(t *testing.T) {
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Bar", "int": 2, "float": "1.2", "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			map[string]interface{}{"string": "", "int": 2, "float": "1.2", "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidTypeStringUpdate": {
@@ -1181,7 +1224,9 @@ func TestStructValidator(t *testing.T) {
 		err := ValidateAndUpdate(v.JsonUpdate, v.Data)
 		assertErrorUpdate(t, k, err, v.Error)
 	}
+}
 
+func TestCaseUpdateWithJson(t *testing.T) {
 	testCasesUpdateWithJson := map[string]*TestRequestWrapperUpdateWithJson{
 		"validUpdateDateUnix": {
 			&TestUpdate{
@@ -1278,16 +1323,17 @@ func TestStructValidator(t *testing.T) {
 			`{"string": "Bar", "int": Bar, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
 			true,
 		},
-		"invalidTypeIntUpdate": {
-			&TestUpdate{
-				String: "Foo",
-				Int:    1,
-				Float:  1.1,
-				Array:  []int{1},
-			},
-			`{"string": "Bar", "int": "2", "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
-			true,
-		},
+		// TODO add strict case/case for json or url values?
+		// "invalidTypeIntUpdate": {
+		// 	&TestUpdate{
+		// 		String: "Foo",
+		// 		Int:    1,
+		// 		Float:  1.1,
+		// 		Array:  []int{1},
+		// 	},
+		// 	`{"string": "Bar", "int": "2", "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
+		// 	true,
+		// },
 		"invalidJsonFloatUpdate": {
 			&TestUpdate{
 				String: "Foo",
@@ -1298,16 +1344,17 @@ func TestStructValidator(t *testing.T) {
 			`{"string": "Bar", "int": 2, "float": Bar, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
 			true,
 		},
-		"invalidTypeFloatUpdate": {
-			&TestUpdate{
-				String: "Foo",
-				Int:    1,
-				Float:  1.1,
-				Array:  []int{1},
-			},
-			`{"string": "Bar", "int": 2, "float": "1.2", "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
-			true,
-		},
+		// TODO add strict case/case for json or url values?
+		// "invalidTypeFloatUpdate": {
+		// 	&TestUpdate{
+		// 		String: "Foo",
+		// 		Int:    1,
+		// 		Float:  1.1,
+		// 		Array:  []int{1},
+		// 	},
+		// 	`{"string": "Bar", "int": 2, "float": "1.2", "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "test"}, "map": {"key": "test"}}`,
+		// 	true,
+		// },
 		"invalidJsonArrayUpdate": {
 			&TestUpdate{
 				String: "Foo",

@@ -73,16 +73,22 @@ func (p *Parser) parseGroup() *model.AstValue {
 			} else if p.currentTokenTypeIs(model.LexerConditionType) {
 				group.Start = p.currentToken.Start
 				grpState = GrpOpen
+			} else if p.currentTokenTypeIs(model.LexerEmptyRequirement) {
+				group.Type = model.EMPTY
+				group.Start = p.currentToken.Start
+				group.End = p.currentToken.End
+				grpState = GrpEnd
+				return group
 			} else {
 				p.parseError(fmt.Sprintf(
-					"error parsing validation group, expected `(` or condition, got: %s",
+					"error parsing validation group, expected `(`, `-` or condition, got: %s",
 					p.currentToken.Literal,
 				))
 				return nil
 			}
 		case GrpOpen:
 			if p.currentTokenTypeIs(model.LexerRightBrace) {
-				group.End = p.currentToken.Start
+				group.End = p.currentToken.End
 				p.nextToken()
 				grpState = GrpEnd
 			} else if p.currentTokenTypeIs(model.LexerLeftBrace) {
@@ -105,7 +111,7 @@ func (p *Parser) parseGroup() *model.AstValue {
 				p.nextToken()
 			} else {
 				p.parseError(fmt.Sprintf(
-					"error parsing group, expected RightBrace, CndType or operator token, got: %s, type: %v",
+					"error parsing group, expected `)`, condition or operator, got: %s, type: %v",
 					p.currentToken.Literal,
 					p.currentToken.Type,
 				))

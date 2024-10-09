@@ -45,22 +45,24 @@ func (r *JsonMap) Has(key string) bool {
 	return false
 }
 
-func TypeFromInterface(in interface{}) (ValidatorType, error) {
+func TypeFromInterface(in interface{}) ValidatorType {
 	switch in.(type) {
 	case string:
-		return String, nil
-	case int:
-		return Int, nil
-	case float64:
-		return Float, nil
+		return String
+	case int, int64, int32, int16, int8:
+		return Int
+	case float64, float32:
+		return Float
 	case bool:
-		return Bool, nil
-	case map[string]interface{}:
-		return Map, nil
+		return Bool
+	case JsonMap, map[string]string, map[string]int, map[string]int64, map[string]int32, map[string]int16, map[string]int8, map[string]float64, map[string]float32, map[string]bool:
+		return Map
+	case []string, []int, []int64, []int32, []int16, []int8, []float64, []float32, []bool:
+		return Array
 	case time.Time:
-		return Time, nil
+		return Time
 	default:
-		return "", fmt.Errorf("input type unsupported: %T", in)
+		return Struct
 	}
 }
 
@@ -102,47 +104,105 @@ func InterfaceFromString(in string, inType ValidatorType) (interface{}, error) {
 		}
 		return out, nil
 	case Time:
-		// Unix seconds date string
-		match, _ := regexp.MatchString("^[0-9]{1,}$", in)
-		if match {
-			seconds, err := strconv.ParseInt(in, 10, 64)
-			if err != nil {
-				panic(err)
-			}
-			return time.Unix(seconds, 0), nil
-		}
-
-		layout := ""
-		// Iso8601 date string in local time (yyyy-MM-ddTHH:mm:ss.mmmuuu)
-		match, _ = regexp.MatchString("^[-:.T0-9]{26}$", in)
-		if match {
-			layout = "2006-01-02T15:04:05.000000"
-		}
-
-		// Iso8601 date string in UTC time (yyyy-MM-ddTHH:mm:ss.mmmuuuZ)
-		match, _ = regexp.MatchString("^[-:.T0-9]{26}Z$", in)
-		if match {
-			layout = "2006-01-02T15:04:05.000000Z"
-		}
-
-		// Iso8601 date string in local time without microseconds (yyyy-MM-ddTHH:mm:ss.mmm)
-		match, _ = regexp.MatchString("^[-:.T0-9]{23}$", in)
-		if match {
-			layout = "2006-01-02T15:04:05.000"
-		}
-
-		// Iso8601 date string in UTC time without microseconds (yyyy-MM-ddTHH:mm:ss.mmmZ)
-		match, _ = regexp.MatchString("^[-:.T0-9]{23}Z$", in)
-		if match {
-			layout = "2006-01-02T15:04:05.000Z"
-		}
-
-		date, err := time.Parse(layout, in)
+		date, err := UnixStringToTime(in)
 		if err != nil {
-			return nil, fmt.Errorf("input string could not be converted to time.Time with err: %v", err.Error())
+			date, err := ISO8601StringToTime(in)
+			if err != nil {
+				return nil, err
+			}
+			return date, nil
 		}
 		return date, nil
+	case TimeUnix:
+		return UnixStringToTime(in)
+	case TimeISO8601:
+		return ISO8601StringToTime(in)
 	default:
 		return nil, fmt.Errorf("receiver unsupported: %v", inType)
 	}
+}
+
+func InterfaceFromInt(in int, inType ValidatorType) (interface{}, error) {
+	switch inType {
+	case Int:
+		return in, nil
+	case Float:
+		return float64(in), nil
+	case Bool:
+		if in == 1 {
+			return true, nil
+		}
+		return false, nil
+	case Time, TimeUnix:
+		date, err := UnixStringToTime(strconv.Itoa(in))
+		return date, err
+	default:
+		return nil, fmt.Errorf("receiver unsupported: %v", inType)
+	}
+}
+
+func InterfaceFromFloat(in float64, inType ValidatorType) (interface{}, error) {
+	switch inType {
+	case Int:
+		return int(in), nil
+	case Float:
+		return in, nil
+	case Bool:
+		if in == 1 {
+			return true, nil
+		}
+		return false, nil
+	case Time, TimeUnix:
+		date, err := UnixStringToTime(strconv.Itoa(int(in)))
+		return date, err
+	default:
+		return nil, fmt.Errorf("receiver unsupported: %v", inType)
+	}
+}
+
+func UnixStringToTime(in string) (time.Time, error) {
+	// Unix seconds date string
+	match, _ := regexp.MatchString("^[0-9]{1,}$", in)
+	if !match {
+		return time.Time{}, fmt.Errorf("invalid unix time: %v", in)
+	}
+
+	seconds, err := strconv.ParseInt(in, 10, 64)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("error parsing unix string to time: %v", err)
+	}
+	return time.Unix(seconds, 0), nil
+}
+
+func ISO8601StringToTime(in string) (time.Time, error) {
+	layout := ""
+	// Iso8601 date string in local time (yyyy-MM-ddTHH:mm:ss.mmmuuu)
+	match, _ := regexp.MatchString("^[-:.T0-9]{26}$", in)
+	if match {
+		layout = "2006-01-02T15:04:05.000000"
+	}
+
+	// Iso8601 date string in UTC time (yyyy-MM-ddTHH:mm:ss.mmmuuuZ)
+	match, _ = regexp.MatchString("^[-:.T0-9]{26}Z$", in)
+	if match {
+		layout = "2006-01-02T15:04:05.000000Z"
+	}
+
+	// Iso8601 date string in local time without microseconds (yyyy-MM-ddTHH:mm:ss.mmm)
+	match, _ = regexp.MatchString("^[-:.T0-9]{23}$", in)
+	if match {
+		layout = "2006-01-02T15:04:05.000"
+	}
+
+	// Iso8601 date string in UTC time without microseconds (yyyy-MM-ddTHH:mm:ss.mmmZ)
+	match, _ = regexp.MatchString("^[-:.T0-9]{23}Z$", in)
+	if match {
+		layout = "2006-01-02T15:04:05.000Z"
+	}
+
+	date, err := time.Parse(layout, in)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("error parsing iso8601 string to time: %v", err)
+	}
+	return date, nil
 }

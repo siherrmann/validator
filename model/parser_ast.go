@@ -26,6 +26,7 @@ type AstValue struct {
 type AstValueType string
 
 const (
+	EMPTY     AstValueType = "Empty"
 	GROUP     AstValueType = "Group"
 	CONDITION AstValueType = "Condition"
 )
@@ -62,6 +63,9 @@ func (r AstValue) AstConditionToString() string {
 func (r AstValue) RunFuncOnConditionGroup(input reflect.Value, f func(reflect.Value, *AstValue) error) error {
 	var errors []error
 	for i, v := range r.ConditionGroup {
+		if v.Type == EMPTY {
+			return nil
+		}
 		var err error
 		if v.Type == GROUP {
 			err = v.RunFuncOnConditionGroup(input, f)
@@ -78,7 +82,7 @@ func (r AstValue) RunFuncOnConditionGroup(input reflect.Value, f func(reflect.Va
 			return err
 		}
 	}
-	if len(errors) >= len(r.ConditionGroup) {
+	if len(r.ConditionGroup) > 0 && len(errors) >= len(r.ConditionGroup) {
 		return fmt.Errorf("no condition fulfilled, all errors: %v", errors)
 	}
 	return nil

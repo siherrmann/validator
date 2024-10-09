@@ -3,55 +3,69 @@ package validator
 import (
 	"fmt"
 	"reflect"
-	"slices"
 
 	"github.com/siherrmann/validator/model"
 	"github.com/siherrmann/validator/parser"
+	"github.com/siherrmann/validator/validators"
 )
 
-func ValidateValueWithoutParser(input reflect.Value, conditions []string, or bool, checkFunction func(reflect.Value, *model.AstValue) error) error {
-	if slices.Contains(conditions, string(model.NONE)) || len(conditions) == 0 {
-		return nil
+// func ValidateValueWithParser(input reflect.Value, requirement string, checkFunction func(reflect.Value, *model.AstValue) error) error {
+// 	lexer := parser.NewLexer(requirement)
+// 	p := parser.NewParser(lexer)
+// 	r, err := p.ParseValidation()
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	err = r.RootValue.RunFuncOnConditionGroup(input, checkFunction)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
+
+func ValidateValueWithParser(input reflect.Value, validation *model.Validation) (interface{}, error) {
+	validValue, err := validation.GetValidValue(input.Interface())
+	if err != nil {
+		return nil, err
 	}
 
-	var errors []error
-	for _, conFull := range conditions {
-		conType, err := model.GetConditionType(conFull)
-		if err != nil {
-			return err
-		}
-
-		conValue, err := model.GetConditionByType(conFull, conType)
-		if err != nil {
-			return err
-		}
-
-		err = checkFunction(input, &model.AstValue{ConditionType: conType, ConditionValue: conValue})
-		if err != nil && or {
-			errors = append(errors, err)
-		} else if err != nil {
-			return err
-		}
-	}
-
-	if len(errors) >= len(conditions) {
-		return fmt.Errorf("no condition fulfilled, all errors: %v", errors)
-	}
-
-	return nil
-}
-
-func ValidateValueWithParser(input reflect.Value, requirement string, checkFunction func(reflect.Value, *model.AstValue) error) error {
-	lexer := parser.NewLexer(requirement)
+	lexer := parser.NewLexer(validation.Requirement)
 	p := parser.NewParser(lexer)
 	r, err := p.ParseValidation()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = r.RootValue.RunFuncOnConditionGroup(input, checkFunction)
-	if err != nil {
-		return err
+	var checkFunction func(reflect.Value, *model.AstValue) error
+	switch validation.Type {
+	case model.String:
+		checkFunction = validators.CheckString
+	case model.Int:
+		checkFunction = validators.CheckInt
+	case model.Float:
+		checkFunction = validators.CheckFloat
+	case model.Bool:
+		checkFunction = validators.CheckBool
+	case model.Array:
+		checkFunction = validators.CheckArray
+	case model.Map:
+		checkFunction = validators.CheckMap
+	case model.Struct:
+		checkFunction = validators.CheckMap
+	case model.Time:
+		checkFunction = validators.CheckTime
+	case model.TimeISO8601:
+		checkFunction = validators.CheckTime
+	case model.TimeUnix:
+		checkFunction = validators.CheckTime
+	default:
+		return nil, fmt.Errorf("invalid validation type: %v", validation.Type)
 	}
-	return nil
+
+	err = r.RootValue.RunFuncOnConditionGroup(reflect.ValueOf(validValue), checkFunction)
+	if err != nil {
+		return nil, err
+	}
+	return validValue, nil
 }
