@@ -17,7 +17,11 @@ import (
 // UnmapOrAnmarshalValidateAndUpdate unmarshals given json ([]byte) or given url.Values (from request.Form),
 // validates them and updates the given struct.
 func UnmapOrUnmarshalRequestValidateAndUpdate(request *http.Request, structToUpdate interface{}) error {
-	var err error
+	err := request.ParseForm()
+	if err != nil {
+		return err
+	}
+
 	if len(request.Form.Encode()) > 0 {
 		err = UnmapValidateAndUpdate(request.Form, structToUpdate)
 	} else {
