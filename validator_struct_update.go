@@ -16,7 +16,7 @@ import (
 
 // UnmapOrAnmarshalValidateAndUpdate unmarshals given json ([]byte) or given url.Values (from request.Form),
 // validates them and updates the given struct.
-func UnmapOrAnmarshalValidateAndUpdate(request *http.Request, structToUpdate interface{}) error {
+func UnmapOrUnmarshalRequestValidateAndUpdate(request *http.Request, structToUpdate interface{}) error {
 	var err error
 	if len(request.Form.Encode()) > 0 {
 		err = UnmapValidateAndUpdate(request.Form, structToUpdate)
