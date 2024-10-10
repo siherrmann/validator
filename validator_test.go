@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -1457,6 +1458,110 @@ func TestCaseUpdateWithJson(t *testing.T) {
 
 	for k, v := range testCasesUpdateWithJson {
 		err := UnmarshalValidateAndUpdate([]byte(v.JsonUpdate), v.Data)
+		assertErrorUpdate(t, k, err, v.Error)
+	}
+}
+
+func TestCaseStructIntTypes(t *testing.T) {
+	type TestStructIntTypes struct {
+		Int   int   `upd:"int, min3"`
+		Int64 int64 `upd:"int64, min3"`
+		Int32 int32 `upd:"int32, min3"`
+		Int16 int16 `upd:"int16, min3"`
+		Int8  int8  `upd:"int8, min3"`
+	}
+
+	testCases := map[string]*TestRequestWrapperUpdateWithJson{
+		"valid": {
+			&TestStructIntTypes{
+				Int:   3,
+				Int64: 3,
+				Int32: 3,
+				Int16: 3,
+				Int8:  3,
+			},
+			`{"int": 9223372036854775807, "int64": 9223372036854775807, "int32": 2147483647, "int16": 32767, "int8": 127}`,
+			false,
+		},
+		"invalidInt32": {
+			&TestStructIntTypes{
+				Int:   3,
+				Int64: 3,
+				Int32: 3,
+				Int16: 3,
+				Int8:  3,
+			},
+			`{"int": 9223372036854775807, "int64": 9223372036854775807, "int32": 2147483648, "int16": 32767, "int8": 127}`,
+			true,
+		},
+		"invalidInt16": {
+			&TestStructIntTypes{
+				Int:   3,
+				Int64: 3,
+				Int32: 3,
+				Int16: 3,
+				Int8:  3,
+			},
+			`{"int": 9223372036854775807, "int64": 9223372036854775807, "int32": 2147483647, "int16": 32768, "int8": 127}`,
+			true,
+		},
+		"invalidInt8": {
+			&TestStructIntTypes{
+				Int:   3,
+				Int64: 3,
+				Int32: 3,
+				Int16: 3,
+				Int8:  3,
+			},
+			`{"int": 9223372036854775807, "int64": 9223372036854775807, "int32": 2147483647, "int16": 32767, "int8": 128}`,
+			true,
+		},
+	}
+
+	for k, v := range testCases {
+		err := UnmarshalValidateAndUpdate([]byte(v.JsonUpdate), v.Data)
+		assertErrorUpdate(t, k, err, v.Error)
+	}
+}
+
+func TestCaseStructFloatTypes(t *testing.T) {
+	type TestStructFloatTypes struct {
+		Float64 float64 `vld:"min3"`
+		Float32 float32 `vld:"min3"`
+	}
+
+	// As the json Unmarshal always unmarshals into float64
+	// updating float32 will only fail with a float64 overflow.
+	testCases := map[string]*TestRequestWrapperUpdateWithJson{
+		"valid": {
+			&TestStructFloatTypes{
+				Float64: 3,
+				Float32: 3,
+			},
+			`{"float64": 1.79769313486231570814527423731704356798070e+308, "float32": 3.40282346638528859811704183484516925440e+38}`,
+			false,
+		},
+		"invalidFloat64": {
+			&TestStructFloatTypes{
+				Float64: 3,
+				Float32: 3,
+			},
+			`{"float64": 1.79769313486231570814527423731704356798070e+309, "float32": 3.40282346638528859811704183484516925440e+38}`,
+			true,
+		},
+		"invalidFloat32": {
+			&TestStructFloatTypes{
+				Float64: 3,
+				Float32: 3,
+			},
+			`{"float64": 1.79769313486231570814527423731704356798070e+308, "float32": 3.40282346638528859811704183484516925440e+309}`,
+			true,
+		},
+	}
+
+	for k, v := range testCases {
+		err := UnmarshalValidateAndUpdate([]byte(v.JsonUpdate), v.Data)
+		fmt.Printf("error float types: %v", err)
 		assertErrorUpdate(t, k, err, v.Error)
 	}
 }
