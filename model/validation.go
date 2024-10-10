@@ -66,6 +66,9 @@ func (r *Validation) GetValidValue(in interface{}) (interface{}, error) {
 	case float32:
 		out, err = InterfaceFromFloat(float64(in), r.Type)
 	default:
+		if v, ok := in.(JsonMap); ok {
+			return map[string]interface{}(v), nil
+		}
 		return in, nil
 	}
 	return out, err
@@ -142,13 +145,16 @@ func InterfaceFromString(in string, inType ValidatorType) (interface{}, error) {
 			return nil, err
 		}
 		return out, nil
-	case Map:
-		jsonMarshalled, err := json.Marshal(in)
+	case Array:
+		out := []interface{}{}
+		err := json.Unmarshal([]byte(in), &out)
 		if err != nil {
 			return nil, err
 		}
-		out := JsonMap{}
-		err = json.Unmarshal(jsonMarshalled, &out)
+		return out, nil
+	case Map, Struct:
+		out := map[string]interface{}{}
+		err := json.Unmarshal([]byte(in), &out)
 		if err != nil {
 			return nil, err
 		}

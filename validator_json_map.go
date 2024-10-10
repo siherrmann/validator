@@ -22,7 +22,7 @@ func UnmarshalJsonToJsonMapAndValidate(jsonInput []byte, validation ...model.Val
 }
 
 func UnmapUrlValuesAndValidateWithValidation(values url.Values, validation ...model.Validation) (model.JsonMap, error) {
-	mapOut, err := UnmapUrlValuesToJsonMap(values, validation...)
+	mapOut, err := UnmapUrlValuesToJsonMap(values)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func UnmarshalJsonToJsonMap(jsonInput []byte) (model.JsonMap, error) {
 	return mapOut, nil
 }
 
-func UnmapUrlValuesToJsonMap(values url.Values, validation ...model.Validation) (model.JsonMap, error) {
+func UnmapUrlValuesToJsonMap(values url.Values) (model.JsonMap, error) {
 	mapOut := model.JsonMap{}
 	for k := range values {
 		mapOut[k] = values.Get(k)

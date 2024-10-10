@@ -1,6 +1,8 @@
 package validator
 
 import (
+	"log"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -15,15 +17,124 @@ type TestRequestWrapper struct {
 }
 
 type TestRequestWrapperUpdate struct {
-	Data       interface{}
-	JsonUpdate model.JsonMap
-	Error      bool
+	Data          interface{}
+	JsonMapUpdate model.JsonMap
+	Error         bool
 }
 
 type TestRequestWrapperUpdateWithJson struct {
 	Data       interface{}
 	JsonUpdate string
 	Error      bool
+}
+
+type TestRequestWrapperUpdateWithUrlValues struct {
+	Data            interface{}
+	UrlValuesUpdate url.Values
+	Error           bool
+}
+
+func TestCaseStructIntTypes(t *testing.T) {
+	type TestStructIntTypes struct {
+		Int   int   `upd:"int, min3"`
+		Int64 int64 `upd:"int64, min3"`
+		Int32 int32 `upd:"int32, min3"`
+		Int16 int16 `upd:"int16, min3"`
+		Int8  int8  `upd:"int8, min3"`
+	}
+
+	testCases := map[string]*TestRequestWrapperUpdateWithJson{
+		"valid": {
+			&TestStructIntTypes{
+				Int:   3,
+				Int64: 3,
+				Int32: 3,
+				Int16: 3,
+				Int8:  3,
+			},
+			`{"int": 9223372036854775807, "int64": 9223372036854775807, "int32": 2147483647, "int16": 32767, "int8": 127}`,
+			false,
+		},
+		"invalidInt32": {
+			&TestStructIntTypes{
+				Int:   3,
+				Int64: 3,
+				Int32: 3,
+				Int16: 3,
+				Int8:  3,
+			},
+			`{"int": 9223372036854775807, "int64": 9223372036854775807, "int32": 2147483648, "int16": 32767, "int8": 127}`,
+			true,
+		},
+		"invalidInt16": {
+			&TestStructIntTypes{
+				Int:   3,
+				Int64: 3,
+				Int32: 3,
+				Int16: 3,
+				Int8:  3,
+			},
+			`{"int": 9223372036854775807, "int64": 9223372036854775807, "int32": 2147483647, "int16": 32768, "int8": 127}`,
+			true,
+		},
+		"invalidInt8": {
+			&TestStructIntTypes{
+				Int:   3,
+				Int64: 3,
+				Int32: 3,
+				Int16: 3,
+				Int8:  3,
+			},
+			`{"int": 9223372036854775807, "int64": 9223372036854775807, "int32": 2147483647, "int16": 32767, "int8": 128}`,
+			true,
+		},
+	}
+
+	for k, v := range testCases {
+		err := UnmarshalValidateAndUpdate([]byte(v.JsonUpdate), v.Data)
+		assertErrorUpdate(t, k, err, v.Error)
+	}
+}
+
+func TestCaseStructFloatTypes(t *testing.T) {
+	type TestStructFloatTypes struct {
+		Float64 float64 `vld:"min3"`
+		Float32 float32 `vld:"min3"`
+	}
+
+	// As the json Unmarshal always unmarshals into float64
+	// updating float32 will only fail with a float64 overflow.
+	testCases := map[string]*TestRequestWrapperUpdateWithJson{
+		"valid": {
+			&TestStructFloatTypes{
+				Float64: 3,
+				Float32: 3,
+			},
+			`{"float64": 1.79769313486231570814527423731704356798070e+308, "float32": 3.40282346638528859811704183484516925440e+38}`,
+			false,
+		},
+		"invalidFloat64": {
+			&TestStructFloatTypes{
+				Float64: 3,
+				Float32: 3,
+			},
+			`{"float64": 1.79769313486231570814527423731704356798070e+309, "float32": 3.40282346638528859811704183484516925440e+38}`,
+			true,
+		},
+		"invalidFloat32": {
+			&TestStructFloatTypes{
+				Float64: 3,
+				Float32: 3,
+			},
+			`{"float64": 1.79769313486231570814527423731704356798070e+308, "float32": 3.40282346638528859811704183484516925440e+309}`,
+			true,
+		},
+	}
+
+	for k, v := range testCases {
+		err := UnmarshalValidateAndUpdate([]byte(v.JsonUpdate), v.Data)
+		assertErrorUpdate(t, k, err, v.Error)
+	}
 }
 
 func TestCaseStructEqual(t *testing.T) {
@@ -1141,7 +1252,7 @@ func TestCaseUpdate(t *testing.T) {
 	}
 
 	for k, v := range testCasesUpdate {
-		err := ValidateAndUpdate(v.JsonUpdate, v.Data)
+		err := ValidateAndUpdate(v.JsonMapUpdate, v.Data)
 		assertErrorUpdate(t, k, err, v.Error)
 	}
 }
@@ -1219,7 +1330,7 @@ func TestCaseUpdatePartial(t *testing.T) {
 	}
 
 	for k, v := range testCasesUpdatePartial {
-		err := ValidateAndUpdate(v.JsonUpdate, v.Data)
+		err := ValidateAndUpdate(v.JsonMapUpdate, v.Data)
 		assertErrorUpdate(t, k, err, v.Error)
 	}
 }
@@ -1461,105 +1572,298 @@ func TestCaseUpdateWithJson(t *testing.T) {
 	}
 }
 
-func TestCaseStructIntTypes(t *testing.T) {
-	type TestStructIntTypes struct {
-		Int   int   `upd:"int, min3"`
-		Int64 int64 `upd:"int64, min3"`
-		Int32 int32 `upd:"int32, min3"`
-		Int16 int16 `upd:"int16, min3"`
-		Int8  int8  `upd:"int8, min3"`
+func TestCaseStructUpdateWithoutKey(t *testing.T) {
+	type TestUpdateInner struct {
+		String string `upd:"string, equtest"`
 	}
 
-	testCases := map[string]*TestRequestWrapperUpdateWithJson{
+	type TestStructUpdateWithKey struct {
+		String string          `upd:"string, min3"`
+		Int    int             `upd:"int, min3"`
+		Float  float64         `upd:"float, min3"`
+		Array  []string        `upd:"array, min3"`
+		Map    model.JsonMap   `upd:"map, min3"`
+		Struct TestUpdateInner `upd:"struct, min3"`
+	}
+
+	type TestStructUpdateWithoutKey struct {
+		String string          `upd:"min3"`
+		Int    int             `upd:"min3"`
+		Float  float64         `upd:"min3"`
+		Array  []string        `upd:"min3"`
+		Map    model.JsonMap   `upd:"min3"`
+		Struct TestUpdateInner `upd:"min3"`
+	}
+
+	testCases := map[string]*TestRequestWrapperUpdate{
 		"valid": {
-			&TestStructIntTypes{
-				Int:   3,
-				Int64: 3,
-				Int32: 3,
-				Int16: 3,
-				Int8:  3,
+			&TestStructUpdateWithKey{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
 			},
-			`{"int": 9223372036854775807, "int64": 9223372036854775807, "int32": 2147483647, "int16": 32767, "int8": 127}`,
+			map[string]interface{}{"string": "Bar", "int": 3, "float": 3.2, "array": []string{"a", "b", "c"}, "struct": map[string]any{"string": "test"}, "map": map[string]any{"key1": "test", "key2": "test", "key3": "test"}},
 			false,
 		},
-		"invalidInt32": {
-			&TestStructIntTypes{
-				Int:   3,
-				Int64: 3,
-				Int32: 3,
-				Int16: 3,
-				Int8:  3,
+		"invalid": {
+			&TestStructUpdateWithoutKey{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
 			},
-			`{"int": 9223372036854775807, "int64": 9223372036854775807, "int32": 2147483648, "int16": 32767, "int8": 127}`,
-			true,
-		},
-		"invalidInt16": {
-			&TestStructIntTypes{
-				Int:   3,
-				Int64: 3,
-				Int32: 3,
-				Int16: 3,
-				Int8:  3,
-			},
-			`{"int": 9223372036854775807, "int64": 9223372036854775807, "int32": 2147483647, "int16": 32768, "int8": 127}`,
-			true,
-		},
-		"invalidInt8": {
-			&TestStructIntTypes{
-				Int:   3,
-				Int64: 3,
-				Int32: 3,
-				Int16: 3,
-				Int8:  3,
-			},
-			`{"int": 9223372036854775807, "int64": 9223372036854775807, "int32": 2147483647, "int16": 32767, "int8": 128}`,
+			map[string]interface{}{"string": "Bar", "int": 3, "float": 3.2, "array": []string{"a", "b", "c"}, "struct": map[string]any{"string": "test"}, "map": map[string]any{"key1": "test", "key2": "test", "key3": "test"}},
 			true,
 		},
 	}
 
 	for k, v := range testCases {
-		err := UnmarshalValidateAndUpdate([]byte(v.JsonUpdate), v.Data)
+		err := ValidateAndUpdate(v.JsonMapUpdate, v.Data)
 		assertErrorUpdate(t, k, err, v.Error)
 	}
 }
 
-func TestCaseStructFloatTypes(t *testing.T) {
-	type TestStructFloatTypes struct {
-		Float64 float64 `vld:"min3"`
-		Float32 float32 `vld:"min3"`
+func TestCaseStructUrlValues(t *testing.T) {
+	type TestUpdateInner struct {
+		String string `upd:"string, equtest"`
 	}
 
-	// As the json Unmarshal always unmarshals into float64
-	// updating float32 will only fail with a float64 overflow.
-	testCases := map[string]*TestRequestWrapperUpdateWithJson{
-		"valid": {
-			&TestStructFloatTypes{
-				Float64: 3,
-				Float32: 3,
+	type TestStructUrlValues struct {
+		String string          `upd:"string, min3"`
+		Int    int             `upd:"int, min3"`
+		Float  float64         `upd:"float, min3"`
+		Array  []string        `upd:"array, min3"`
+		Map    model.JsonMap   `upd:"map, min3"`
+		Struct TestUpdateInner `upd:"struct, min3"`
+	}
+
+	testCases := map[string]*TestRequestWrapperUpdateWithUrlValues{
+		"validSingle": {
+			&TestStructUrlValues{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
 			},
-			`{"float64": 1.79769313486231570814527423731704356798070e+308, "float32": 3.40282346638528859811704183484516925440e+38}`,
+			url.Values{"string": []string{"Bar"}, "int": []string{"3"}, "float": []string{"3.2"}, "array": []string{`["Ah", "Eh", "Ih"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`}, "struct": []string{`{"string": "test"}`}},
 			false,
 		},
-		"invalidFloat64": {
-			&TestStructFloatTypes{
-				Float64: 3,
-				Float32: 3,
+		"validMulti": {
+			&TestStructUrlValues{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
 			},
-			`{"float64": 1.79769313486231570814527423731704356798070e+309, "float32": 3.40282346638528859811704183484516925440e+38}`,
+			url.Values{"string": []string{"Bar", "bu"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			false,
+		},
+		"invalidString": {
+			&TestStructUrlValues{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			url.Values{"string": []string{"bu", "Bar"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
 			true,
 		},
-		"invalidFloat32": {
-			&TestStructFloatTypes{
-				Float64: 3,
-				Float32: 3,
+		"invalidInt": {
+			&TestStructUrlValues{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
 			},
-			`{"float64": 1.79769313486231570814527423731704356798070e+308, "float32": 3.40282346638528859811704183484516925440e+309}`,
+			url.Values{"string": []string{"Bar", "bu"}, "int": []string{"2", "2"}, "float": []string{"3.2", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			true,
+		},
+		"invalidTypeInt": {
+			&TestStructUrlValues{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			url.Values{"string": []string{"Bar", "bu"}, "int": []string{"3.2", "2"}, "float": []string{"3.2", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			true,
+		},
+		"invalidFloat": {
+			&TestStructUrlValues{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			url.Values{"string": []string{"Bar", "bu"}, "int": []string{"3", "2"}, "float": []string{"2.5", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			true,
+		},
+		"invalidTypeFloat": {
+			&TestStructUrlValues{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			url.Values{"string": []string{"Bar", "bu"}, "int": []string{"3", "2"}, "float": []string{"Blubb", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			true,
+		},
+		"invalidArray": {
+			&TestStructUrlValues{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			url.Values{"string": []string{"Bar", "bu"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{`["Ah", "Eh"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			true,
+		},
+		"invalidTypeArray": {
+			&TestStructUrlValues{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			url.Values{"string": []string{"Bar", "bu"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{`[1, 2, 3]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			true,
+		},
+		"invalidMap": {
+			&TestStructUrlValues{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			url.Values{"string": []string{"Bar", "bu"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			true,
+		},
+		"invalidTypeMap": {
+			&TestStructUrlValues{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			url.Values{"string": []string{"Bar", "bu"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`["Ah", "Eh", "Ih"]`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			true,
+		},
+		"invalidStruct": {
+			&TestStructUrlValues{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			url.Values{"string": []string{"Bar", "bu"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "muhhh"}`, "Blubb"}},
+			true,
+		},
+		"invalidTypeStruct": {
+			&TestStructUrlValues{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			url.Values{"string": []string{"Bar", "bu"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`["Ah", "Eh", "Ih"]`, "Blubb"}},
 			true,
 		},
 	}
 
 	for k, v := range testCases {
-		err := UnmarshalValidateAndUpdate([]byte(v.JsonUpdate), v.Data)
+		err := UnmapValidateAndUpdate(v.UrlValuesUpdate, v.Data)
+		log.Printf("after update: %v, err: %v", v.Data, err)
 		assertErrorUpdate(t, k, err, v.Error)
 	}
 }
