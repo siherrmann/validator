@@ -21,7 +21,7 @@ func (r JsonMap) Marshal() ([]byte, error) {
 }
 
 func (r *JsonMap) Unmarshal(value interface{}) error {
-	if s, ok := value.(map[string]interface{}); ok {
+	if s, ok := value.(JsonMap); ok {
 		*r = JsonMap(s)
 	} else {
 		b, ok := value.([]byte)

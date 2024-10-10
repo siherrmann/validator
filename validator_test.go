@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -17,7 +16,7 @@ type TestRequestWrapper struct {
 
 type TestRequestWrapperUpdate struct {
 	Data       interface{}
-	JsonUpdate map[string]interface{}
+	JsonUpdate model.JsonMap
 	Error      bool
 }
 
@@ -1561,7 +1560,6 @@ func TestCaseStructFloatTypes(t *testing.T) {
 
 	for k, v := range testCases {
 		err := UnmarshalValidateAndUpdate([]byte(v.JsonUpdate), v.Data)
-		fmt.Printf("error float types: %v", err)
 		assertErrorUpdate(t, k, err, v.Error)
 	}
 }

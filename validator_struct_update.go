@@ -12,9 +12,9 @@ import (
 )
 
 // UnmarshalValidateAndUpdate unmarshals given json ([]byte) into pointer v.
-// For more information to ValidateAndUpdate look at ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interface{}) error.
+// For more information to ValidateAndUpdate look at ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate interface{}) error.
 func UnmarshalValidateAndUpdate(jsonInput []byte, structToUpdate interface{}) error {
-	jsonUnmarshaled := map[string]interface{}{}
+	jsonUnmarshaled := model.JsonMap{}
 
 	err := json.Unmarshal(jsonInput, &jsonUnmarshaled)
 	if err != nil {
@@ -66,7 +66,7 @@ func UnmarshalValidateAndUpdate(jsonInput []byte, structToUpdate interface{}) er
 //
 // In the case of rex the int and float input will get converted to a string (strconv.Itoa(int) and fmt.Sprintf("%f", f)).
 // If you want to check more complex cases you can obviously replace equ, neq, min, max and con with one regular expression.
-func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interface{}) error {
+func ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate interface{}) error {
 	// check if value is a pointer to a struct
 	value := reflect.ValueOf(structToUpdate)
 	if value.Kind() != reflect.Ptr {

@@ -44,15 +44,8 @@ func UnmarshalJsonToJsonMap(jsonInput []byte) (model.JsonMap, error) {
 
 func UnmapUrlValuesToJsonMap(values url.Values, validation ...model.Validation) (model.JsonMap, error) {
 	mapOut := model.JsonMap{}
-	for _, v := range validation {
-		if values.Has(v.Key) {
-			value := values.Get(v.Key)
-			out, err := model.InterfaceFromString(value, v.Type)
-			if err != nil {
-				return nil, err
-			}
-			mapOut[v.Key] = out
-		}
+	for k := range values {
+		mapOut[k] = values.Get(k)
 	}
 	return mapOut, nil
 }
