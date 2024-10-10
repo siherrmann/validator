@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/siherrmann/validator/helper"
 	"github.com/siherrmann/validator/model"
@@ -91,6 +92,10 @@ func ValidateAndUpdate(jsonInput map[string]interface{}, structToUpdate interfac
 		err := validation.Fill(tag, model.UPD, field)
 		if err != nil {
 			return err
+		}
+
+		if len(strings.TrimSpace(validation.Key)) == 0 {
+			continue
 		}
 
 		for _, g := range validation.Groups {

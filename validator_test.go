@@ -14,121 +14,6 @@ type TestRequestWrapper struct {
 	InvalidField string
 }
 
-type TestStructEqual struct {
-	String string   `vld:"equtest"`
-	Int    int      `vld:"equ3"`
-	Float  float64  `vld:"equ3"`
-	Array  []string `vld:"equ3"`
-}
-
-type TestStructNotEqual struct {
-	String string   `vld:"neqtest"`
-	Int    int      `vld:"neq3"`
-	Float  float64  `vld:"neq3"`
-	Array  []string `vld:"neq3"`
-}
-
-type TestStructMin struct {
-	String string   `vld:"min3"`
-	Int    int      `vld:"min3"`
-	Float  float64  `vld:"min3"`
-	Array  []string `vld:"min3"`
-}
-
-type TestStructMax struct {
-	String string   `vld:"max4"`
-	Int    int      `vld:"max4"`
-	Float  float64  `vld:"max4"`
-	Array  []string `vld:"max4"`
-}
-
-type TestStructCon struct {
-	String string   `vld:"con@"`
-	Int    int      `vld:"-"`
-	Float  float64  `vld:"-"`
-	Array  []string `vld:"con@"`
-}
-
-type TestStructNotCon struct {
-	String string   `vld:"nco@"`
-	Int    int      `vld:"-"`
-	Float  float64  `vld:"-"`
-	Array  []string `vld:"nco@"`
-}
-
-type TestStructFrom struct {
-	String string   `vld:"frm@,$"`
-	Int    int      `vld:"frm1,200"`
-	Float  float64  `vld:"frm0.5,1"`
-	Array  []string `vld:"frm@,$"`
-}
-
-type TestStructNotFrom struct {
-	String string   `vld:"nfr@,$"`
-	Int    int      `vld:"nfr1,2"`
-	Float  float64  `vld:"nfr0.5,0.8"`
-	Array  []string `vld:"nfr@,$"`
-}
-
-type TestStructRex struct {
-	String string   `vld:"rex'^[a-zA-Z0-9]+$'"`
-	Int    int      `vld:"rex'^(2|3)$'"`
-	Float  float64  `vld:"rex'^(2.000|3.000)$'"`
-	Array  []string `vld:"-"`
-}
-
-type TestStructMulti struct {
-	String string   `vld:"min3 neqtest"`
-	Int    int      `vld:"min3 neq4"`
-	Float  float64  `vld:"min3 neq4"`
-	Array  []string `vld:"min3 max4"`
-}
-
-type TestStructMultiOr struct {
-	String string   `vld:"min4 || equte"`
-	Int    int      `vld:"min3 || equ0"`
-	Float  float64  `vld:"min3 || equ0"`
-	Array  []string `vld:"min3 || equ0"`
-}
-
-type TestStructEmptyCondition struct {
-	String string   `vld:"equ"`
-	Int    int      `vld:"neq"`
-	Float  float64  `vld:"min"`
-	Array  []string `vld:"max"`
-}
-
-type TestStructPassword struct {
-	String string `vld:"min8 max30 rex'^(.*[A-Z])+(.*)$' rex'^(.*[a-z])+(.*)$' rex'^(.*\\d)+(.*)$' rex'^(.*[\x60!@#$%^&*()_+={};/':\"|\\,.<>/?~-])+(.*)$'"`
-}
-
-type TestStructGroup struct {
-	String string            `vld:"min3, gr1min1 gr2min2"`
-	Int    int               `vld:"min3, gr1min1 gr2min2"`
-	Float  float64           `vld:"min3, gr1min1"`
-	Array  []string          `vld:"min3, gr1min1"`
-	Map    map[string]string `vld:"min3, gr1min1"`
-	Struct time.Time         `vld:"min1728000000, gr1min1"`
-}
-
-type TestStructGroupNoGroup struct {
-	String string            `vld:"min3"`
-	Int    int               `vld:"min3, gr3min5"`
-	Float  float64           `vld:"min3, gr3min5"`
-	Array  []string          `vld:"min3, gr3min5"`
-	Map    map[string]string `vld:"min3, gr3min5"`
-	Struct time.Time         `vld:"min1728000000, gr3min5"`
-}
-
-type TestStructInvalidGroupCondition struct {
-	String string            `vld:"min3, gr4min1 gr5min2"`
-	Int    int               `vld:"min3, gr4min1 gr5min2"`
-	Float  float64           `vld:"min3, gr4min1"`
-	Array  []string          `vld:"min3, gr4min1"`
-	Map    map[string]string `vld:"min3, gr4min1"`
-	Struct time.Time         `vld:"min1728000000, gr40min1"`
-}
-
 type TestRequestWrapperUpdate struct {
 	Data       interface{}
 	JsonUpdate map[string]interface{}
@@ -141,31 +26,14 @@ type TestRequestWrapperUpdateWithJson struct {
 	Error      bool
 }
 
-type TestUpdate struct {
-	String string          `upd:"string, min1, gr1min7"`
-	Int    int             `upd:"int, min1, gr1min7"`
-	Float  float64         `upd:"float, min1, gr1min7"`
-	Array  []int           `upd:"array, min1, gr1min7"`
-	Date   time.Time       `upd:"date, min1, gr1min7"`
-	Struct TestUpdateInner `upd:"struct, min1, gr1min7"`
-	Map    model.JsonMap   `upd:"map, min1 conkey, gr1min7"`
-}
-
-type TestUpdatePartial struct {
-	String string `upd:"string, min1, gr1min2"`
-	Int    int
-	Float  float64
-	Array  []int `upd:"array, min1, gr1min2"`
-	Date   time.Time
-	Struct TestUpdateInner
-	Map    model.JsonMap
-}
-
-type TestUpdateInner struct {
-	String string `upd:"string, equtest"`
-}
-
 func TestCaseStructEqual(t *testing.T) {
+	type TestStructEqual struct {
+		String string   `vld:"equtest"`
+		Int    int      `vld:"equ3"`
+		Float  float64  `vld:"equ3"`
+		Array  []string `vld:"equ3"`
+	}
+
 	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructEqual{
@@ -221,6 +89,13 @@ func TestCaseStructEqual(t *testing.T) {
 }
 
 func TestCaseStructNotEqual(t *testing.T) {
+	type TestStructNotEqual struct {
+		String string   `vld:"neqtest"`
+		Int    int      `vld:"neq3"`
+		Float  float64  `vld:"neq3"`
+		Array  []string `vld:"neq3"`
+	}
+
 	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructNotEqual{
@@ -276,6 +151,13 @@ func TestCaseStructNotEqual(t *testing.T) {
 }
 
 func TestCaseStructMin(t *testing.T) {
+	type TestStructMin struct {
+		String string   `vld:"min3"`
+		Int    int      `vld:"min3"`
+		Float  float64  `vld:"min3"`
+		Array  []string `vld:"min3"`
+	}
+
 	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructMin{
@@ -331,6 +213,13 @@ func TestCaseStructMin(t *testing.T) {
 }
 
 func TestCaseStructMax(t *testing.T) {
+	type TestStructMax struct {
+		String string   `vld:"max4"`
+		Int    int      `vld:"max4"`
+		Float  float64  `vld:"max4"`
+		Array  []string `vld:"max4"`
+	}
+
 	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructMax{
@@ -386,6 +275,13 @@ func TestCaseStructMax(t *testing.T) {
 }
 
 func TestCaseStructCon(t *testing.T) {
+	type TestStructCon struct {
+		String string   `vld:"con@"`
+		Int    int      `vld:"-"`
+		Float  float64  `vld:"-"`
+		Array  []string `vld:"con@"`
+	}
+
 	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructCon{
@@ -423,6 +319,13 @@ func TestCaseStructCon(t *testing.T) {
 }
 
 func TestCaseStructNotCon(t *testing.T) {
+	type TestStructNotCon struct {
+		String string   `vld:"nco@"`
+		Int    int      `vld:"-"`
+		Float  float64  `vld:"-"`
+		Array  []string `vld:"nco@"`
+	}
+
 	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructNotCon{
@@ -460,6 +363,13 @@ func TestCaseStructNotCon(t *testing.T) {
 }
 
 func TestCaseStructFrom(t *testing.T) {
+	type TestStructFrom struct {
+		String string   `vld:"frm@,$"`
+		Int    int      `vld:"frm1,200"`
+		Float  float64  `vld:"frm0.5,1"`
+		Array  []string `vld:"frm@,$"`
+	}
+
 	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructFrom{
@@ -524,6 +434,13 @@ func TestCaseStructFrom(t *testing.T) {
 }
 
 func TestCaseStructNotFrom(t *testing.T) {
+	type TestStructNotFrom struct {
+		String string   `vld:"nfr@,$"`
+		Int    int      `vld:"nfr1,2"`
+		Float  float64  `vld:"nfr0.5,0.8"`
+		Array  []string `vld:"nfr@,$"`
+	}
+
 	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructNotFrom{
@@ -579,6 +496,13 @@ func TestCaseStructNotFrom(t *testing.T) {
 }
 
 func TestCaseStructRex(t *testing.T) {
+	type TestStructRex struct {
+		String string   `vld:"rex'^[a-zA-Z0-9]+$'"`
+		Int    int      `vld:"rex'^(2|3)$'"`
+		Float  float64  `vld:"rex'^(2.000|3.000)$'"`
+		Array  []string `vld:"-"`
+	}
+
 	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructRex{
@@ -625,6 +549,13 @@ func TestCaseStructRex(t *testing.T) {
 }
 
 func TestCaseStructMulti(t *testing.T) {
+	type TestStructMulti struct {
+		String string   `vld:"min3 neqtest"`
+		Int    int      `vld:"min3 neq4"`
+		Float  float64  `vld:"min3 neq4"`
+		Array  []string `vld:"min3 max4"`
+	}
+
 	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructMulti{
@@ -716,6 +647,13 @@ func TestCaseStructMulti(t *testing.T) {
 }
 
 func TestCaseStructMultiOr(t *testing.T) {
+	type TestStructMultiOr struct {
+		String string   `vld:"min4 || equte"`
+		Int    int      `vld:"min3 || equ0"`
+		Float  float64  `vld:"min3 || equ0"`
+		Array  []string `vld:"min3 || equ0"`
+	}
+
 	testCases := map[string]*TestRequestWrapper{
 		"validFirstCondition": {
 			&TestStructMultiOr{
@@ -780,6 +718,13 @@ func TestCaseStructMultiOr(t *testing.T) {
 }
 
 func TestCaseTestStructEmptyCondition(t *testing.T) {
+	type TestStructEmptyCondition struct {
+		String string   `vld:"equ"`
+		Int    int      `vld:"neq"`
+		Float  float64  `vld:"min"`
+		Array  []string `vld:"max"`
+	}
+
 	testCases := map[string]*TestRequestWrapper{
 		"emptyConditon": {
 			&TestStructEmptyCondition{
@@ -799,6 +744,10 @@ func TestCaseTestStructEmptyCondition(t *testing.T) {
 }
 
 func TestCaseStructPassword(t *testing.T) {
+	type TestStructPassword struct {
+		String string `vld:"min8 max30 rex'^(.*[A-Z])+(.*)$' rex'^(.*[a-z])+(.*)$' rex'^(.*\\d)+(.*)$' rex'^(.*[\x60!@#$%^&*()_+={};/':\"|\\,.<>/?~-])+(.*)$'"`
+	}
+
 	testCases := map[string]*TestRequestWrapper{
 		"valid": {
 			&TestStructPassword{
@@ -851,6 +800,15 @@ func TestCaseStructPassword(t *testing.T) {
 }
 
 func TestCaseStructGroup(t *testing.T) {
+	type TestStructGroup struct {
+		String string            `vld:"min3, gr1min1 gr2min2"`
+		Int    int               `vld:"min3, gr1min1 gr2min2"`
+		Float  float64           `vld:"min3, gr1min1"`
+		Array  []string          `vld:"min3, gr1min1"`
+		Map    map[string]string `vld:"min3, gr1min1"`
+		Struct time.Time         `vld:"min1728000000, gr1min1"`
+	}
+
 	testCases := map[string]*TestRequestWrapper{
 		"validAll": {
 			&TestStructGroup{
@@ -898,6 +856,15 @@ func TestCaseStructGroup(t *testing.T) {
 }
 
 func TestCaseStructGroupNoGroup(t *testing.T) {
+	type TestStructGroupNoGroup struct {
+		String string            `vld:"min3"`
+		Int    int               `vld:"min3, gr3min5"`
+		Float  float64           `vld:"min3, gr3min5"`
+		Array  []string          `vld:"min3, gr3min5"`
+		Map    map[string]string `vld:"min3, gr3min5"`
+		Struct time.Time         `vld:"min1728000000, gr3min5"`
+	}
+
 	testTimeValid, _ := time.Parse("2006-01-02T15:04:05.000000", "2025-01-02T15:04:05.000000")
 	testTimeInvalid, _ := time.Parse("2006-01-02T15:04:05.000000", "2024-01-02T15:04:05.000000")
 	testCases := map[string]*TestRequestWrapper{
@@ -943,6 +910,15 @@ func TestCaseStructGroupNoGroup(t *testing.T) {
 }
 
 func TestCaseStructInvalidGroupCondition(t *testing.T) {
+	type TestStructInvalidGroupCondition struct {
+		String string            `vld:"min3, gr4min1 gr5min2"`
+		Int    int               `vld:"min3, gr4min1 gr5min2"`
+		Float  float64           `vld:"min3, gr4min1"`
+		Array  []string          `vld:"min3, gr4min1"`
+		Map    map[string]string `vld:"min3, gr4min1"`
+		Struct time.Time         `vld:"min1728000000, gr40min1"`
+	}
+
 	testCases := map[string]*TestRequestWrapper{
 		"invalidGroupConditionLast": {
 			&TestStructInvalidGroupCondition{
@@ -962,6 +938,20 @@ func TestCaseStructInvalidGroupCondition(t *testing.T) {
 }
 
 func TestCaseUpdate(t *testing.T) {
+	type TestUpdateInner struct {
+		String string `upd:"string, equtest"`
+	}
+
+	type TestUpdate struct {
+		String string          `upd:"string, min1, gr1min7"`
+		Int    int             `upd:"int, min1, gr1min7"`
+		Float  float64         `upd:"float, min1, gr1min7"`
+		Array  []int           `upd:"array, min1, gr1min7"`
+		Date   time.Time       `upd:"date, min1, gr1min7"`
+		Struct TestUpdateInner `upd:"struct, min1, gr1min7"`
+		Map    model.JsonMap   `upd:"map, min1 conkey, gr1min7"`
+	}
+
 	testCasesUpdate := map[string]*TestRequestWrapperUpdate{
 		"validUpdate": {
 			&TestUpdate{
@@ -1157,9 +1147,39 @@ func TestCaseUpdate(t *testing.T) {
 }
 
 func TestCaseUpdatePartial(t *testing.T) {
+	type TestUpdateInner struct {
+		String string `upd:"string, equtest"`
+	}
+
+	type TestUpdatePartial struct {
+		String string `upd:"string, min1, gr1min2"`
+		Int    int
+		Float  float64
+		Array  []int `upd:"array, min1, gr1min2"`
+		Date   time.Time
+		Struct TestUpdateInner
+		Map    model.JsonMap
+	}
+
 	testCasesUpdatePartial := map[string]*TestRequestWrapperUpdate{
 		"validUpdate": {
-			&TestUpdate{
+			&TestUpdatePartial{
+				String: "Foo",
+				Int:    1,
+				Float:  1.1,
+				Date:   time.Time{},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+			},
+			map[string]interface{}{"string": "Bar", "array": []interface{}{2}},
+			false,
+		},
+		"validUpdateMoreValues": {
+			&TestUpdatePartial{
 				String: "Foo",
 				Int:    1,
 				Float:  1.1,
@@ -1175,47 +1195,25 @@ func TestCaseUpdatePartial(t *testing.T) {
 			false,
 		},
 		"invalidJsonStringUpdate": {
-			&TestUpdate{
+			&TestUpdatePartial{
 				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "", "int": 2, "float": "1.2", "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
-			true,
-		},
-		"invalidTypeStringUpdate": {
-			&TestUpdate{
-				String: "Foo",
-				Int:    1,
-				Float:  1.1,
-				Array:  []int{1},
-				Date:   time.Time{},
-			},
-			map[string]interface{}{"string": 1, "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			map[string]interface{}{"string": "", "array": []int{2}},
 			true,
 		},
 		"invalidJsonArrayUpdate": {
-			&TestUpdate{
+			&TestUpdatePartial{
 				String: "Foo",
 				Int:    1,
 				Float:  1.1,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
-			true,
-		},
-		"invalidTypeArrayUpdate": {
-			&TestUpdate{
-				String: "Foo",
-				Int:    1,
-				Float:  1.1,
-				Array:  []int{1},
-				Date:   time.Time{},
-			},
-			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []string{"2"}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			map[string]interface{}{"string": "Bar", "array": []int{}},
 			true,
 		},
 	}
@@ -1227,6 +1225,20 @@ func TestCaseUpdatePartial(t *testing.T) {
 }
 
 func TestCaseUpdateWithJson(t *testing.T) {
+	type TestUpdateInner struct {
+		String string `upd:"string, equtest"`
+	}
+
+	type TestUpdate struct {
+		String string          `upd:"string, min1, gr1min7"`
+		Int    int             `upd:"int, min1, gr1min7"`
+		Float  float64         `upd:"float, min1, gr1min7"`
+		Array  []int           `upd:"array, min1, gr1min7"`
+		Date   time.Time       `upd:"date, min1, gr1min7"`
+		Struct TestUpdateInner `upd:"struct, min1, gr1min7"`
+		Map    model.JsonMap   `upd:"map, min1 conkey, gr1min7"`
+	}
+
 	testCasesUpdateWithJson := map[string]*TestRequestWrapperUpdateWithJson{
 		"validUpdateDateUnix": {
 			&TestUpdate{
