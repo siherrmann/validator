@@ -1341,12 +1341,12 @@ func TestCaseStructUpdateEmptyRequirement(t *testing.T) {
 	}
 
 	type TestStructUpdateEmptyRequirement struct {
-		String string          `upd:"string"`
-		Int    int             `upd:"int"`
-		Float  float64         `upd:"float"`
-		Array  []string        `upd:"array"`
-		Map    model.JsonMap   `upd:"map"`
-		Struct TestUpdateInner `upd:"struct"`
+		String string          `upd:"string, -"`
+		Int    int             `upd:"int, -"`
+		Float  float64         `upd:"float, -"`
+		Array  []string        `upd:"array, -"`
+		Map    model.JsonMap   `upd:"map, -"`
+		Struct TestUpdateInner `upd:"struct, -"`
 	}
 
 	testCases := map[string]*TestRequestWrapperUpdate{
@@ -1380,7 +1380,7 @@ func TestCaseStructUpdateEmptyRequirement(t *testing.T) {
 				},
 			},
 			map[string]interface{}{"string": "Bar"},
-			false,
+			true,
 		},
 	}
 

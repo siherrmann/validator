@@ -135,11 +135,6 @@ func ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate interface{}) erro
 			return err
 		}
 
-		// early return/continue for empty requirement
-		if len(strings.TrimSpace(validation.Key)) == 0 || strings.TrimSpace(validation.Requirement) == string(model.NONE) {
-			continue
-		}
-
 		for _, g := range validation.Groups {
 			groups[g.Name] = g
 			groupSize[g.Name]++
@@ -148,7 +143,9 @@ func ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate interface{}) erro
 		var ok bool
 		var jsonValue interface{}
 		if jsonValue, ok = jsonInput[validation.Key]; !ok {
-			if len(validation.Groups) == 0 {
+			if strings.TrimSpace(validation.Requirement) == string(model.NONE) {
+				continue
+			} else if len(validation.Groups) == 0 {
 				return fmt.Errorf("json %v key not in map", validation.Key)
 			} else {
 				for _, group := range validation.Groups {
