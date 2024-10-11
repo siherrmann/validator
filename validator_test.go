@@ -1335,6 +1335,45 @@ func TestCaseUpdatePartial(t *testing.T) {
 	}
 }
 
+func TestCaseStructUpdateEmptyRequirement(t *testing.T) {
+	type TestUpdateInner struct {
+		String string `upd:"string, -"`
+	}
+
+	type TestStructUpdateEmptyRequirement struct {
+		String string          `upd:"string, -"`
+		Int    int             `upd:"int, -"`
+		Float  float64         `upd:"float, -"`
+		Array  []string        `upd:"array, -"`
+		Map    model.JsonMap   `upd:"map, -"`
+		Struct TestUpdateInner `upd:"struct, -"`
+	}
+
+	testCases := map[string]*TestRequestWrapperUpdate{
+		"valid": {
+			&TestStructUpdateEmptyRequirement{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			map[string]interface{}{"string": "Bar", "int": 3, "float": 3.2, "array": []string{"a", "b", "c"}, "struct": map[string]any{"string": "test"}, "map": map[string]any{"key1": "test", "key2": "test", "key3": "test"}},
+			false,
+		},
+	}
+
+	for k, v := range testCases {
+		err := ValidateAndUpdate(v.JsonMapUpdate, v.Data)
+		assertErrorUpdate(t, k, err, v.Error)
+	}
+}
+
 func TestCaseUpdateWithJson(t *testing.T) {
 	type TestUpdateInner struct {
 		String string `upd:"string, equtest"`
