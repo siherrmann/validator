@@ -1380,7 +1380,7 @@ func TestCaseStructUpdateEmptyRequirement(t *testing.T) {
 				},
 			},
 			map[string]interface{}{"string": "Bar"},
-			true,
+			false,
 		},
 	}
 
