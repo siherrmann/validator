@@ -1341,12 +1341,12 @@ func TestCaseStructUpdateEmptyRequirement(t *testing.T) {
 	}
 
 	type TestStructUpdateEmptyRequirement struct {
-		String string          `upd:"string, -"`
-		Int    int             `upd:"int, -"`
-		Float  float64         `upd:"float, -"`
-		Array  []string        `upd:"array, -"`
-		Map    model.JsonMap   `upd:"map, -"`
-		Struct TestUpdateInner `upd:"struct, -"`
+		String string          `upd:"string"`
+		Int    int             `upd:"int"`
+		Float  float64         `upd:"float"`
+		Array  []string        `upd:"array"`
+		Map    model.JsonMap   `upd:"map"`
+		Struct TestUpdateInner `upd:"struct"`
 	}
 
 	testCases := map[string]*TestRequestWrapperUpdate{
@@ -1364,6 +1364,22 @@ func TestCaseStructUpdateEmptyRequirement(t *testing.T) {
 				},
 			},
 			map[string]interface{}{"string": "Bar", "int": 3, "float": 3.2, "array": []string{"a", "b", "c"}, "struct": map[string]any{"string": "test"}, "map": map[string]any{"key1": "test", "key2": "test", "key3": "test"}},
+			false,
+		},
+		"validOnlyString": {
+			&TestStructUpdateEmptyRequirement{
+				String: "test",
+				Int:    3,
+				Float:  2.0,
+				Array:  []string{"", "", ""},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+			},
+			map[string]interface{}{"string": "Bar"},
 			false,
 		},
 	}

@@ -135,7 +135,8 @@ func ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate interface{}) erro
 			return err
 		}
 
-		if len(strings.TrimSpace(validation.Key)) == 0 {
+		// early return/continue for empty requirement
+		if len(strings.TrimSpace(validation.Key)) == 0 || strings.TrimSpace(validation.Requirement) == string(model.NONE) {
 			continue
 		}
 

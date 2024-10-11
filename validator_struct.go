@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/siherrmann/validator/model"
 	"github.com/siherrmann/validator/validators"
@@ -95,6 +96,11 @@ func Validate(v any) error {
 		err := validation.Fill(tag, model.VLD, value)
 		if err != nil {
 			return err
+		}
+
+		// early return/continue for empty requirement
+		if strings.TrimSpace(validation.Requirement) == string(model.NONE) {
+			continue
 		}
 
 		for _, g := range validation.Groups {
