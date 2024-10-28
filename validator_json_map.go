@@ -57,7 +57,7 @@ func ValidateJsonMap(jsonMap model.JsonMap, validations ...model.Validation) err
 				v.Type = model.TypeFromInterface(v)
 			}
 
-			_, err := ValidateValueWithParser(reflect.ValueOf(v), &v)
+			_, err := ValidateValueWithParser(reflect.ValueOf(jsonMap[v.Key]), &v)
 			if err != nil {
 				return err
 			}
