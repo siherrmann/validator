@@ -59,7 +59,7 @@ func ValidateJsonMap(jsonMap model.JsonMap, validations ...model.Validation) err
 
 			_, err := ValidateValueWithParser(reflect.ValueOf(jsonMap[v.Key]), &v)
 			if err != nil {
-				return err
+				return fmt.Errorf("invalid value %s: %v", v.Key, err)
 			}
 		}
 	}
