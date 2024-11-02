@@ -90,7 +90,7 @@ func CheckInt(v reflect.Value, c *model.AstValue) error {
 		}
 	case model.REGX:
 		if len(c.ConditionValue) != 0 {
-			match, err := regexp.MatchString(c.ConditionValue, strconv.Itoa(i))
+			match, err := regexp.MatchString(c.ConditionValue, fmt.Sprint(i))
 			if err != nil {
 				return err
 			} else if !match {

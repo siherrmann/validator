@@ -92,7 +92,7 @@ func CheckFloat(v reflect.Value, c *model.AstValue) error {
 		}
 	case model.REGX:
 		if len(c.ConditionValue) != 0 {
-			match, err := regexp.MatchString(c.ConditionValue, strconv.FormatFloat(f, 'f', 3, 64))
+			match, err := regexp.MatchString(c.ConditionValue, fmt.Sprint(f))
 			if err != nil {
 				return err
 			} else if !match {

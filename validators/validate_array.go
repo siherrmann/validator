@@ -3,6 +3,7 @@ package validators
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 	"slices"
 	"strconv"
 
@@ -79,7 +80,7 @@ func CheckArray(v reflect.Value, c *model.AstValue) error {
 			if err != nil {
 				return err
 			} else if len(notFound) != 0 {
-				return fmt.Errorf("from values do not contain %v", notFound)
+				return fmt.Errorf("value not found in %v", fromValues)
 			}
 		}
 	case model.NOT_FROM:
@@ -92,7 +93,18 @@ func CheckArray(v reflect.Value, c *model.AstValue) error {
 			if err != nil {
 				return err
 			} else if len(found) != 0 {
-				return fmt.Errorf("notFrom values do contain %v", found)
+				return fmt.Errorf("value found in %v", notFromValues)
+			}
+		}
+	case model.REGX:
+		if len(c.ConditionValue) != 0 {
+			for _, av := range v.Interface().([]any) {
+				match, err := regexp.MatchString(c.ConditionValue, fmt.Sprint(av))
+				if err != nil {
+					return err
+				} else if !match {
+					return fmt.Errorf("value does match regex %v", c.ConditionValue)
+				}
 			}
 		}
 	case model.NONE:
