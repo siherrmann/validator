@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/siherrmann/validator/model"
@@ -83,6 +84,7 @@ func Validate(v any) error {
 	// get valid reflect structValue of struct
 	structFull := structValue.Elem()
 
+	keys := []string{}
 	groups := map[string]*model.Group{}
 	groupSize := map[string]int{}
 	groupErrors := map[string][]error{}
@@ -101,6 +103,12 @@ func Validate(v any) error {
 		// early return/continue for empty requirement
 		if strings.TrimSpace(validation.Requirement) == string(model.NONE) {
 			continue
+		}
+
+		if len(validation.Key) > 0 && slices.Contains(keys, validation.Key) {
+			return fmt.Errorf("duplicate validation key: %v", validation.Key)
+		} else {
+			keys = append(keys, validation.Key)
 		}
 
 		for _, g := range validation.Groups {

@@ -610,7 +610,7 @@ func TestCaseStructRex(t *testing.T) {
 	type TestStructRex struct {
 		String string   `vld:"rex'^[a-zA-Z0-9]+$'"`
 		Int    int      `vld:"rex'^(2|3)$'"`
-		Float  float64  `vld:"rex'^(2.000|3.000)$'"`
+		Float  float64  `vld:"rex'^(2|3)$'"`
 		Array  []string `vld:"-"`
 	}
 
@@ -1921,6 +1921,50 @@ func TestCaseStructUrlValues(t *testing.T) {
 		log.Printf("after update: %v, err: %v", v.Data, err)
 		assertErrorUpdate(t, k, err, v.Error)
 	}
+}
+
+func TestCaseParser(t *testing.T) {
+	type TestUpdate struct {
+		String string `upd:"string, (min10 && max100) || equ'Bar'"`
+	}
+
+	lexer := parser.NewLexer(`(min10 && max100) || equ'Bar'`)
+	p := parser.NewParser(lexer)
+	r, err := p.ParseValidation()
+	if err != nil {
+		t.Errorf("error parsing: %v", err)
+	}
+
+	expectedValidation := "(min'10' && max'100') || equ'Bar'"
+	if r.RootValue.AstGroupToString() != expectedValidation {
+		t.Errorf("test case parser - wanted %s, got: %s", expectedValidation, r.RootValue.AstGroupToString())
+	}
+
+	data := &TestUpdate{
+		String: "test",
+	}
+	err = UnmapValidateAndUpdate(url.Values{"string": []string{"Bar"}}, data)
+	log.Printf("after update: %v, err: %v", data, err)
+	assertErrorUpdate(t, "validSingle", err, false)
+
+	lexer = parser.NewLexer(`(min10 && max100) || (equ'Bar')`)
+	p = parser.NewParser(lexer)
+	r, err = p.ParseValidation()
+	if err != nil {
+		t.Errorf("error parsing: %v", err)
+	}
+
+	expectedValidation = "(min'10' && max'100') || (equ'Bar')"
+	if r.RootValue.AstGroupToString() != expectedValidation {
+		t.Errorf("test case parser - wanted %s, got: %s", expectedValidation, r.RootValue.AstGroupToString())
+	}
+
+	data = &TestUpdate{
+		String: "test",
+	}
+	err = UnmapValidateAndUpdate(url.Values{"string": []string{"Bar"}}, data)
+	log.Printf("after update: %v, err: %v", data, err)
+	assertErrorUpdate(t, "validSingle", err, false)
 }
 
 func assertError(t testing.TB, testCase string, err error, invalidField string) {

@@ -34,13 +34,13 @@ func NewParser(l *Lexer) *Parser {
 func (p *Parser) ParseValidation() (model.RootNode, error) {
 	var rootNode model.RootNode
 
-	val := p.parseGroup()
+	val := p.parseGroup(true)
 	if val == nil || len(p.Errors()) > 0 {
 		p.parseError(fmt.Sprintf(
 			"error parsing validation, expected a value, got: %v:",
 			p.currentToken.Literal,
 		))
-		return model.RootNode{}, errors.New(p.Errors())
+		return model.RootNode{RootValue: &model.AstValue{}}, errors.New(p.Errors())
 	}
 	rootNode.RootValue = val
 
@@ -59,7 +59,7 @@ func (p *Parser) currentTokenTypeIs(t model.TokenType) bool {
 }
 
 // parseGroup is called when an open left brace `(` token is found or a requirement starts without a '('.
-func (p *Parser) parseGroup() *model.AstValue {
+func (p *Parser) parseGroup(root bool) *model.AstValue {
 	group := &model.AstValue{Type: model.GROUP}
 	grpState := GrpStart
 
@@ -67,9 +67,15 @@ func (p *Parser) parseGroup() *model.AstValue {
 		switch grpState {
 		case GrpStart:
 			if p.currentTokenTypeIs(model.LexerLeftBrace) {
-				group.Start = p.currentToken.Start
-				p.nextToken()
-				grpState = GrpOpen
+				if root {
+					innerGroup := p.parseGroup(false)
+					group.ConditionGroup = append(group.ConditionGroup, innerGroup)
+					grpState = GrpOpen
+				} else {
+					group.Start = p.currentToken.Start
+					p.nextToken()
+					grpState = GrpOpen
+				}
 			} else if p.currentTokenTypeIs(model.LexerConditionType) {
 				group.Start = p.currentToken.Start
 				grpState = GrpOpen
@@ -92,7 +98,7 @@ func (p *Parser) parseGroup() *model.AstValue {
 				p.nextToken()
 				grpState = GrpEnd
 			} else if p.currentTokenTypeIs(model.LexerLeftBrace) {
-				innerGroup := p.parseGroup()
+				innerGroup := p.parseGroup(false)
 				group.ConditionGroup = append(group.ConditionGroup, innerGroup)
 				if len(group.ConditionGroup) > 1 && len(group.ConditionGroup[len(group.ConditionGroup)-2].Operator) == 0 {
 					group.ConditionGroup[len(group.ConditionGroup)-2].Operator = model.AND

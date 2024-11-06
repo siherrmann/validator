@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/siherrmann/validator/helper"
@@ -120,6 +121,7 @@ func ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate interface{}) erro
 	// get valid reflect value of struct
 	structFull := value.Elem()
 
+	keys := []string{}
 	groups := map[string]*model.Group{}
 	groupSize := map[string]int{}
 	groupErrors := map[string][]error{}
@@ -133,6 +135,12 @@ func ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate interface{}) erro
 		err := validation.Fill(tag, model.UPD, field)
 		if err != nil {
 			return err
+		}
+
+		if len(validation.Key) > 0 && slices.Contains(keys, validation.Key) {
+			return fmt.Errorf("duplicate validation key: %v", validation.Key)
+		} else {
+			keys = append(keys, validation.Key)
 		}
 
 		for _, g := range validation.Groups {
