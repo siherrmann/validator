@@ -15,30 +15,30 @@ import (
 )
 
 // UnmapOrAnmarshalValidateAndUpdate unmarshals given json ([]byte) or given url.Values (from request.Form),
-// validates them and updates the given struct.
-func UnmapOrUnmarshalRequestValidateAndUpdateWithValidation(request *http.Request, structToUpdate interface{}, validations map[string]model.Validation) error {
+// validates them and updates the given map.
+func UnmapOrUnmarshalRequestValidateAndUpdateWithValidation(request *http.Request, mapToUpdate *model.JsonMap, validations map[string]model.Validation) error {
 	err := request.ParseForm()
 	if err != nil {
 		return err
 	}
 
 	if len(request.Form.Encode()) > 0 {
-		err = UnmapValidateAndUpdateWithValidation(request.Form, structToUpdate, validations)
+		err = UnmapValidateAndUpdateWithValidation(request.Form, mapToUpdate, validations)
 	} else {
 		var bodyBytes []byte
 		bodyBytes, err = io.ReadAll(request.Body)
 		if err != nil {
 			return err
 		}
-		err = UnmarshalValidateAndUpdateWithValidation(bodyBytes, structToUpdate, validations)
+		err = UnmarshalValidateAndUpdateWithValidation(bodyBytes, mapToUpdate, validations)
 	}
 
 	return err
 }
 
-// UnmarshalValidateAndUpdateWithValidation unmarshals given json ([]byte) into pointer v.
+// UnmarshalValidateAndUpdateWithValidation unmarshals given json ([]byte) into pointer mapToUpdate.
 // For more information to ValidateAndUpdate look at ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate interface{}) error.
-func UnmarshalValidateAndUpdateWithValidation(jsonInput []byte, structToUpdate interface{}, validations map[string]model.Validation) error {
+func UnmarshalValidateAndUpdateWithValidation(jsonInput []byte, mapToUpdate *model.JsonMap, validations map[string]model.Validation) error {
 	jsonUnmarshaled := model.JsonMap{}
 
 	err := json.Unmarshal(jsonInput, &jsonUnmarshaled)
@@ -46,7 +46,7 @@ func UnmarshalValidateAndUpdateWithValidation(jsonInput []byte, structToUpdate i
 		return fmt.Errorf("error unmarshaling: %v", err)
 	}
 
-	err = ValidateAndUpdate(jsonUnmarshaled, structToUpdate)
+	err = ValidateAndUpdateWithValidation(jsonUnmarshaled, mapToUpdate, validations)
 	if err != nil {
 		return fmt.Errorf("error updating struct: %v", err)
 	}
@@ -56,13 +56,13 @@ func UnmarshalValidateAndUpdateWithValidation(jsonInput []byte, structToUpdate i
 
 // UnmapValidateAndUpdateWithValidation unmaps given url.Values into pointer jsonMap.
 // For more information to ValidateAndUpdate look at ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate interface{}) error.
-func UnmapValidateAndUpdateWithValidation(values url.Values, structToUpdate interface{}, validations map[string]model.Validation) error {
+func UnmapValidateAndUpdateWithValidation(values url.Values, mapToUpdate *model.JsonMap, validations map[string]model.Validation) error {
 	mapOut, err := UnmapUrlValuesToJsonMap(values)
 	if err != nil {
 		return err
 	}
 
-	err = ValidateAndUpdate(mapOut, structToUpdate)
+	err = ValidateAndUpdateWithValidation(mapOut, mapToUpdate, validations)
 	if err != nil {
 		return fmt.Errorf("error updating struct: %v", err)
 	}
@@ -73,41 +73,13 @@ func UnmapValidateAndUpdateWithValidation(values url.Values, structToUpdate inte
 // ValidateAndUpdateWithValidation validates a given struct by upd tags.
 // ValidateAndUpdateWithValidation needs a struct pointer, a json map as input and a validation map.
 // The given struct is updated by the values in the json map.
-func ValidateAndUpdateWithValidation(jsonInput model.JsonMap, structToUpdate interface{}, validations map[string]model.Validation) error {
-	// check if value is a pointer to a struct
-	value := reflect.ValueOf(structToUpdate)
-	if value.Kind() != reflect.Ptr {
-		return fmt.Errorf("value has to be of kind pointer, was %T", value)
-	}
-	if value.Elem().Kind() != reflect.Struct {
-		return fmt.Errorf("value has to be of kind struct, was %T", value)
-	}
-
-	// get valid reflect value of struct
-	structFull := value.Elem()
-
+func ValidateAndUpdateWithValidation(jsonInput model.JsonMap, mapToUpdate *model.JsonMap, validations map[string]model.Validation) error {
 	keys := []string{}
 	groups := map[string]*model.Group{}
 	groupSize := map[string]int{}
 	groupErrors := map[string][]error{}
 
-	for i := 0; i < structFull.Type().NumField(); i++ {
-		tag := structFull.Type().Field(i).Tag.Get(string(model.UPD))
-		field := structFull.Field(i)
-		fieldName := structFull.Type().Field(i).Name
-
-		validation := &model.Validation{}
-		err := validation.FillOnlyKey(tag, model.UPD, field)
-		if err != nil {
-			return err
-		}
-
-		if val, ok := validations[validation.Key]; ok {
-			validation.Type = val.Type
-			validation.Requirement = val.Requirement
-			validation.Groups = val.Groups
-		}
-
+	for key, validation := range validations {
 		if len(validation.Key) > 0 && slices.Contains(keys, validation.Key) {
 			return fmt.Errorf("duplicate validation key: %v", validation.Key)
 		} else {
@@ -135,37 +107,23 @@ func ValidateAndUpdateWithValidation(jsonInput model.JsonMap, structToUpdate int
 		}
 
 		var validatedValue interface{}
+		var err error
 		if validation.Type == model.Struct {
-			var validMap interface{}
-			validMap, err = validation.GetValidValue(jsonValue)
-			if err != nil {
-				return err
-			}
-
-			err = ValidateAndUpdate(validMap.(map[string]interface{}), field.Addr().Interface())
-			validatedValue = field.Interface()
+			return fmt.Errorf("field %v unsupported type %v", key, validation.Type)
 		} else {
-			validatedValue, err = ValidateValueWithParser(reflect.ValueOf(jsonValue), validation)
+			validatedValue, err = ValidateValueWithParser(reflect.ValueOf(jsonValue), &validation)
 		}
 
 		if err != nil && len(validation.Groups) == 0 {
-			return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
+			return fmt.Errorf("field %v invalid: %v", key, err.Error())
 		} else if err != nil {
 			for _, group := range validation.Groups {
-				groupErrors[group.Name] = append(groupErrors[group.Name], fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error()))
+				groupErrors[group.Name] = append(groupErrors[group.Name], fmt.Errorf("field %v invalid: %v", key, err.Error()))
 			}
 			continue
 		}
 
-		err = setStructValueByJson(field, validation.Key, validatedValue)
-		if err != nil && len(validation.Groups) == 0 {
-			return fmt.Errorf("could not set field %v of %v: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
-		} else if err != nil {
-			for _, group := range groups {
-				groupErrors[group.Name] = append(groupErrors[group.Name], fmt.Errorf("could not set field %v: %v", fieldName, err.Error()))
-			}
-			continue
-		}
+		(*mapToUpdate)[key] = validatedValue
 	}
 
 	err := validators.ValidateGroups(groups, groupSize, groupErrors)
