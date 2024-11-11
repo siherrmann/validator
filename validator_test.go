@@ -1959,6 +1959,18 @@ func TestCaseParser(t *testing.T) {
 		t.Errorf("test case parser - wanted %s, got: %s", expectedValidation, r.RootValue.AstGroupToString())
 	}
 
+	lexer = parser.NewLexer(`frmhappy,sad,neutral || equ''`)
+	p = parser.NewParser(lexer)
+	r, err = p.ParseValidation()
+	if err != nil {
+		t.Errorf("error parsing: %v", err)
+	}
+
+	expectedValidation = "frm'happy,sad,neutral' || equ''"
+	if r.RootValue.AstGroupToString() != expectedValidation {
+		t.Errorf("test case parser - wanted %s, got: %s", expectedValidation, r.RootValue.AstGroupToString())
+	}
+
 	data = &TestUpdate{
 		String: "test",
 	}

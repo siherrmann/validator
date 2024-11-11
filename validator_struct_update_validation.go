@@ -114,6 +114,10 @@ func ValidateAndUpdateWithValidation(jsonInput model.JsonMap, mapToUpdate *model
 			validatedValue, err = ValidateValueWithParser(reflect.ValueOf(jsonValue), &validation)
 		}
 
+		if err != nil && len(validation.Default) > 0 {
+			validatedValue, err = model.InterfaceFromString(validation.Default, validation.Type)
+		}
+
 		if err != nil && len(validation.Groups) == 0 {
 			return fmt.Errorf("field %v invalid: %v", key, err.Error())
 		} else if err != nil {

@@ -15,6 +15,7 @@ type Validation struct {
 	Type        ValidatorType
 	Requirement string
 	Groups      []*Group
+	Default     string
 }
 
 func (r *Validation) Fill(tag string, tagType TagType, value reflect.Value) error {
