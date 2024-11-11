@@ -29,7 +29,7 @@ func (r *Validation) Fill(tag string, tagType TagType, value reflect.Value) erro
 		tagIndex++
 	}
 
-	if len(tagSplit) > tagIndex && tagType == UPD || len(tagSplit) > tagIndex {
+	if len(tagSplit) > tagIndex {
 		r.Requirement = tagSplit[tagIndex]
 		tagIndex++
 	}
@@ -40,6 +40,21 @@ func (r *Validation) Fill(tag string, tagType TagType, value reflect.Value) erro
 		if err != nil {
 			return fmt.Errorf("error extracting group: %v", err)
 		}
+	}
+
+	return nil
+}
+
+func (r *Validation) FillOnlyKey(tag string, tagType TagType, value reflect.Value) error {
+	r.Type = TypeFromInterface(value.Interface())
+
+	tagSplit := strings.Split(tag, ", ")
+	r.Requirement = "-"
+
+	tagIndex := 0
+	if len(tagSplit) > tagIndex && tagType == UPD {
+		r.Key = strings.TrimSpace(tagSplit[tagIndex])
+		tagIndex++
 	}
 
 	return nil
