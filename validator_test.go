@@ -1054,13 +1054,14 @@ func TestCaseUpdate(t *testing.T) {
 	}
 
 	type TestUpdate struct {
-		String string          `upd:"string, min1, gr1min7"`
-		Int    int             `upd:"int, min1, gr1min7"`
-		Float  float64         `upd:"float, min1, gr1min7"`
-		Array  []int           `upd:"array, min1, gr1min7"`
-		Date   time.Time       `upd:"date, min1, gr1min7"`
-		Struct TestUpdateInner `upd:"struct, min1, gr1min7"`
-		Map    model.JsonMap   `upd:"map, min1 conkey, gr1min7"`
+		String string          `upd:"string, min1, gr1min8"`
+		Int    int             `upd:"int, min1, gr1min8"`
+		Float  float64         `upd:"float, min1, gr1min8"`
+		Bool   bool            `upd:"bool, equtrue, gr1min8"`
+		Array  []int           `upd:"array, min1, gr1min8"`
+		Date   time.Time       `upd:"date, min1, gr1min8"`
+		Struct TestUpdateInner `upd:"struct, min1, gr1min8"`
+		Map    model.JsonMap   `upd:"map, min1 conkey, gr1min8"`
 	}
 
 	testCasesUpdate := map[string]*TestRequestWrapperUpdate{
@@ -1069,6 +1070,7 @@ func TestCaseUpdate(t *testing.T) {
 				String: "Foo",
 				Int:    1,
 				Float:  1.1,
+				Bool:   false,
 				Date:   time.Time{},
 				Struct: TestUpdateInner{
 					String: "foo",
@@ -1077,7 +1079,7 @@ func TestCaseUpdate(t *testing.T) {
 					"key": "foo",
 				},
 			},
-			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []interface{}{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []interface{}{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			false,
 		},
 		"invalidJsonStringUpdate": {
@@ -1085,10 +1087,11 @@ func TestCaseUpdate(t *testing.T) {
 				String: "Foo",
 				Int:    1,
 				Float:  1.1,
+				Bool:   false,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "", "int": 2, "float": "1.2", "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			map[string]interface{}{"string": "", "int": 2, "float": "1.2", "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidTypeStringUpdate": {
@@ -1096,10 +1099,11 @@ func TestCaseUpdate(t *testing.T) {
 				String: "Foo",
 				Int:    1,
 				Float:  1.1,
+				Bool:   false,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": 1, "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			map[string]interface{}{"string": 1, "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidJsonIntUpdate": {
@@ -1107,10 +1111,11 @@ func TestCaseUpdate(t *testing.T) {
 				String: "Foo",
 				Int:    1,
 				Float:  1.1,
+				Bool:   false,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Bar", "int": 0, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 0, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		// TODO add strict case/case for json or url values?
@@ -1122,7 +1127,7 @@ func TestCaseUpdate(t *testing.T) {
 		// 		Array:  []int{1},
 		// 		Date:   time.Time{},
 		// 	},
-		// 	map[string]interface{}{"string": "Bar", "int": "2", "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+		// 	map[string]interface{}{"string": "Bar", "int": "2", "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 		// 	true,
 		// },
 		"invalidJsonFloatUpdate": {
@@ -1130,10 +1135,11 @@ func TestCaseUpdate(t *testing.T) {
 				String: "Foo",
 				Int:    1,
 				Float:  1.1,
+				Bool:   false,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Bar", "int": 2, "float": 0.0, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 0.0, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		// TODO add strict case/case for json or url values?
@@ -1145,18 +1151,55 @@ func TestCaseUpdate(t *testing.T) {
 		// 		Array:  []int{1},
 		// 		Date:   time.Time{},
 		// 	},
-		// 	map[string]interface{}{"string": "Bar", "int": 2, "float": "1.2", "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+		// 	map[string]interface{}{"string": "Bar", "int": 2, "float": "1.2", "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 		// 	true,
 		// },
+		"invalidJsonBoolUpdate": {
+			&TestUpdate{
+				String: "Foo",
+				Int:    1,
+				Float:  1.1,
+				Bool:   false,
+				Array:  []int{1},
+				Date:   time.Time{},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+			},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": false, "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			true,
+		},
+		"invalidTypeBoolUpdate": {
+			&TestUpdate{
+				String: "Foo",
+				Int:    1,
+				Float:  1.1,
+				Bool:   false,
+				Array:  []int{1},
+				Date:   time.Time{},
+				Struct: TestUpdateInner{
+					String: "foo",
+				},
+				Map: model.JsonMap{
+					"key": "foo",
+				},
+			},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": "23", "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			true,
+		},
 		"invalidJsonArrayUpdate": {
 			&TestUpdate{
 				String: "Foo",
 				Int:    1,
 				Float:  1.1,
+				Bool:   false,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidTypeArrayUpdate": {
@@ -1164,10 +1207,11 @@ func TestCaseUpdate(t *testing.T) {
 				String: "Foo",
 				Int:    1,
 				Float:  1.1,
+				Bool:   false,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []string{"2"}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []string{"2"}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidJsonDateUpdate": {
@@ -1175,10 +1219,11 @@ func TestCaseUpdate(t *testing.T) {
 				String: "Foo",
 				Int:    1,
 				Float:  1.1,
+				Bool:   false,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03 15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03 15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		// TODO add case for time.Time with timeUnix in tag
@@ -1190,7 +1235,7 @@ func TestCaseUpdate(t *testing.T) {
 		// 		Array:  []int{1},
 		// 		Date:   time.Time{},
 		// 	},
-		// 	map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{2}, "date": 2024, "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+		// 	map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": 2024, "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 		// 	true,
 		// },
 		"invalidJsonStructUpdate": {
@@ -1198,10 +1243,11 @@ func TestCaseUpdate(t *testing.T) {
 				String: "Foo",
 				Int:    1,
 				Float:  1.1,
+				Bool:   false,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "testing"}, "map": map[string]any{"key": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "testing"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidTypeStructUpdate": {
@@ -1209,10 +1255,11 @@ func TestCaseUpdate(t *testing.T) {
 				String: "Foo",
 				Int:    1,
 				Float:  1.1,
+				Bool:   false,
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": 2, "map": map[string]any{"key": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": 2, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidJsonMapUpdate": {
@@ -1220,6 +1267,7 @@ func TestCaseUpdate(t *testing.T) {
 				String: "Foo",
 				Int:    1,
 				Float:  1.1,
+				Bool:   false,
 				Array:  []int{1},
 				Date:   time.Time{},
 				Struct: TestUpdateInner{
@@ -1229,7 +1277,7 @@ func TestCaseUpdate(t *testing.T) {
 					"key": "foo",
 				},
 			},
-			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"test": "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"test": "test"}},
 			true,
 		},
 		"invalidTypeMapUpdate": {
@@ -1237,6 +1285,7 @@ func TestCaseUpdate(t *testing.T) {
 				String: "Foo",
 				Int:    1,
 				Float:  1.1,
+				Bool:   false,
 				Array:  []int{1},
 				Date:   time.Time{},
 				Struct: TestUpdateInner{
@@ -1246,7 +1295,7 @@ func TestCaseUpdate(t *testing.T) {
 					"key": "foo",
 				},
 			},
-			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[int]any{2: "test"}},
+			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[int]any{2: "test"}},
 			true,
 		},
 	}
