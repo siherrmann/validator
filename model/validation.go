@@ -126,7 +126,7 @@ func TypeFromInterface(in interface{}) ValidatorType {
 		return Bool
 	case JsonMap, map[string]string, map[string]int, map[string]int64, map[string]int32, map[string]int16, map[string]int8, map[string]float64, map[string]float32, map[string]bool:
 		return Map
-	case []string, []int, []int64, []int32, []int16, []int8, []float64, []float32, []bool:
+	case []string, []int, []int64, []int32, []int16, []int8, []float64, []float32, []bool, []any:
 		return Array
 	case time.Time:
 		return Time
