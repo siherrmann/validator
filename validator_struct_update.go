@@ -277,8 +277,8 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 
 			switch t := reflect.TypeOf(fv.Interface()).Elem().Kind(); t {
 			case reflect.Int:
-				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int](jsonValue.([]interface{}))
+				if v, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int](v)
 					if err != nil {
 						return err
 					}
@@ -289,8 +289,8 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
 			case reflect.Int64:
-				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int64](jsonValue.([]interface{}))
+				if v, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int64](v)
 					if err != nil {
 						return err
 					}
@@ -301,8 +301,8 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
 			case reflect.Int32:
-				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int32](jsonValue.([]interface{}))
+				if v, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int32](v)
 					if err != nil {
 						return err
 					}
@@ -313,8 +313,8 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
 			case reflect.Int16:
-				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int16](jsonValue.([]interface{}))
+				if v, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int16](v)
 					if err != nil {
 						return err
 					}
@@ -325,8 +325,8 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
 			case reflect.Int8:
-				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int8](jsonValue.([]interface{}))
+				if v, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int8](v)
 					if err != nil {
 						return err
 					}
@@ -337,8 +337,8 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
 			case reflect.Float64:
-				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := helper.ArrayOfInterfaceToArrayOf[float64](jsonValue.([]interface{}))
+				if v, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[float64](v)
 					if err != nil {
 						return err
 					}
@@ -349,8 +349,8 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
 			case reflect.Float32:
-				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := helper.ArrayOfInterfaceToArrayOf[float32](jsonValue.([]interface{}))
+				if v, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[float32](v)
 					if err != nil {
 						return err
 					}
@@ -361,8 +361,8 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
 			case reflect.String:
-				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := helper.ArrayOfInterfaceToArrayOf[string](jsonValue.([]interface{}))
+				if v, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[string](v)
 					if err != nil {
 						return err
 					}
@@ -373,14 +373,29 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}
 			case reflect.Bool:
-				if _, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := helper.ArrayOfInterfaceToArrayOf[bool](jsonValue.([]interface{}))
+				if v, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[bool](v)
 					if err != nil {
 						return err
 					}
 					fv.Set(reflect.ValueOf(typedArray))
 				} else if _, ok := jsonValue.([]bool); ok {
 					fv.Set(reflect.ValueOf(jsonValue.([]bool)))
+				} else {
+					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
+				}
+			case reflect.Struct:
+				if a, ok := jsonValue.([]interface{}); ok {
+					typedArray := reflect.New(fv.Type())
+					for _, v := range a {
+						structTempt := reflect.New(fv.Type().Elem()).Interface()
+						err := ValidateAndUpdate(v.(map[string]interface{}), structTempt)
+						if err != nil {
+							return err
+						}
+						typedArray = reflect.Append(typedArray.Elem(), reflect.ValueOf(structTempt).Elem())
+					}
+					fv.Set(typedArray)
 				} else {
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}

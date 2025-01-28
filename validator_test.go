@@ -1384,6 +1384,60 @@ func TestCaseUpdatePartial(t *testing.T) {
 	}
 }
 
+func TestCaseUpdateArrayOfStruct(t *testing.T) {
+	type TestUpdateInner struct {
+		String string `upd:"string, equtest"`
+	}
+
+	type TestArrayOfStruct struct {
+		ArrayOfStruct []TestUpdateInner `upd:"array_of_struct, equ1"`
+	}
+
+	testCases := map[string]*TestRequestWrapperUpdate{
+		"valid": {
+			&TestArrayOfStruct{
+				ArrayOfStruct: []TestUpdateInner{
+					{String: "test"},
+				},
+			},
+			map[string]interface{}{"array_of_struct": []interface{}{map[string]any{"string": "test"}}},
+			false,
+		},
+		"tooShort": {
+			&TestArrayOfStruct{
+				ArrayOfStruct: []TestUpdateInner{},
+			},
+			map[string]interface{}{"array_of_struct": []interface{}{}},
+			true,
+		},
+		"tooLong": {
+			&TestArrayOfStruct{
+				ArrayOfStruct: []TestUpdateInner{
+					{String: "test"},
+					{String: "test"},
+					{String: "test"},
+				},
+			},
+			map[string]interface{}{"array_of_struct": []interface{}{map[string]any{"string": "test"}, map[string]any{"string": "test"}, map[string]any{"string": "test"}}},
+			true,
+		},
+		"invalidInner": {
+			&TestArrayOfStruct{
+				ArrayOfStruct: []TestUpdateInner{
+					{String: "foo"},
+				},
+			},
+			map[string]interface{}{"array_of_struct": []interface{}{map[string]any{"string": "foo"}}},
+			true,
+		},
+	}
+
+	for k, v := range testCases {
+		err := ValidateAndUpdate(v.JsonMapUpdate, v.Data)
+		assertErrorUpdate(t, k, err, v.Error)
+	}
+}
+
 func TestCaseStructUpdateEmptyRequirement(t *testing.T) {
 	type TestUpdateInner struct {
 		String string `upd:"string, -"`

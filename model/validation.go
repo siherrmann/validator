@@ -81,6 +81,8 @@ func (r *Validation) GetValidValue(in interface{}) (interface{}, error) {
 		out, err = InterfaceFromFloat(in, r.Type)
 	case float32:
 		out, err = InterfaceFromFloat(float64(in), r.Type)
+	case []interface{}:
+		return in, nil
 	default:
 		if v, ok := in.(JsonMap); ok {
 			return map[string]interface{}(v), nil
@@ -126,12 +128,16 @@ func TypeFromInterface(in interface{}) ValidatorType {
 		return Bool
 	case JsonMap, map[string]string, map[string]int, map[string]int64, map[string]int32, map[string]int16, map[string]int8, map[string]float64, map[string]float32, map[string]bool:
 		return Map
-	case []string, []int, []int64, []int32, []int16, []int8, []float64, []float32, []bool, []any:
+	case []string, []int, []int64, []int32, []int16, []int8, []float64, []float32, []bool:
 		return Array
 	case time.Time:
 		return Time
 	default:
-		return Struct
+		if reflect.ValueOf(in).Kind() == reflect.Array || reflect.ValueOf(in).Kind() == reflect.Slice {
+			return Array
+		} else {
+			return Struct
+		}
 	}
 }
 
