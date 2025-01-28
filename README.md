@@ -104,4 +104,4 @@ To run benchmarks run `go test -bench . -count 100 > bench.txt` (with memory all
 
 ## Creating a new version
 
-To create a new tagged version run eg. `git tag v0.1.3`. To push and publish it run eg. `git push origin v0.1.3`.
+To create a new tagged version run eg. `git tag v0.1.3`. To push and publish it run eg. `git push origin v0.1.3`. You can get the latest tags with `git log $(git describe --tags)`.
