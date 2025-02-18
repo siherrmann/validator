@@ -186,9 +186,9 @@ func ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate interface{}) erro
 			continue
 		}
 
-		err = setStructValueByJson(field, validation.Key, validatedValue)
+		err = setStructValueByJson(field, validatedValue)
 		if err != nil && len(validation.Groups) == 0 {
-			return fmt.Errorf("could not set field %v of %v: %v", fieldName, reflect.TypeOf(structToUpdate), err.Error())
+			return fmt.Errorf("could not set field %v (json key: %v) of %v: %v", fieldName, validation.Key, reflect.TypeOf(structToUpdate), err.Error())
 		} else if err != nil {
 			for _, group := range groups {
 				groupErrors[group.Name] = append(groupErrors[group.Name], fmt.Errorf("could not set field %v: %v", fieldName, err.Error()))
@@ -205,7 +205,7 @@ func ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate interface{}) erro
 	return nil
 }
 
-func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{}) error {
+func setStructValueByJson(fv reflect.Value, jsonValue interface{}) error {
 	if fv.IsValid() && fv.CanSet() {
 		switch fv.Kind() {
 		case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
@@ -228,7 +228,7 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 			}
 
 			if fv.OverflowInt(newInt) {
-				return fmt.Errorf("cannot set overflowing int for field %v", jsonKey)
+				return fmt.Errorf("cannot set overflowing int")
 			}
 			fv.SetInt(newInt)
 		case reflect.Float64, reflect.Float32:
@@ -242,7 +242,7 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 			}
 
 			if fv.OverflowFloat(newFloat) {
-				return fmt.Errorf("cannot set overflowing float for field %v", jsonKey)
+				return fmt.Errorf("cannot set overflowing float")
 			}
 			fv.SetFloat(newFloat)
 		case reflect.String:
@@ -403,7 +403,7 @@ func setStructValueByJson(fv reflect.Value, jsonKey string, jsonValue interface{
 				return fmt.Errorf("invalid array element type: %v", reflect.TypeOf(fv.Interface()).Elem().Kind())
 			}
 		default:
-			return fmt.Errorf("invalid field type of %v: %v", jsonKey, reflect.TypeOf(jsonValue).Elem().Kind())
+			return fmt.Errorf("invalid field type: %v", reflect.TypeOf(jsonValue).Elem().Kind())
 		}
 	}
 	return nil

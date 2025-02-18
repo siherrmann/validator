@@ -133,7 +133,17 @@ func TypeFromInterface(in interface{}) ValidatorType {
 	case time.Time:
 		return Time
 	default:
-		if reflect.ValueOf(in).Kind() == reflect.Array || reflect.ValueOf(in).Kind() == reflect.Slice {
+		// custom types
+		if reflect.TypeOf(in).Kind() == reflect.String {
+			return String
+		} else if reflect.TypeOf(in).Kind() == reflect.Int {
+			return Int
+		} else if reflect.TypeOf(in).Kind() == reflect.Float64 || reflect.TypeOf(in).Kind() == reflect.Float32 {
+			return Float
+		} else if reflect.TypeOf(in).Kind() == reflect.Bool {
+			return Bool
+			// other types
+		} else if reflect.ValueOf(in).Kind() == reflect.Array || reflect.ValueOf(in).Kind() == reflect.Slice {
 			return Array
 		} else {
 			return Struct

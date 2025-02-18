@@ -9,21 +9,6 @@ import (
 	"github.com/siherrmann/validator/validators"
 )
 
-// func ValidateValueWithParser(input reflect.Value, requirement string, checkFunction func(reflect.Value, *model.AstValue) error) error {
-// 	lexer := parser.NewLexer(requirement)
-// 	p := parser.NewParser(lexer)
-// 	r, err := p.ParseValidation()
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	err = r.RootValue.RunFuncOnConditionGroup(input, checkFunction)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
 func ValidateValueWithParser(input reflect.Value, validation *model.Validation) (interface{}, error) {
 	validValue, err := validation.GetValidValue(input.Interface())
 	if err != nil {
@@ -49,15 +34,9 @@ func ValidateValueWithParser(input reflect.Value, validation *model.Validation) 
 		checkFunction = validators.CheckBool
 	case model.Array:
 		checkFunction = validators.CheckArray
-	case model.Map:
+	case model.Map, model.Struct:
 		checkFunction = validators.CheckMap
-	case model.Struct:
-		checkFunction = validators.CheckMap
-	case model.Time:
-		checkFunction = validators.CheckTime
-	case model.TimeISO8601:
-		checkFunction = validators.CheckTime
-	case model.TimeUnix:
+	case model.Time, model.TimeISO8601, model.TimeUnix:
 		checkFunction = validators.CheckTime
 	default:
 		return nil, fmt.Errorf("invalid validation type: %v", validation.Type)
