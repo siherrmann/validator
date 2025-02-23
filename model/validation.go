@@ -179,9 +179,13 @@ func (r *Validation) InterfaceFromString(in string) (interface{}, error) {
 		return out, nil
 	case Array:
 		out := []interface{}{}
-		err := json.Unmarshal([]byte(in), &out)
-		if err != nil {
-			return nil, err
+		if strings.Contains(in, "[") {
+			err := json.Unmarshal([]byte(in), &out)
+			if err != nil {
+				return nil, err
+			}
+		} else if len(in) > 0 {
+			out = append(out, in)
 		}
 		return out, nil
 	case Map, Struct:
