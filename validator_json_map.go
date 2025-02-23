@@ -20,7 +20,11 @@ func UnmarshalJsonToJsonMap(jsonInput []byte) (model.JsonMap, error) {
 func UnmapUrlValuesToJsonMap(values url.Values) (model.JsonMap, error) {
 	mapOut := model.JsonMap{}
 	for k := range values {
-		mapOut[k] = values.Get(k)
+		if len(values[k]) > 1 {
+			mapOut[k] = values[k]
+		} else {
+			mapOut[k] = values.Get(k)
+		}
 	}
 	return mapOut, nil
 }
