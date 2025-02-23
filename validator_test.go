@@ -1826,7 +1826,7 @@ func TestCaseStructUrlValues(t *testing.T) {
 					String: "foo",
 				},
 			},
-			url.Values{"string": []string{"Bar"}, "custom_string": []string{"Bar"}, "int": []string{"3"}, "float": []string{"3.2"}, "array": []string{`["Ah", "Eh", "Ih"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`}, "struct": []string{`{"string": "test"}`}},
+			url.Values{"string": []string{"Bar"}, "custom_string": []string{"Bar"}, "int": []string{"3"}, "float": []string{"3.2"}, "array": []string{"Ah", "Eh", "Ih"}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`}, "struct": []string{`{"string": "test"}`}},
 			false,
 		},
 		"validMulti": {
@@ -1842,7 +1842,7 @@ func TestCaseStructUrlValues(t *testing.T) {
 					String: "foo",
 				},
 			},
-			url.Values{"string": []string{"Bar", "bu"}, "custom_string": []string{"Bar"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			url.Values{"string": []string{"Bar"}, "custom_string": []string{"Bar"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{"Ah", "Eh", "Ih"}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
 			false,
 		},
 		"invalidString": {
@@ -1858,7 +1858,7 @@ func TestCaseStructUrlValues(t *testing.T) {
 					String: "foo",
 				},
 			},
-			url.Values{"string": []string{"bu", "Bar"}, "custom_string": []string{"Bar"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			url.Values{"string": []string{"bu", "Bar"}, "custom_string": []string{"Bar"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{"Ah", "Eh", "Ih"}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
 			true,
 		},
 		"invalidInt": {
@@ -1874,7 +1874,7 @@ func TestCaseStructUrlValues(t *testing.T) {
 					String: "foo",
 				},
 			},
-			url.Values{"string": []string{"Bar", "bu"}, "custom_string": []string{"Bar"}, "int": []string{"2", "2"}, "float": []string{"3.2", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			url.Values{"string": []string{"Bar", "bu"}, "custom_string": []string{"Bar"}, "int": []string{"2", "2"}, "float": []string{"3.2", "3"}, "array": []string{"Ah", "Eh", "Ih"}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
 			true,
 		},
 		"invalidTypeInt": {
@@ -1890,7 +1890,7 @@ func TestCaseStructUrlValues(t *testing.T) {
 					String: "foo",
 				},
 			},
-			url.Values{"string": []string{"Bar", "bu"}, "custom_string": []string{"Bar"}, "int": []string{"3.2", "2"}, "float": []string{"3.2", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			url.Values{"string": []string{"Bar", "bu"}, "custom_string": []string{"Bar"}, "int": []string{"3.2", "2"}, "float": []string{"3.2", "3"}, "array": []string{"Ah", "Eh", "Ih"}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
 			true,
 		},
 		"invalidFloat": {
@@ -1906,7 +1906,7 @@ func TestCaseStructUrlValues(t *testing.T) {
 					String: "foo",
 				},
 			},
-			url.Values{"string": []string{"Bar", "bu"}, "custom_string": []string{"Bar"}, "int": []string{"3", "2"}, "float": []string{"2.5", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			url.Values{"string": []string{"Bar", "bu"}, "custom_string": []string{"Bar"}, "int": []string{"3", "2"}, "float": []string{"2.5", "3"}, "array": []string{"Ah", "Eh", "Ih"}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
 			true,
 		},
 		"invalidTypeFloat": {
@@ -1922,7 +1922,7 @@ func TestCaseStructUrlValues(t *testing.T) {
 					String: "foo",
 				},
 			},
-			url.Values{"string": []string{"Bar", "bu"}, "custom_string": []string{"Bar"}, "int": []string{"3", "2"}, "float": []string{"Blubb", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			url.Values{"string": []string{"Bar", "bu"}, "custom_string": []string{"Bar"}, "int": []string{"3", "2"}, "float": []string{"Blubb", "3"}, "array": []string{"Ah", "Eh", "Ih"}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
 			true,
 		},
 		"invalidArray": {
@@ -1970,7 +1970,7 @@ func TestCaseStructUrlValues(t *testing.T) {
 					String: "foo",
 				},
 			},
-			url.Values{"string": []string{"Bar", "bu"}, "custom_string": []string{"Bar"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			url.Values{"string": []string{"Bar", "bu"}, "custom_string": []string{"Bar"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{"Ah", "Eh", "Ih"}, "map": []string{`{"key1": "test", "key2": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
 			true,
 		},
 		"invalidTypeMap": {
@@ -1986,7 +1986,7 @@ func TestCaseStructUrlValues(t *testing.T) {
 					String: "foo",
 				},
 			},
-			url.Values{"string": []string{"Bar", "bu"}, "custom_string": []string{"Bar"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`["Ah", "Eh", "Ih"]`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			url.Values{"string": []string{"Bar", "bu"}, "custom_string": []string{"Bar"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{"Ah", "Eh", "Ih"}, "map": []string{"Ah", "Eh", "Ih"}, "struct": []string{`{"string": "test"}`, "Blubb"}},
 			true,
 		},
 		"invalidStruct": {
@@ -2002,7 +2002,7 @@ func TestCaseStructUrlValues(t *testing.T) {
 					String: "foo",
 				},
 			},
-			url.Values{"string": []string{"Bar", "bu"}, "custom_string": []string{"Bar"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "muhhh"}`, "Blubb"}},
+			url.Values{"string": []string{"Bar", "bu"}, "custom_string": []string{"Bar"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{"Ah", "Eh", "Ih"}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "muhhh"}`, "Blubb"}},
 			true,
 		},
 		"invalidTypeStruct": {
@@ -2018,7 +2018,7 @@ func TestCaseStructUrlValues(t *testing.T) {
 					String: "foo",
 				},
 			},
-			url.Values{"string": []string{"Bar", "bu"}, "custom_string": []string{"Bar"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{`["Ah", "Eh", "Ih"]`, `["Oh"]`}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`["Ah", "Eh", "Ih"]`, "Blubb"}},
+			url.Values{"string": []string{"Bar", "bu"}, "custom_string": []string{"Bar"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array": []string{"Ah", "Eh", "Ih"}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{"Ah", "Eh", "Ih"}},
 			true,
 		},
 	}

@@ -115,7 +115,7 @@ func ValidateAndUpdateWithValidation(jsonInput model.JsonMap, mapToUpdate *model
 		}
 
 		if err != nil && len(validation.Default) > 0 {
-			validatedValue, err = model.InterfaceFromString(validation.Default, validation.Type)
+			validatedValue, err = validation.InterfaceFromString(validation.Default)
 		}
 
 		if err != nil && len(validation.Groups) == 0 {

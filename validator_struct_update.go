@@ -257,7 +257,8 @@ func setStructValueByJson(fv reflect.Value, jsonValue interface{}) error {
 			fv.SetBool(bool(jsonValue.(bool)))
 		case reflect.Struct:
 			if v, ok := jsonValue.(string); ok {
-				date, err := model.InterfaceFromString(v, model.Time)
+				validation := &model.Validation{Type: model.Time}
+				date, err := validation.InterfaceFromString(v)
 				if err != nil {
 					return err
 				}

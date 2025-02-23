@@ -66,23 +66,23 @@ func (r *Validation) GetValidValue(in interface{}) (interface{}, error) {
 	var err error
 	switch in := in.(type) {
 	case string:
-		out, err = InterfaceFromString(in, r.Type)
+		out, err = r.InterfaceFromString(in)
 	case int:
-		out, err = InterfaceFromInt(in, r.Type)
+		out, err = r.InterfaceFromInt(in)
 	case int64:
-		out, err = InterfaceFromInt(int(in), r.Type)
+		out, err = r.InterfaceFromInt(int(in))
 	case int32:
-		out, err = InterfaceFromInt(int(in), r.Type)
+		out, err = r.InterfaceFromInt(int(in))
 	case int16:
-		out, err = InterfaceFromInt(int(in), r.Type)
+		out, err = r.InterfaceFromInt(int(in))
 	case int8:
-		out, err = InterfaceFromInt(int(in), r.Type)
+		out, err = r.InterfaceFromInt(int(in))
 	case float64:
-		out, err = InterfaceFromFloat(in, r.Type)
+		out, err = r.InterfaceFromFloat(in)
 	case float32:
-		out, err = InterfaceFromFloat(float64(in), r.Type)
-	case []interface{}:
-		return in, nil
+		out, err = r.InterfaceFromFloat(float64(in))
+	case []string:
+		out, err = r.InterfaceFromArrayOfString(in)
 	default:
 		if v, ok := in.(JsonMap); ok {
 			return map[string]interface{}(v), nil
@@ -151,8 +151,8 @@ func TypeFromInterface(in interface{}) ValidatorType {
 	}
 }
 
-func InterfaceFromString(in string, inType ValidatorType) (interface{}, error) {
-	switch inType {
+func (r *Validation) InterfaceFromString(in string) (interface{}, error) {
+	switch r.Type {
 	case String:
 		return in, nil
 	case Int:
@@ -206,12 +206,12 @@ func InterfaceFromString(in string, inType ValidatorType) (interface{}, error) {
 	case TimeISO8601:
 		return ISO8601StringToTime(in)
 	default:
-		return nil, fmt.Errorf("receiver unsupported: %v", inType)
+		return nil, fmt.Errorf("receiver unsupported: %v", r.Type)
 	}
 }
 
-func InterfaceFromInt(in int, inType ValidatorType) (interface{}, error) {
-	switch inType {
+func (r *Validation) InterfaceFromInt(in int) (interface{}, error) {
+	switch r.Type {
 	case Int:
 		return in, nil
 	case Float:
@@ -227,12 +227,12 @@ func InterfaceFromInt(in int, inType ValidatorType) (interface{}, error) {
 		date, err := UnixStringToTime(strconv.Itoa(in))
 		return date, err
 	default:
-		return nil, fmt.Errorf("receiver unsupported: %v", inType)
+		return nil, fmt.Errorf("receiver unsupported: %v", r.Type)
 	}
 }
 
-func InterfaceFromFloat(in float64, inType ValidatorType) (interface{}, error) {
-	switch inType {
+func (r *Validation) InterfaceFromFloat(in float64) (interface{}, error) {
+	switch r.Type {
 	case Int:
 		return int(in), nil
 	case Float:
@@ -248,7 +248,21 @@ func InterfaceFromFloat(in float64, inType ValidatorType) (interface{}, error) {
 		date, err := UnixStringToTime(strconv.Itoa(int(in)))
 		return date, err
 	default:
-		return nil, fmt.Errorf("receiver unsupported: %v", inType)
+		return nil, fmt.Errorf("receiver unsupported: %v", r.Type)
+	}
+}
+
+func (r *Validation) InterfaceFromArrayOfString(in []string) (interface{}, error) {
+	switch r.Type {
+	case Array:
+		return in, nil
+	default:
+		// Case for array of strings from url values
+		s := ""
+		if len(in) > 0 {
+			s = in[0]
+		}
+		return r.InterfaceFromString(s)
 	}
 }
 

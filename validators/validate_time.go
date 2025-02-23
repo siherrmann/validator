@@ -15,10 +15,11 @@ func CheckTime(v reflect.Value, c *model.AstValue) error {
 		return fmt.Errorf("invalid time: %v", v.Interface())
 	}
 
+	validation := model.Validation{Type: model.Time}
 	switch c.ConditionType {
 	case model.EQUAL:
 		if len(c.ConditionValue) != 0 {
-			compareTime, err := model.InterfaceFromString(c.ConditionValue, model.Time)
+			compareTime, err := validation.InterfaceFromString(c.ConditionValue)
 			if err != nil {
 				return err
 			}
@@ -28,7 +29,7 @@ func CheckTime(v reflect.Value, c *model.AstValue) error {
 		}
 	case model.NOT_EQUAL:
 		if len(c.ConditionValue) != 0 {
-			compareTime, err := model.InterfaceFromString(c.ConditionValue, model.Time)
+			compareTime, err := validation.InterfaceFromString(c.ConditionValue)
 			if err != nil {
 				return err
 			}
@@ -38,7 +39,7 @@ func CheckTime(v reflect.Value, c *model.AstValue) error {
 		}
 	case model.MIN_VALUE:
 		if len(c.ConditionValue) != 0 {
-			minValue, err := model.InterfaceFromString(c.ConditionValue, model.Time)
+			minValue, err := validation.InterfaceFromString(c.ConditionValue)
 			if err != nil {
 				return err
 			}
@@ -48,7 +49,7 @@ func CheckTime(v reflect.Value, c *model.AstValue) error {
 		}
 	case model.MAX_VLAUE:
 		if len(c.ConditionValue) != 0 {
-			maxValue, err := model.InterfaceFromString(c.ConditionValue, model.Time)
+			maxValue, err := validation.InterfaceFromString(c.ConditionValue)
 			if err != nil {
 				return err
 			}
@@ -63,7 +64,7 @@ func CheckTime(v reflect.Value, c *model.AstValue) error {
 				return err
 			}
 			foundInFromValues := slices.ContainsFunc(fromValues, func(fromValue string) bool {
-				from, err := model.InterfaceFromString(fromValue, model.Time)
+				from, err := validation.InterfaceFromString(fromValue)
 				if err != nil {
 					return false
 				}
@@ -80,7 +81,7 @@ func CheckTime(v reflect.Value, c *model.AstValue) error {
 				return err
 			}
 			foundInFromValues := slices.ContainsFunc(notFromValues, func(notFromValue string) bool {
-				notFrom, err := model.InterfaceFromString(notFromValue, model.Time)
+				notFrom, err := validation.InterfaceFromString(notFromValue)
 				if err != nil {
 					return false
 				}
