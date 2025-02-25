@@ -389,12 +389,16 @@ func setStructValueByJson(fv reflect.Value, jsonValue interface{}) error {
 				if a, ok := jsonValue.([]interface{}); ok {
 					typedArray := reflect.New(fv.Type())
 					for _, v := range a {
-						structTempt := reflect.New(fv.Type().Elem()).Interface()
-						err := ValidateAndUpdate(v.(map[string]interface{}), structTempt)
-						if err != nil {
-							return err
+						if m, ok := v.(map[string]interface{}); ok {
+							structTempt := reflect.New(fv.Type().Elem()).Interface()
+							err := ValidateAndUpdate(m, structTempt)
+							if err != nil {
+								return err
+							}
+							typedArray = reflect.Append(typedArray.Elem(), reflect.ValueOf(structTempt).Elem())
+						} else {
+							return fmt.Errorf("input value inside array has to be of type map[string]interface{}, was %v", reflect.TypeOf(v))
 						}
-						typedArray = reflect.Append(typedArray.Elem(), reflect.ValueOf(structTempt).Elem())
 					}
 					fv.Set(typedArray)
 				} else {
