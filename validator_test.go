@@ -1390,7 +1390,7 @@ func TestCaseUpdateArrayOfStruct(t *testing.T) {
 	}
 
 	type TestArrayOfStruct struct {
-		ArrayOfStruct []TestUpdateInner `upd:"array_of_struct, equ1"`
+		ArrayOfStruct []TestUpdateInner `upd:"array_of_struct, min1 && max2"`
 	}
 
 	testCases := map[string]*TestRequestWrapperUpdate{
@@ -1400,7 +1400,7 @@ func TestCaseUpdateArrayOfStruct(t *testing.T) {
 					{String: "test"},
 				},
 			},
-			map[string]interface{}{"array_of_struct": []interface{}{map[string]any{"string": "test"}}},
+			map[string]interface{}{"array_of_struct": []interface{}{map[string]any{"string": "test"}, map[string]any{"string": "test"}}},
 			false,
 		},
 		"tooShort": {
