@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"slices"
-	"strings"
 
+	"github.com/siherrmann/validator/helper"
 	"github.com/siherrmann/validator/model"
-	"github.com/siherrmann/validator/validators"
 )
 
 type StructValue struct {
@@ -72,64 +70,27 @@ func UnmarshalAndValidate(data []byte, v any) error {
 // In the case of rex the int and float input will get converted to a string (strconv.Itoa(int) and fmt.Sprintf("%f", f)).
 // If you want to check more complex cases you can obviously replace equ, neq, min, max and con with one regular expression.
 func Validate(v any) error {
-	// check if value is a pointer to a struct
-	structValue := reflect.ValueOf(v)
-	if structValue.Kind() != reflect.Ptr {
-		return fmt.Errorf("structValue has to be of kind pointer, was %T", structValue)
-	}
-	if structValue.Elem().Kind() != reflect.Struct {
-		return fmt.Errorf("structValue has to be of kind struct, was %T", structValue)
-	}
-
-	// get valid reflect structValue of struct
-	structFull := structValue.Elem()
-
-	keys := []string{}
-	groups := map[string]*model.Group{}
-	groupSize := map[string]int{}
-	groupErrors := map[string][]error{}
-
-	for i := 0; i < structFull.Type().NumField(); i++ {
-		value := structFull.Field(i)
-		fieldName := structFull.Type().Field(i).Name
-		tag := structFull.Type().Field(i).Tag.Get(string(model.VLD))
-
-		validation := &model.Validation{}
-		err := validation.Fill(tag, model.VLD, value)
-		if err != nil {
-			return err
-		}
-
-		// early return/continue for empty requirement
-		if strings.TrimSpace(validation.Requirement) == string(model.NONE) {
-			continue
-		}
-
-		if len(validation.Key) > 0 && slices.Contains(keys, validation.Key) {
-			return fmt.Errorf("duplicate validation key: %v", validation.Key)
-		} else {
-			keys = append(keys, validation.Key)
-		}
-
-		for _, g := range validation.Groups {
-			groups[g.Name] = g
-			groupSize[g.Name]++
-		}
-
-		_, err = ValidateValueWithParser(value, validation)
-		if err != nil && len(validation.Groups) == 0 {
-			return fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error())
-		} else if err != nil {
-			for _, group := range validation.Groups {
-				groupErrors[group.Name] = append(groupErrors[group.Name], fmt.Errorf("field %v of %v invalid: %v", fieldName, reflect.TypeOf(v), err.Error()))
-				continue
-			}
-		}
-	}
-
-	err := validators.ValidateGroups(groups, groupSize, groupErrors)
+	err := helper.CheckValidPointerToStruct(v)
 	if err != nil {
 		return err
+	}
+
+	jsonMap := model.JsonMap{}
+	err = UnmapStructToJsonMap(v, &jsonMap)
+	if err != nil {
+		return fmt.Errorf("error unmapping struct to json map: %v", err)
+	}
+
+	validations, err := model.GetValidationsFromStruct(v, string(model.VLD))
+	if err != nil {
+		return fmt.Errorf("error getting validations from struct: %v", err)
+	}
+
+	// log.Printf("validations: %v", validations)
+
+	_, err = ValidateWithValidation(jsonMap, validations)
+	if err != nil {
+		return fmt.Errorf("error validating struct: %v", err)
 	}
 
 	return nil

@@ -82,10 +82,10 @@ A small code example would be:
 
 ```go
 type Error struct {
-	ID                  int       `json:"id" vld:"-"`
-	StatusCode          int       `json:"status_code" vld:"min100" upd:"status_code, min100, gr1min1"`
-	Message             string    `json:"message" vld:"min1" vld:"min1, gr1min1" upd:"status_code, min1, gr1min1"`
-	UnderlyingException string    `json:"underlying_exception" vld:"min1, gr1min1" upd:"status_code, min1, gr1min1"`
+	ID                  int       `json:"id"`
+	StatusCode          int       `json:"status_code" vld:"min100" upd:"min100, gr1min1"`
+	Message             string    `json:"message" vld:"min1" upd:"min1, gr1min1"`
+	UnderlyingException string    `json:"underlying_exception" vld:"min1, gr1min1" upd:"min1, gr1min1"`
 	CreatedAt           time.Time `json:"created_at" vld:"-"`
 }
 ```

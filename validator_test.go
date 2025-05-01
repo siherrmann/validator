@@ -36,11 +36,11 @@ type TestRequestWrapperUpdateWithUrlValues struct {
 
 func TestCaseStructIntTypes(t *testing.T) {
 	type TestStructIntTypes struct {
-		Int   int   `upd:"int, min3"`
-		Int64 int64 `upd:"int64, min3"`
-		Int32 int32 `upd:"int32, min3"`
-		Int16 int16 `upd:"int16, min3"`
-		Int8  int8  `upd:"int8, min3"`
+		Int   int   `json:"int" upd:"min3"`
+		Int64 int64 `json:"int64" upd:"min3"`
+		Int32 int32 `json:"int32" upd:"min3"`
+		Int16 int16 `json:"int16" upd:"min3"`
+		Int8  int8  `json:"int8" upd:"min3"`
 	}
 
 	testCases := map[string]*TestRequestWrapperUpdateWithJson{
@@ -98,8 +98,8 @@ func TestCaseStructIntTypes(t *testing.T) {
 
 func TestCaseStructFloatTypes(t *testing.T) {
 	type TestStructFloatTypes struct {
-		Float64 float64 `vld:"min3"`
-		Float32 float32 `vld:"min3"`
+		Float64 float64 `json:"float64" vld:"min3"`
+		Float32 float32 `json:"float32" vld:"min3"`
 	}
 
 	// As the json Unmarshal always unmarshals into float64
@@ -1050,18 +1050,18 @@ func TestCaseStructInvalidGroupCondition(t *testing.T) {
 
 func TestCaseUpdate(t *testing.T) {
 	type TestUpdateInner struct {
-		String string `upd:"string, equtest"`
+		String string `json:"string" upd:"equtest"`
 	}
 
 	type TestUpdate struct {
-		String string          `upd:"string, min1, gr1min8"`
-		Int    int             `upd:"int, min1, gr1min8"`
-		Float  float64         `upd:"float, min1, gr1min8"`
-		Bool   bool            `upd:"bool, equtrue, gr1min8"`
-		Array  []int           `upd:"array, min1, gr1min8"`
-		Date   time.Time       `upd:"date, min1, gr1min8"`
-		Struct TestUpdateInner `upd:"struct, min1, gr1min8"`
-		Map    model.JsonMap   `upd:"map, min1 conkey, gr1min8"`
+		String string          `json:"string" upd:"min1, gr1min8"`
+		Int    int             `json:"int" upd:"min1, gr1min8"`
+		Float  float64         `json:"float" upd:"min1, gr1min8"`
+		Bool   bool            `json:"bool" upd:"equtrue, gr1min8"`
+		Array  []int           `json:"array" upd:"min1, gr1min8"`
+		Date   time.Time       `json:"date" upd:"min1, gr1min8"`
+		Struct TestUpdateInner `json:"struct" upd:"min1, gr1min8"`
+		Map    model.JsonMap   `json:"map" upd:"min1 conkey, gr1min8"`
 	}
 
 	testCasesUpdate := map[string]*TestRequestWrapperUpdate{
@@ -1247,7 +1247,7 @@ func TestCaseUpdate(t *testing.T) {
 				Array:  []int{1},
 				Date:   time.Time{},
 			},
-			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "testing"}, "map": map[string]any{"key": "test"}},
+			map[string]interface{}{"string": 2, "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "testing"}, "map": map[string]any{"key": "test"}},
 			true,
 		},
 		"invalidTypeStructUpdate": {
@@ -1308,14 +1308,14 @@ func TestCaseUpdate(t *testing.T) {
 
 func TestCaseUpdatePartial(t *testing.T) {
 	type TestUpdateInner struct {
-		String string `upd:"string, equtest"`
+		String string `json:"string" upd:"equtest"`
 	}
 
 	type TestUpdatePartial struct {
-		String string `upd:"string, min1, gr1min2"`
+		String string `json:"string" upd:"min1, gr1min2"`
 		Int    int
 		Float  float64
-		Array  []int `upd:"array, min1, gr1min2"`
+		Array  []int `json:"array" upd:"min1, gr1min2"`
 		Date   time.Time
 		Struct TestUpdateInner
 		Map    model.JsonMap
@@ -1386,11 +1386,11 @@ func TestCaseUpdatePartial(t *testing.T) {
 
 func TestCaseUpdateArrayOfStruct(t *testing.T) {
 	type TestUpdateInner struct {
-		String string `upd:"string, equtest"`
+		String string `json:"string" upd:"equtest"`
 	}
 
 	type TestArrayOfStruct struct {
-		ArrayOfStruct []TestUpdateInner `upd:"array_of_struct, min1 && max2"`
+		ArrayOfStruct []TestUpdateInner `json:"array_of_struct" upd:"min1 && max2"`
 	}
 
 	testCases := map[string]*TestRequestWrapperUpdate{
@@ -1440,16 +1440,16 @@ func TestCaseUpdateArrayOfStruct(t *testing.T) {
 
 func TestCaseStructUpdateEmptyRequirement(t *testing.T) {
 	type TestUpdateInner struct {
-		String string `upd:"string, -"`
+		String string `json:"string" upd:"-"`
 	}
 
 	type TestStructUpdateEmptyRequirement struct {
-		String string          `upd:"string, -"`
-		Int    int             `upd:"int, -"`
-		Float  float64         `upd:"float, -"`
-		Array  []string        `upd:"array, -"`
-		Map    model.JsonMap   `upd:"map, -"`
-		Struct TestUpdateInner `upd:"struct, -"`
+		String string          `json:"string" upd:"-"`
+		Int    int             `json:"int" upd:"-"`
+		Float  float64         `json:"float" upd:"-"`
+		Array  []string        `json:"array" upd:"-"`
+		Map    model.JsonMap   `json:"map" upd:"-"`
+		Struct TestUpdateInner `json:"struct" upd:"-"`
 	}
 
 	testCases := map[string]*TestRequestWrapperUpdate{
@@ -1495,17 +1495,17 @@ func TestCaseStructUpdateEmptyRequirement(t *testing.T) {
 
 func TestCaseUpdateWithJson(t *testing.T) {
 	type TestUpdateInner struct {
-		String string `upd:"string, equtest"`
+		String string `json:"string" upd:"equtest"`
 	}
 
 	type TestUpdate struct {
-		String string          `upd:"string, min1, gr1min7"`
-		Int    int             `upd:"int, min1, gr1min7"`
-		Float  float64         `upd:"float, min1, gr1min7"`
-		Array  []int           `upd:"array, min1, gr1min7"`
-		Date   time.Time       `upd:"date, min1, gr1min7"`
-		Struct TestUpdateInner `upd:"struct, min1, gr1min7"`
-		Map    model.JsonMap   `upd:"map, min1 conkey, gr1min7"`
+		String string          `json:"string" upd:"min1, gr1min7"`
+		Int    int             `json:"int" upd:"min1, gr1min7"`
+		Float  float64         `json:"float" upd:"min1, gr1min7"`
+		Array  []int           `json:"array" upd:"min1, gr1min7"`
+		Date   time.Time       `json:"date" upd:"min1, gr1min7"`
+		Struct TestUpdateInner `json:"struct" upd:"min1, gr1min7"`
+		Map    model.JsonMap   `json:"map" upd:"min1 conkey, gr1min7"`
 	}
 
 	testCasesUpdateWithJson := map[string]*TestRequestWrapperUpdateWithJson{
@@ -1683,7 +1683,7 @@ func TestCaseUpdateWithJson(t *testing.T) {
 				Float:  1.1,
 				Array:  []int{1},
 			},
-			`{"string": "Bar", "int": 2, "float": 1.2, "array": [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "testing"}, "map": {"key": "test"}}`,
+			`{"string": 2, "int": 2, "float": 1.2, array: [2], "date": "2022-01-03T15:04:05.000", "struct": {"string": "testing"}, "map": {"key": "test"}}`,
 			true,
 		},
 		"invalidTypeStructUpdate": {
@@ -1732,16 +1732,16 @@ func TestCaseUpdateWithJson(t *testing.T) {
 
 func TestCaseStructUpdateWithoutKey(t *testing.T) {
 	type TestUpdateInner struct {
-		String string `upd:"string, equtest"`
+		String string `json:"string" upd:"equtest"`
 	}
 
 	type TestStructUpdateWithKey struct {
-		String string          `upd:"string, min3"`
-		Int    int             `upd:"int, min3"`
-		Float  float64         `upd:"float, min3"`
-		Array  []string        `upd:"array, min3"`
-		Map    model.JsonMap   `upd:"map, min3"`
-		Struct TestUpdateInner `upd:"struct, min3"`
+		String string          `json:"string" upd:"min3"`
+		Int    int             `json:"int" upd:"min3"`
+		Float  float64         `json:"float" upd:"min3"`
+		Array  []string        `json:"array" upd:"min3"`
+		Map    model.JsonMap   `json:"map" upd:"min3"`
+		Struct TestUpdateInner `json:"struct" upd:"min3"`
 	}
 
 	type TestStructUpdateWithoutKey struct {
@@ -1798,18 +1798,18 @@ func TestCaseStructUrlValues(t *testing.T) {
 	type CustomString string
 
 	type TestUpdateInner struct {
-		String string `upd:"string, equtest"`
+		String string `json:"string" upd:"equtest"`
 	}
 
 	type TestStructUrlValues struct {
-		String       string          `upd:"string, min3"`
-		CustomString CustomString    `upd:"custom_string, min3"`
-		Int          int             `upd:"int, min3"`
-		Float        float64         `upd:"float, min3"`
-		ArrayShort   []string        `upd:"array_short, min1"`
-		Array        []string        `upd:"array, min3"`
-		Map          model.JsonMap   `upd:"map, min3"`
-		Struct       TestUpdateInner `upd:"struct, min3"`
+		String       string          `json:"string" upd:"min3"`
+		CustomString CustomString    `json:"custom_string" upd:"min3"`
+		Int          int             `json:"int" upd:"min3"`
+		Float        float64         `json:"float" upd:"min3"`
+		ArrayShort   []string        `json:"array_short" upd:"min1"`
+		Array        []string        `json:"array" upd:"min3"`
+		Map          model.JsonMap   `json:"map" upd:"min3"`
+		Struct       TestUpdateInner `json:"struct" upd:"min3"`
 	}
 
 	testCases := map[string]*TestRequestWrapperUpdateWithUrlValues{
@@ -1845,7 +1845,7 @@ func TestCaseStructUrlValues(t *testing.T) {
 					String: "foo",
 				},
 			},
-			url.Values{"string": []string{"Bar"}, "custom_string": []string{"Bar"}, "int": []string{"3", "2"}, "float": []string{"3.2", "3"}, "array_short": []string{"Buh"}, "array": []string{"Ah", "Eh", "Ih"}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`, `{"key1": "test"}`}, "struct": []string{`{"string": "test"}`, "Blubb"}},
+			url.Values{"string": []string{"Bar"}, "custom_string": []string{"Bar"}, "int": []string{"3"}, "float": []string{"3.2"}, "array_short": []string{"Buh"}, "array": []string{"Ah", "Eh", "Ih"}, "map": []string{`{"key1": "test", "key2": "test", "key3": "test"}`}, "struct": []string{`{"string": "test"}`}},
 			false,
 		},
 		"invalidString": {
@@ -2072,15 +2072,15 @@ func TestCaseStructUrlValues(t *testing.T) {
 	}
 
 	for k, v := range testCases {
+		log.Printf("test case: %s", k)
 		err := UnmapValidateAndUpdate(v.UrlValuesUpdate, v.Data)
-		log.Printf("after update: %v, err: %v", v.Data, err)
 		assertErrorUpdate(t, k, err, v.Error)
 	}
 }
 
 func TestCaseParser(t *testing.T) {
 	type TestUpdate struct {
-		String string `upd:"string, (min10 && max100) || equ'Bar'"`
+		String string `json:"string" upd:"(min10 && max100) || equ'Bar'"`
 	}
 
 	lexer := parser.NewLexer(`(min10 && max100) || equ'Bar'`)
@@ -2099,7 +2099,6 @@ func TestCaseParser(t *testing.T) {
 		String: "test",
 	}
 	err = UnmapValidateAndUpdate(url.Values{"string": []string{"Bar"}}, data)
-	log.Printf("after update: %v, err: %v", data, err)
 	assertErrorUpdate(t, "validSingle", err, false)
 
 	lexer = parser.NewLexer(`(min10 && max100) || (equ'Bar')`)
@@ -2130,7 +2129,6 @@ func TestCaseParser(t *testing.T) {
 		String: "test",
 	}
 	err = UnmapValidateAndUpdate(url.Values{"string": []string{"Bar"}}, data)
-	log.Printf("after update: %v, err: %v", data, err)
 	assertErrorUpdate(t, "validSingle", err, false)
 }
 

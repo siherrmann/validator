@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/siherrmann/validator/helper"
 )
 
 type Validation struct {
@@ -16,34 +18,72 @@ type Validation struct {
 	Requirement string
 	Groups      []*Group
 	Default     string
+	// Inner Struct validation
+	InnerValidation []Validation
 }
 
-func (r *Validation) Fill(tag string, tagType TagType, value reflect.Value) error {
-	r.Type = TypeFromInterface(value.Interface())
+func GetValidationsFromStruct(in interface{}, tagType string) ([]Validation, error) {
+	err := helper.CheckValidPointerToStruct(in)
+	if err != nil {
+		return nil, err
+	}
 
-	tagSplit := strings.Split(tag, ", ")
-	r.Requirement = "-"
+	validations := []Validation{}
+
+	structFull := reflect.ValueOf(in).Elem()
+	for i := 0; i < structFull.Type().NumField(); i++ {
+		field := structFull.Field(i)
+		fieldType := structFull.Type().Field(i)
+
+		validation, err := GetValidationFromStructField(TagType(tagType), field, fieldType)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(validation.Requirement) > 0 {
+			validations = append(validations, validation)
+		}
+	}
+	return validations, nil
+}
+
+func GetValidationFromStructField(tagType TagType, fieldValue reflect.Value, fieldType reflect.StructField) (Validation, error) {
+	validation := Validation{}
+	validation.Key = fieldType.Name
+	if len(fieldType.Tag.Get("json")) > 0 {
+		validation.Key = fieldType.Tag.Get("json")
+	}
+	validation.Type = TypeFromInterface(fieldValue.Interface())
+	validation.Requirement = "-"
 
 	tagIndex := 0
-	if len(tagSplit) > tagIndex && tagType == UPD {
-		r.Key = strings.TrimSpace(tagSplit[tagIndex])
+	tagSplit := strings.Split(fieldType.Tag.Get(string(tagType)), ", ")
+
+	if len(tagSplit) > tagIndex {
+		validation.Requirement = tagSplit[tagIndex]
 		tagIndex++
 	}
 
 	if len(tagSplit) > tagIndex {
-		r.Requirement = tagSplit[tagIndex]
-		tagIndex++
-	}
-
-	var err error
-	if len(tagSplit) > tagIndex {
-		r.Groups, err = GetGroups(tagSplit[tagIndex])
+		var err error
+		validation.Groups, err = GetGroups(tagSplit[tagIndex])
 		if err != nil {
-			return fmt.Errorf("error extracting group: %v", err)
+			return Validation{}, fmt.Errorf("error extracting group: %v", err)
 		}
 	}
 
-	return nil
+	if helper.IsArrayOfStruct(fieldValue.Interface()) {
+		for i := 0; i < fieldValue.Len(); i++ {
+			innerStruct := fieldValue.Index(i).Addr().Interface()
+			innerValidation, err := GetValidationsFromStruct(innerStruct, string(tagType))
+			if err != nil {
+				return Validation{}, fmt.Errorf("error getting inner validation: %v", err)
+			}
+			validation.InnerValidation = append(validation.InnerValidation, innerValidation...)
+		}
+	}
+
+	return validation, nil
 }
 
 func (r *Validation) FillOnlyKey(tag string, tagType TagType, value reflect.Value) error {
@@ -143,7 +183,7 @@ func TypeFromInterface(in interface{}) ValidatorType {
 		} else if reflect.TypeOf(in).Kind() == reflect.Bool {
 			return Bool
 			// other types
-		} else if reflect.ValueOf(in).Kind() == reflect.Array || reflect.ValueOf(in).Kind() == reflect.Slice {
+		} else if helper.IsArray(in) {
 			return Array
 		} else {
 			return Struct
