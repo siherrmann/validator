@@ -16,7 +16,7 @@ type StructValue struct {
 
 // UnmarshalAndValidate unmarshals given json ([]byte) into pointer v.
 // For more information to Validate look at [Validate(v any) error].
-func UnmarshalAndValidate(data []byte, v any) error {
+func UnmarshalAndValidate(data []byte, v any, tagType ...string) error {
 	value := reflect.ValueOf(v)
 	if value.Kind() != reflect.Ptr {
 		return fmt.Errorf("value has to be of kind pointer, was %T", value)
@@ -30,7 +30,7 @@ func UnmarshalAndValidate(data []byte, v any) error {
 		return fmt.Errorf("error unmarshalling %T: %v", value, err)
 	}
 
-	err = Validate(v)
+	err = Validate(v, tagType...)
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,12 @@ func UnmarshalAndValidate(data []byte, v any) error {
 //
 // In the case of rex the int and float input will get converted to a string (strconv.Itoa(int) and fmt.Sprintf("%f", f)).
 // If you want to check more complex cases you can obviously replace equ, neq, min, max and con with one regular expression.
-func Validate(v any) error {
+func Validate(v any, tagType ...string) error {
+	tagTypeSet := model.VLD
+	if len(tagType) > 0 {
+		tagTypeSet = tagType[0]
+	}
+
 	err := helper.CheckValidPointerToStruct(v)
 	if err != nil {
 		return err
@@ -81,7 +86,7 @@ func Validate(v any) error {
 		return fmt.Errorf("error unmapping struct to json map: %v", err)
 	}
 
-	validations, err := model.GetValidationsFromStruct(v, string(model.VLD))
+	validations, err := model.GetValidationsFromStruct(v, tagTypeSet)
 	if err != nil {
 		return fmt.Errorf("error getting validations from struct: %v", err)
 	}

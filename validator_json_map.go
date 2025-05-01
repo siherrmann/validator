@@ -3,7 +3,6 @@ package validator
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/url"
 	"reflect"
 
@@ -80,7 +79,6 @@ func MapJsonMapToStruct(jsonMapInput model.JsonMap, structToUpdate interface{}) 
 		}
 
 		if jsonValue, ok := jsonMapInput[fieldKey]; ok {
-			log.Printf("json key: %v, field key: %v", jsonKey, fieldKey)
 			err := SetStructValueByJson(field, jsonValue)
 			if err != nil {
 				return fmt.Errorf("could not set field %v (json key: %v) of %v: %v", fieldType.Name, jsonKey, reflect.TypeOf(structToUpdate), err.Error())

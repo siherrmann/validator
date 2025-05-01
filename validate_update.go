@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 
@@ -14,21 +13,21 @@ import (
 
 // UnmapOrAnmarshalValidateAndUpdate unmarshals given json ([]byte) or given url.Values (from request.Form),
 // validates them and updates the given struct.
-func UnmapOrUnmarshalRequestValidateAndUpdate(request *http.Request, structToUpdate interface{}) error {
+func UnmapOrUnmarshalRequestValidateAndUpdate(request *http.Request, structToUpdate interface{}, tagType ...string) error {
 	err := request.ParseForm()
 	if err != nil {
 		return err
 	}
 
 	if len(request.Form.Encode()) > 0 {
-		err = UnmapValidateAndUpdate(request.Form, structToUpdate)
+		err = UnmapValidateAndUpdate(request.Form, structToUpdate, tagType...)
 	} else {
 		var bodyBytes []byte
 		bodyBytes, err = io.ReadAll(request.Body)
 		if err != nil {
 			return err
 		}
-		err = UnmarshalValidateAndUpdate(bodyBytes, structToUpdate)
+		err = UnmarshalValidateAndUpdate(bodyBytes, structToUpdate, tagType...)
 	}
 
 	return err
@@ -36,7 +35,7 @@ func UnmapOrUnmarshalRequestValidateAndUpdate(request *http.Request, structToUpd
 
 // UnmarshalValidateAndUpdate unmarshals given json ([]byte) into pointer v.
 // For more information to ValidateAndUpdate look at ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate interface{}) error.
-func UnmarshalValidateAndUpdate(jsonInput []byte, structToUpdate interface{}) error {
+func UnmarshalValidateAndUpdate(jsonInput []byte, structToUpdate interface{}, tagType ...string) error {
 	jsonUnmarshaled := model.JsonMap{}
 
 	err := json.Unmarshal(jsonInput, &jsonUnmarshaled)
@@ -44,7 +43,7 @@ func UnmarshalValidateAndUpdate(jsonInput []byte, structToUpdate interface{}) er
 		return fmt.Errorf("error unmarshaling: %v", err)
 	}
 
-	err = ValidateAndUpdate(jsonUnmarshaled, structToUpdate)
+	err = ValidateAndUpdate(jsonUnmarshaled, structToUpdate, tagType...)
 	if err != nil {
 		return fmt.Errorf("error updating struct: %v", err)
 	}
@@ -54,15 +53,13 @@ func UnmarshalValidateAndUpdate(jsonInput []byte, structToUpdate interface{}) er
 
 // UnmapValidateAndUpdate unmaps given url.Values into pointer jsonMap.
 // For more information to ValidateAndUpdate look at ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate interface{}) error.
-func UnmapValidateAndUpdate(values url.Values, structToUpdate interface{}) error {
+func UnmapValidateAndUpdate(values url.Values, structToUpdate interface{}, tagType ...string) error {
 	mapOut, err := UnmapUrlValuesToJsonMap(values)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("unmapped values: %v", mapOut)
-
-	err = ValidateAndUpdate(mapOut, structToUpdate)
+	err = ValidateAndUpdate(mapOut, structToUpdate, tagType...)
 	if err != nil {
 		return fmt.Errorf("error updating struct: %v", err)
 	}
@@ -107,13 +104,18 @@ func UnmapValidateAndUpdate(values url.Values, structToUpdate interface{}) error
 //
 // In the case of rex the int and float input will get converted to a string (strconv.Itoa(int) and fmt.Sprintf("%f", f)).
 // If you want to check more complex cases you can obviously replace equ, neq, min, max and con with one regular expression.
-func ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate interface{}) error {
+func ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate interface{}, tagType ...string) error {
+	tagTypeSet := model.VLD
+	if len(tagType) > 0 {
+		tagTypeSet = tagType[0]
+	}
+
 	err := helper.CheckValidPointerToStruct(structToUpdate)
 	if err != nil {
 		return err
 	}
 
-	validations, err := model.GetValidationsFromStruct(structToUpdate, string(model.UPD))
+	validations, err := model.GetValidationsFromStruct(structToUpdate, tagTypeSet)
 	if err != nil {
 		return fmt.Errorf("error getting validations from struct: %v", err)
 	}

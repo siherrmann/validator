@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"log"
 	"net/url"
 	"strings"
 	"testing"
@@ -91,7 +90,7 @@ func TestCaseStructIntTypes(t *testing.T) {
 	}
 
 	for k, v := range testCases {
-		err := UnmarshalValidateAndUpdate([]byte(v.JsonUpdate), v.Data)
+		err := UnmarshalValidateAndUpdate([]byte(v.JsonUpdate), v.Data, "upd")
 		assertErrorUpdate(t, k, err, v.Error)
 	}
 }
@@ -1301,7 +1300,7 @@ func TestCaseUpdate(t *testing.T) {
 	}
 
 	for k, v := range testCasesUpdate {
-		err := ValidateAndUpdate(v.JsonMapUpdate, v.Data)
+		err := ValidateAndUpdate(v.JsonMapUpdate, v.Data, "upd")
 		assertErrorUpdate(t, k, err, v.Error)
 	}
 }
@@ -1379,7 +1378,7 @@ func TestCaseUpdatePartial(t *testing.T) {
 	}
 
 	for k, v := range testCasesUpdatePartial {
-		err := ValidateAndUpdate(v.JsonMapUpdate, v.Data)
+		err := ValidateAndUpdate(v.JsonMapUpdate, v.Data, "upd")
 		assertErrorUpdate(t, k, err, v.Error)
 	}
 }
@@ -1433,7 +1432,7 @@ func TestCaseUpdateArrayOfStruct(t *testing.T) {
 	}
 
 	for k, v := range testCases {
-		err := ValidateAndUpdate(v.JsonMapUpdate, v.Data)
+		err := ValidateAndUpdate(v.JsonMapUpdate, v.Data, "upd")
 		assertErrorUpdate(t, k, err, v.Error)
 	}
 }
@@ -1725,7 +1724,7 @@ func TestCaseUpdateWithJson(t *testing.T) {
 	}
 
 	for k, v := range testCasesUpdateWithJson {
-		err := UnmarshalValidateAndUpdate([]byte(v.JsonUpdate), v.Data)
+		err := UnmarshalValidateAndUpdate([]byte(v.JsonUpdate), v.Data, "upd")
 		assertErrorUpdate(t, k, err, v.Error)
 	}
 }
@@ -1789,7 +1788,7 @@ func TestCaseStructUpdateWithoutKey(t *testing.T) {
 	}
 
 	for k, v := range testCases {
-		err := ValidateAndUpdate(v.JsonMapUpdate, v.Data)
+		err := ValidateAndUpdate(v.JsonMapUpdate, v.Data, "upd")
 		assertErrorUpdate(t, k, err, v.Error)
 	}
 }
@@ -2072,8 +2071,7 @@ func TestCaseStructUrlValues(t *testing.T) {
 	}
 
 	for k, v := range testCases {
-		log.Printf("test case: %s", k)
-		err := UnmapValidateAndUpdate(v.UrlValuesUpdate, v.Data)
+		err := UnmapValidateAndUpdate(v.UrlValuesUpdate, v.Data, "upd")
 		assertErrorUpdate(t, k, err, v.Error)
 	}
 }

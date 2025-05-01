@@ -12,6 +12,9 @@ import (
 	"github.com/siherrmann/validator/helper"
 )
 
+// Default tag type.
+const VLD string = "vld"
+
 type Validation struct {
 	Key         string
 	Type        ValidatorType
@@ -35,7 +38,7 @@ func GetValidationsFromStruct(in interface{}, tagType string) ([]Validation, err
 		field := structFull.Field(i)
 		fieldType := structFull.Type().Field(i)
 
-		validation, err := GetValidationFromStructField(TagType(tagType), field, fieldType)
+		validation, err := GetValidationFromStructField(tagType, field, fieldType)
 		if err != nil {
 			return nil, err
 		}
@@ -47,7 +50,7 @@ func GetValidationsFromStruct(in interface{}, tagType string) ([]Validation, err
 	return validations, nil
 }
 
-func GetValidationFromStructField(tagType TagType, fieldValue reflect.Value, fieldType reflect.StructField) (Validation, error) {
+func GetValidationFromStructField(tagType string, fieldValue reflect.Value, fieldType reflect.StructField) (Validation, error) {
 	validation := Validation{}
 	validation.Key = fieldType.Name
 	if len(fieldType.Tag.Get("json")) > 0 {
@@ -86,21 +89,6 @@ func GetValidationFromStructField(tagType TagType, fieldValue reflect.Value, fie
 	return validation, nil
 }
 
-func (r *Validation) FillOnlyKey(tag string, tagType TagType, value reflect.Value) error {
-	r.Type = TypeFromInterface(value.Interface())
-
-	tagSplit := strings.Split(tag, ", ")
-	r.Requirement = "-"
-
-	tagIndex := 0
-	if len(tagSplit) > tagIndex && tagType == UPD {
-		r.Key = strings.TrimSpace(tagSplit[tagIndex])
-		tagIndex++
-	}
-
-	return nil
-}
-
 func (r *Validation) GetValidValue(in interface{}) (interface{}, error) {
 	var out interface{}
 	var err error
@@ -131,13 +119,6 @@ func (r *Validation) GetValidValue(in interface{}) (interface{}, error) {
 	}
 	return out, err
 }
-
-type TagType string
-
-const (
-	VLD TagType = "vld"
-	UPD TagType = "upd"
-)
 
 type ValidatorMap map[string]Validation
 
