@@ -4,27 +4,16 @@
 
 Validator for structs to validate fields by tag
 
-Validate validates a given struct by `vld` tags or updates a given struct by `upd` tags.
-Validate needs a struct as input and can update the struct by map or json input.
+`Validate` validates a given struct by `vld` tags. `ValidateAndUpdate` does update the given struct with the given json after validating the json. `UnmarshalValidateAndUpdate` and similar functions are unpacking something (request body or url values), then validating the input and updating the given struct.
 
-## Validate
+## Validation
 
 You can add a validate tag with the syntax `vld:"[requirement], [groups]"`.
 Groups are seperated by a space (eg. `gr1min1 gr2max1`).
 Conditions and operators in a requirement are seperated by a space (eg. `max0 || (min10 && max30)`).
 
-All fields in the struct need a `vld` tag.
-If you want to ignore one field in the validator you can add `vld:"-"`.
-If you don't add the vld tag to every field the function will fail with an error.
-
-## Update
-
-You can add a validate tag with the syntax `upd:"[json_key], [requirement], [groups]"`.
-The json key has to be a valid key from given json for unmarshalling or a key from a given map (eg. `gr1min1 gr2max1`).
-Groups are seperated by a space (eg. `gr1min1 gr2max1`).
-Conditions and operators in a requirement are seperated by a space (eg. `max0 || (min10 && max30)`).
-
-Only fields in the struct you want to update need a `upd` tag.
+All fields that you want to validate in the struct need a `vld` tag (or custom tag if specified).
+If you don't want to validate the field you can add `vld:"-"`. If you then use an update function it does update it without validating.
 
 ## Requirement
 
@@ -37,7 +26,9 @@ You can do for example `vld:"max0 || ((min10 && max30) || equTest)"` for a strin
 
 ## Condition types
 
-`-` - ignores the field
+No condition does neither validate nor update the field.
+
+`-` - not validating/update without validating
 
 `equ` - equal (value or length)
 
@@ -93,6 +84,66 @@ type Error struct {
 `ID` and `CreatedAt` are not getting validated, because you would probably not insert these but create these on db level.
 `StatusCode` is necessary on creation and on update it is in a group with `Message` and `UnderlyingException` where one of them must be given.
 One of `Message` and `UnderlyingException` is required on creation.
+
+## Code example
+
+```go
+package main
+
+import (
+	"io"
+	"net/http"
+    "fmt"
+    "time"
+
+	"github.com/siherrmann/validator"
+)
+
+type Error struct {
+	ID                  int       `json:"id" del:"min1"`
+	StatusCode          int       `json:"status_code" vld:"min100" upd:"min100, gr1min1"`
+	Message             string    `json:"message" vld:"min1" upd:"min1, gr1min1"`
+	UnderlyingException string    `json:"underlying_exception" vld:"min1, gr1min1" upd:"min1, gr1min1"`
+	CreatedAt           time.Time `json:"created_at" vld:"-"`
+}
+
+func HandleError(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error reading request body: %v", err), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	// This uses the default `vld` tag. It unmarshals the request body, validates it
+	// and updates the `newError` variable. You could use that for creating a new instance
+	// of error with all needed parameters.
+	var newError Error
+	err = validator.UnmarshalValidateAndUpdate(body, &newError)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error validating new errror: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// For updating an error you could use the `upd` tag (including goups) to make sure 
+	// that at least one of the values is updated and if so is valid.
+	var exisitingErrorFromDb Error
+	err = validator.UnmarshalValidateAndUpdate(body, &exisitingErrorFromDb, "upd")
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error validating error update: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// If you would only want to validate some given struct with another tag
+	// (for example if you want to check if a given error is valid to delete,
+	// containing an id in this case) you could do:
+	err = validator.Validate(&newError, "del")
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error unmarshaling JSON: %v", err), http.StatusBadRequest)
+		return
+	}
+}
+```
 
 ## Testing
 
