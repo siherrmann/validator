@@ -40,6 +40,12 @@ No condition does neither validate nor update the field.
 
 `con` - contains
 
+`nco` - contains not
+
+`frm` - is contained in given list (whitelist)
+
+`nfr` - is not contained in given list (blacklist)
+
 `rex` - regular expression
 
 ## Usage of conditions
@@ -55,6 +61,12 @@ Conditions have different usages per variable type:
 **max** - `int/float <= condition`, `len(strings.TrimSpace(string)/array) <= condition`
 
 **con** - `strings.Contains(string, condition)`, `contains(array, condition)`, int/float ignored
+
+**nco** - `!strings.Contains(string, condition)`, `!contains(array, condition)`, int/float ignored
+
+**frm** - checks if given comma seperated list contains value/every item in array is contained in the comma seperated list, bool ignored
+
+**nfr** - checks if given comma seperated list does not contain value/every item in array is not contained in the comma seperated list, bool ignored
 
 **rex** - `regexp.MatchString(condition, strconv.Itoa(int)/strconv.FormatFloat(float, 'f', 3, 64)/string)`, array ignored
 
