@@ -2,16 +2,15 @@ package model
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 )
 
-// RootNode is what starts every parsed AST.
+// RootNode is what starts every parsed AST (=abstract syntax tree).
 type RootNode struct {
 	RootValue *AstValue
 }
 
-// AstValue holds a Type ("Condition" or "Group") as well as a `ConditionType` and `ConditionValue`.
+// AstValue (=abstract syntax tree value) holds a Type ("Condition" or "Group") as well as a `ConditionType` and `ConditionValue`.
 // The ConditionType is a [model.ConditionType] and the ConditionValue is any string (numbers are also represented as string).
 type AstValue struct {
 	Type           AstValueType
@@ -37,14 +36,14 @@ func (r AstValue) AstGroupToString() string {
 	groupConditions := []string{}
 	groupString := ""
 	for _, v := range r.ConditionGroup {
-		if v.Type == GROUP {
+		switch v.Type {
+		case GROUP:
 			if len(v.Operator) > 0 {
 				groupConditions = append(groupConditions, fmt.Sprintf("(%v) %v", v.AstGroupToString(), v.Operator))
 			} else {
 				groupConditions = append(groupConditions, fmt.Sprintf("(%v)", v.AstGroupToString()))
 			}
-
-		} else if v.Type == CONDITION {
+		case CONDITION:
 			groupConditions = append(groupConditions, v.AstConditionToString())
 		}
 	}
@@ -60,71 +59,37 @@ func (r AstValue) AstConditionToString() string {
 	}
 }
 
-func (r AstValue) RunFuncOnConditionGroup(input reflect.Value, f func(reflect.Value, *AstValue) error) error {
+// RunFuncOnConditionGroup runs the function [f] on each condition in the [astValue].
+// If the condition is a group, it recursively calls itself on the group.
+// If the condition is a condition, it calls the function [f] with the input and the condition.
+// If the operator is AND, it returns an error if any condition fails.
+// If the operator is OR, it collects all errors and returns them if all conditions fail.
+func RunFuncOnConditionGroup[T comparable](input T, astValue *AstValue, f func(T, *AstValue) error) error {
 	var errors []error
-	for i, v := range r.ConditionGroup {
-		if v.Type == EMPTY {
-			return nil
-		}
+	for i, v := range astValue.ConditionGroup {
 		var err error
-		if v.Type == GROUP {
-			err = v.RunFuncOnConditionGroup(input, f)
-		} else if v.Type == CONDITION {
+		switch v.Type {
+		case EMPTY:
+			return nil
+		case GROUP:
+			err = RunFuncOnConditionGroup(input, astValue, f)
+		case CONDITION:
 			err = f(input, v)
 		}
 		if err != nil && i == 0 && v.Operator == OR {
 			errors = append(errors, err)
 		} else if err != nil && i == 0 && v.Operator == AND {
 			return err
-		} else if err != nil && i > 0 && r.ConditionGroup[i-1].Operator == OR {
+		} else if err != nil && i > 0 && astValue.ConditionGroup[i-1].Operator == OR {
 			errors = append(errors, err)
 		} else if err != nil {
 			return err
 		}
 	}
-	if len(r.ConditionGroup) > 0 && len(errors) >= len(r.ConditionGroup) {
+	if len(astValue.ConditionGroup) > 0 && len(errors) >= len(astValue.ConditionGroup) {
 		return fmt.Errorf("no condition fulfilled, all errors: %v", errors)
 	}
 	return nil
-}
-
-// ConditionType is the type for all available condition types.
-type ConditionType string
-
-// Available condition types.
-const (
-	NONE         ConditionType = "-"
-	EQUAL        ConditionType = "equ"
-	NOT_EQUAL    ConditionType = "neq"
-	MIN_VALUE    ConditionType = "min"
-	MAX_VLAUE    ConditionType = "max"
-	CONTAINS     ConditionType = "con"
-	NOT_CONTAINS ConditionType = "nco"
-	FROM         ConditionType = "frm"
-	NOT_FROM     ConditionType = "nfr"
-	REGX         ConditionType = "rex"
-)
-
-var ValidConditionTypes = map[ConditionType]int{
-	NONE:         0,
-	EQUAL:        1,
-	NOT_EQUAL:    2,
-	MIN_VALUE:    3,
-	MAX_VLAUE:    4,
-	CONTAINS:     5,
-	NOT_CONTAINS: 6,
-	FROM:         7,
-	NOT_FROM:     8,
-	REGX:         9,
-}
-
-// LookupConditionType checks our validConditionType map for the scanned condition type.
-// If not found, an error is returned.
-func LookupConditionType(conType ConditionType) error {
-	if _, ok := ValidConditionTypes[conType]; ok {
-		return nil
-	}
-	return fmt.Errorf("expected a valid condition type, found: %s", conType)
 }
 
 // Operator is the type for all available operators.

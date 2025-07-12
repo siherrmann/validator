@@ -61,29 +61,29 @@ func (p *Parser) currentTokenTypeIs(t model.TokenType) bool {
 // parseGroup is called when an open left brace `(` token is found or a requirement starts without a '('.
 func (p *Parser) parseGroup(root bool) *model.AstValue {
 	group := &model.AstValue{Type: model.GROUP}
-	grpState := GrpStart
+	grpState := model.GrpStart
 
-	for !p.currentTokenTypeIs(model.LexerEOF) && grpState != GrpEnd {
+	for !p.currentTokenTypeIs(model.LexerEOF) && grpState != model.GrpEnd {
 		switch grpState {
-		case GrpStart:
+		case model.GrpStart:
 			if p.currentTokenTypeIs(model.LexerLeftBrace) {
 				if root {
 					innerGroup := p.parseGroup(false)
 					group.ConditionGroup = append(group.ConditionGroup, innerGroup)
-					grpState = GrpOpen
+					grpState = model.GrpOpen
 				} else {
 					group.Start = p.currentToken.Start
 					p.nextToken()
-					grpState = GrpOpen
+					grpState = model.GrpOpen
 				}
 			} else if p.currentTokenTypeIs(model.LexerConditionType) {
 				group.Start = p.currentToken.Start
-				grpState = GrpOpen
+				grpState = model.GrpOpen
 			} else if p.currentTokenTypeIs(model.LexerEmptyRequirement) {
 				group.Type = model.EMPTY
 				group.Start = p.currentToken.Start
 				group.End = p.currentToken.End
-				grpState = GrpEnd
+				grpState = model.GrpEnd
 				return group
 			} else {
 				p.parseError(fmt.Sprintf(
@@ -92,11 +92,11 @@ func (p *Parser) parseGroup(root bool) *model.AstValue {
 				))
 				return nil
 			}
-		case GrpOpen:
+		case model.GrpOpen:
 			if p.currentTokenTypeIs(model.LexerRightBrace) {
 				group.End = p.currentToken.End
 				p.nextToken()
-				grpState = GrpEnd
+				grpState = model.GrpEnd
 			} else if p.currentTokenTypeIs(model.LexerLeftBrace) {
 				innerGroup := p.parseGroup(false)
 				group.ConditionGroup = append(group.ConditionGroup, innerGroup)
@@ -134,15 +134,15 @@ func (p *Parser) parseGroup(root bool) *model.AstValue {
 // parseCondition is used to parse a condition and setting the `conditionType`:`condition` pair.
 func (p *Parser) parseCondition() *model.AstValue {
 	condition := &model.AstValue{Type: model.CONDITION}
-	conditionState := ConType
+	conditionState := model.ConType
 
-	for conditionState != ConEnd {
+	for conditionState != model.ConEnd {
 		switch conditionState {
-		case ConType:
+		case model.ConType:
 			if p.currentTokenTypeIs(model.LexerConditionType) {
 				condition.ConditionType = p.parseConditionType()
 				p.nextToken()
-				conditionState = ConValue
+				conditionState = model.ConValue
 			} else {
 				p.parseError(fmt.Sprintf(
 					"error parsing condition type, expected CndType token, got: %s",
@@ -150,11 +150,11 @@ func (p *Parser) parseCondition() *model.AstValue {
 				))
 				return condition
 			}
-		case ConValue:
+		case model.ConValue:
 			if p.currentTokenTypeIs(model.LexerConditionValue) || p.currentTokenTypeIs(model.LexerConditionValueString) {
 				condition.ConditionValue = p.parseConditionValue()
 				p.nextToken()
-				conditionState = ConEnd
+				conditionState = model.ConEnd
 			} else {
 				p.parseError(fmt.Sprintf(
 					"error parsing condition, expected ConValue token, got: %s",
@@ -200,34 +200,6 @@ func (p *Parser) parseConditionType() model.ConditionType {
 func (p *Parser) parseConditionValue() string {
 	return p.currentToken.Literal
 }
-
-// TODO implement peeking
-// // expectPeekType checks the next token type against the one passed in. If it matches,
-// // we call p.nextToken() to set us to the expected token and return true. If the expected
-// // type does not match, we add a peek error and return false.
-// func (p *Parser) expectPeekType(t model.TokenType) bool {
-// 	if p.peekTokenTypeIs(t) {
-// 		p.nextToken()
-// 		return true
-// 	}
-// 	p.peekError(t)
-// 	return false
-// }
-
-// func (p *Parser) peekTokenTypeIs(t model.TokenType) bool {
-// 	return p.peekToken.Type == t
-// }
-
-// // peekError is a small wrapper to add a peek error to our parser's errors field.
-// func (p *Parser) peekError(t model.TokenType) {
-// 	msg := fmt.Sprintf(
-// 		"Line: %d: Expected next token to be %s, got: %s instead",
-// 		p.currentToken.Line,
-// 		t,
-// 		p.peekToken.Type,
-// 	)
-// 	p.errors = append(p.errors, msg)
-// }
 
 // parseError is very similar to `peekError`, except it simply takes a string message that
 // gets appended to the parser's errors

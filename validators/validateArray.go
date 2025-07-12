@@ -2,6 +2,7 @@ package validators
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"regexp"
 	"slices"
@@ -10,95 +11,86 @@ import (
 	"github.com/siherrmann/validator/model"
 )
 
-func CheckArray(v reflect.Value, c *model.AstValue) error {
-	if v.Type().Kind() != reflect.Array && v.Type().Kind() != reflect.Slice {
-		return fmt.Errorf("value to validate has to be a array or slice, was %v", v.Type().Kind())
+func CheckArray[T comparable](v T, c *model.AstValue) error {
+	if len(c.ConditionValue) == 0 {
+		return nil
+	}
+
+	log.Printf("Type %v, Kind %v, Type dirct: %T", reflect.TypeOf(v), reflect.ValueOf(v).Kind(), v)
+
+	rv := reflect.ValueOf(v)
+	if rv.Kind() != reflect.Array && rv.Kind() != reflect.Slice {
+		return fmt.Errorf("value to validate has to be a array or slice, was %v", rv.Kind())
 	}
 
 	switch c.ConditionType {
 	case model.EQUAL:
-		if len(c.ConditionValue) != 0 {
-			equal, err := strconv.Atoi(c.ConditionValue)
-			if err != nil {
-				return err
-			} else if v.Len() != equal {
-				return fmt.Errorf("value shorter than %v", equal)
-			}
+		equal, err := strconv.Atoi(c.ConditionValue)
+		if err != nil {
+			return err
+		} else if rv.Len() != equal {
+			return fmt.Errorf("value shorter than %v", equal)
 		}
 	case model.NOT_EQUAL:
-		if len(c.ConditionValue) != 0 {
-			notEqual, err := strconv.Atoi(c.ConditionValue)
-			if err != nil {
-				return err
-			} else if v.Len() == notEqual {
-				return fmt.Errorf("value longer than %v", notEqual)
-			}
+		notEqual, err := strconv.Atoi(c.ConditionValue)
+		if err != nil {
+			return err
+		} else if rv.Len() == notEqual {
+			return fmt.Errorf("value longer than %v", notEqual)
 		}
 	case model.MIN_VALUE:
-		if len(c.ConditionValue) != 0 {
-			minValue, err := strconv.Atoi(c.ConditionValue)
-			if err != nil {
-				return err
-			} else if v.Len() < minValue {
-				return fmt.Errorf("value shorter than %v", minValue)
-			}
+		minValue, err := strconv.Atoi(c.ConditionValue)
+		if err != nil {
+			return err
+		} else if rv.Len() < minValue {
+			return fmt.Errorf("value shorter than %v", minValue)
 		}
 	case model.MAX_VLAUE:
-		if len(c.ConditionValue) != 0 {
-			maxValue, err := strconv.Atoi(c.ConditionValue)
-			if err != nil {
-				return err
-			} else if v.Len() > maxValue {
-				return fmt.Errorf("value longer than %v", maxValue)
-			}
+		maxValue, err := strconv.Atoi(c.ConditionValue)
+		if err != nil {
+			return err
+		} else if rv.Len() > maxValue {
+			return fmt.Errorf("value longer than %v", maxValue)
 		}
 	case model.CONTAINS:
-		if len(c.ConditionValue) != 0 {
-			contains, err := ValueContains(v, c.ConditionValue)
-			if err != nil {
-				return err
-			} else if len(contains) == 0 {
-				return fmt.Errorf("value does not contain %v", contains)
-			}
+		contains, err := ValueContains(rv, c.ConditionValue)
+		if err != nil {
+			return err
+		} else if len(contains) == 0 {
+			return fmt.Errorf("value does not contain %v", c.ConditionValue)
 		}
 	case model.NOT_CONTAINS:
-		if len(c.ConditionValue) != 0 {
-			contains, err := ValueContains(v, c.ConditionValue)
-			if err != nil {
-				return err
-			} else if len(contains) != 0 {
-				return fmt.Errorf("value does contain %v", contains)
-			}
+		contains, err := ValueContains(rv, c.ConditionValue)
+		if err != nil {
+			return err
+		} else if len(contains) != 0 {
+			return fmt.Errorf("value does contain %v", c.ConditionValue)
 		}
 	case model.FROM:
-		if len(c.ConditionValue) != 0 {
-			fromValues, err := model.GetArrayFromCondition(c.ConditionValue)
-			if err != nil {
-				return err
-			}
-			notFound, err := ValueFrom(v, fromValues, true)
-			if err != nil {
-				return err
-			} else if len(notFound) != 0 {
-				return fmt.Errorf("value not found in %v", fromValues)
-			}
+		fromValues, err := model.GetArrayFromCondition(c.ConditionValue)
+		if err != nil {
+			return err
+		}
+		notFound, err := ValueFrom(rv, fromValues, true)
+		if err != nil {
+			return err
+		} else if len(notFound) != 0 {
+			return fmt.Errorf("value not found in %v", fromValues)
 		}
 	case model.NOT_FROM:
-		if len(c.ConditionValue) != 0 {
-			notFromValues, err := model.GetArrayFromCondition(c.ConditionValue)
-			if err != nil {
-				return err
-			}
-			found, err := ValueFrom(v, notFromValues, false)
-			if err != nil {
-				return err
-			} else if len(found) != 0 {
-				return fmt.Errorf("value found in %v", notFromValues)
-			}
+		notFromValues, err := model.GetArrayFromCondition(c.ConditionValue)
+		if err != nil {
+			return err
+		}
+		found, err := ValueFrom(rv, notFromValues, false)
+		if err != nil {
+			return err
+		} else if len(found) != 0 {
+			return fmt.Errorf("value found in %v", notFromValues)
 		}
 	case model.REGX:
-		if len(c.ConditionValue) != 0 {
-			for _, av := range v.Interface().([]any) {
+		if vArray, ok := rv.Interface().([]any); ok {
+			for _, av := range vArray {
 				match, err := regexp.MatchString(c.ConditionValue, fmt.Sprint(av))
 				if err != nil {
 					return err
@@ -106,6 +98,8 @@ func CheckArray(v reflect.Value, c *model.AstValue) error {
 					return fmt.Errorf("value does match regex %v", c.ConditionValue)
 				}
 			}
+		} else {
+			return fmt.Errorf("type %v not supported for regex", rv.Type().Kind())
 		}
 	case model.NONE:
 		return nil

@@ -2,27 +2,21 @@ package validator
 
 import (
 	"fmt"
-	"reflect"
 
 	"github.com/siherrmann/validator/model"
 	"github.com/siherrmann/validator/parser"
 	"github.com/siherrmann/validator/validators"
 )
 
-func ValidateValueWithParser(input reflect.Value, validation *model.Validation) (interface{}, error) {
-	validValue, err := validation.GetValidValue(input.Interface())
-	if err != nil {
-		return nil, err
-	}
-
+func ValidateValueWithParser[T comparable](input T, validation *model.Validation) error {
 	lexer := parser.NewLexer(validation.Requirement)
 	p := parser.NewParser(lexer)
 	r, err := p.ParseValidation()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var checkFunction func(reflect.Value, *model.AstValue) error
+	var checkFunction func(T, *model.AstValue) error
 	switch validation.Type {
 	case model.String:
 		checkFunction = validators.CheckString
@@ -39,12 +33,13 @@ func ValidateValueWithParser(input reflect.Value, validation *model.Validation) 
 	case model.Time, model.TimeISO8601, model.TimeUnix:
 		checkFunction = validators.CheckTime
 	default:
-		return nil, fmt.Errorf("invalid validation type: %v", validation.Type)
+		return fmt.Errorf("invalid validation type: %v", validation.Type)
 	}
 
-	err = r.RootValue.RunFuncOnConditionGroup(reflect.ValueOf(validValue), checkFunction)
+	err = model.RunFuncOnConditionGroup(input, r.RootValue, checkFunction)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return validValue, nil
+
+	return nil
 }

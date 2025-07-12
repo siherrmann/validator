@@ -48,7 +48,8 @@ func ValidateWithValidation(jsonInput model.JsonMap, validations []model.Validat
 		}
 
 		var err error
-		if validation.Type == model.Struct {
+		switch validation.Type {
+		case model.Struct:
 			jsonValueInner, err := GetValidMap(jsonValue)
 			if err != nil {
 				return model.JsonMap{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
@@ -58,7 +59,7 @@ func ValidateWithValidation(jsonInput model.JsonMap, validations []model.Validat
 			if err != nil {
 				return model.JsonMap{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
 			}
-		} else if validation.Type == model.Array {
+		case model.Array:
 			if helper.IsArray(jsonValue) && len(validation.InnerValidation) > 0 {
 				jsonArray, ok := jsonValue.([]interface{})
 				if !ok {
@@ -77,14 +78,14 @@ func ValidateWithValidation(jsonInput model.JsonMap, validations []model.Validat
 					}
 				}
 			} else if helper.IsArray(jsonValue) {
-				_, err = ValidateValueWithParser(reflect.ValueOf(jsonValue), &validation)
+				err = ValidateValueWithParser(reflect.ValueOf(jsonValue), &validation)
 			} else if helper.IsString(jsonValue) {
 				// Check if the value is a string from a url value.
 				jsonValue = []string{jsonValue.(string)}
-				_, err = ValidateValueWithParser(reflect.ValueOf(jsonValue), &validation)
+				err = ValidateValueWithParser(reflect.ValueOf(jsonValue), &validation)
 			}
-		} else {
-			_, err = ValidateValueWithParser(reflect.ValueOf(jsonValue), &validation)
+		default:
+			err = ValidateValueWithParser(reflect.ValueOf(jsonValue), &validation)
 		}
 
 		if err != nil && len(validation.Groups) == 0 {

@@ -242,9 +242,10 @@ func (r *Validation) InterfaceFromInt(in int) (interface{}, error) {
 	case Float:
 		return float64(in), nil
 	case Bool:
-		if in == 1 {
+		switch in {
+		case 1:
 			return true, nil
-		} else if in == 0 {
+		case 0:
 			return false, nil
 		}
 		return nil, fmt.Errorf("bool must be 0 or 1")
@@ -263,9 +264,10 @@ func (r *Validation) InterfaceFromFloat(in float64) (interface{}, error) {
 	case Float:
 		return in, nil
 	case Bool:
-		if in == 1 {
+		switch in {
+		case 1:
 			return true, nil
-		} else if in == 0 {
+		case 0:
 			return false, nil
 		}
 		return nil, fmt.Errorf("bool must be 0 or 1")

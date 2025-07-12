@@ -6,6 +6,45 @@ import (
 	"strings"
 )
 
+// ConditionType is the type for all available condition types.
+type ConditionType string
+
+// Available condition types.
+const (
+	NONE         ConditionType = "-"
+	EQUAL        ConditionType = "equ"
+	NOT_EQUAL    ConditionType = "neq"
+	MIN_VALUE    ConditionType = "min"
+	MAX_VLAUE    ConditionType = "max"
+	CONTAINS     ConditionType = "con"
+	NOT_CONTAINS ConditionType = "nco"
+	FROM         ConditionType = "frm"
+	NOT_FROM     ConditionType = "nfr"
+	REGX         ConditionType = "rex"
+)
+
+var ValidConditionTypes = map[ConditionType]int{
+	NONE:         0,
+	EQUAL:        1,
+	NOT_EQUAL:    2,
+	MIN_VALUE:    3,
+	MAX_VLAUE:    4,
+	CONTAINS:     5,
+	NOT_CONTAINS: 6,
+	FROM:         7,
+	NOT_FROM:     8,
+	REGX:         9,
+}
+
+// LookupConditionType checks our validConditionType map for the scanned condition type.
+// If not found, an error is returned.
+func LookupConditionType(conType ConditionType) error {
+	if _, ok := ValidConditionTypes[conType]; ok {
+		return nil
+	}
+	return fmt.Errorf("expected a valid condition type, found: %s", conType)
+}
+
 func GetConditionType(s string) (ConditionType, error) {
 	var conditionType ConditionType
 	if len(s) > 2 {
