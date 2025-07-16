@@ -14,9 +14,22 @@ func CheckTime[T comparable](v T, c *model.AstValue) error {
 		return nil
 	}
 
-	t, ok := any(v).(time.Time)
+	var t time.Time
+	var s string
+	var ok bool
+	t, ok = any(v).(time.Time)
 	if !ok {
-		return fmt.Errorf("value to validate has to be a time.Time, was %v", reflect.TypeOf(v))
+		if s, ok = any(v).(string); !ok {
+			return fmt.Errorf("value to validate has to be a time.Time or string, was %v", reflect.TypeOf(v))
+		}
+		var err error
+		t, err = model.UnixStringToTime(s)
+		if err != nil {
+			t, err = model.ISO8601StringToTime(s)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	validation := model.Validation{Type: model.Time}

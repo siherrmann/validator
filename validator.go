@@ -2,7 +2,6 @@ package validator
 
 import (
 	"fmt"
-	"reflect"
 	"slices"
 	"strings"
 
@@ -78,14 +77,14 @@ func ValidateWithValidation(jsonInput model.JsonMap, validations []model.Validat
 					}
 				}
 			} else if helper.IsArray(jsonValue) {
-				err = ValidateValueWithParser(reflect.ValueOf(jsonValue), &validation)
+				err = ValidateValueWithParser(jsonValue, &validation)
 			} else if helper.IsString(jsonValue) {
 				// Check if the value is a string from a url value.
 				jsonValue = []string{jsonValue.(string)}
-				err = ValidateValueWithParser(reflect.ValueOf(jsonValue), &validation)
+				err = ValidateValueWithParser(jsonValue, &validation)
 			}
 		default:
-			err = ValidateValueWithParser(reflect.ValueOf(jsonValue), &validation)
+			err = ValidateValueWithParser(jsonValue, &validation)
 		}
 
 		if err != nil && len(validation.Groups) == 0 {

@@ -15,9 +15,15 @@ func CheckInt[T comparable](v T, c *model.AstValue) error {
 		return nil
 	}
 
-	i, ok := any(v).(int)
+	var i int
+	var f float64
+	var ok bool
+	i, ok = any(v).(int)
 	if !ok {
-		return fmt.Errorf("value to validate has to be an int, was %v", reflect.TypeOf(v))
+		if f, ok = any(v).(float64); !ok {
+			return fmt.Errorf("value to validate has to be an int or float64, was %v", reflect.TypeOf(v))
+		}
+		i = int(f)
 	}
 
 	switch c.ConditionType {
