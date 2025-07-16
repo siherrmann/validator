@@ -59,39 +59,6 @@ func (r AstValue) AstConditionToString() string {
 	}
 }
 
-// RunFuncOnConditionGroup runs the function [f] on each condition in the [astValue].
-// If the condition is a group, it recursively calls itself on the group.
-// If the condition is a condition, it calls the function [f] with the input and the condition.
-// If the operator is AND, it returns an error if any condition fails.
-// If the operator is OR, it collects all errors and returns them if all conditions fail.
-func RunFuncOnConditionGroup[T comparable](input T, astValue *AstValue, f func(T, *AstValue) error) error {
-	var errors []error
-	for i, v := range astValue.ConditionGroup {
-		var err error
-		switch v.Type {
-		case EMPTY:
-			return nil
-		case GROUP:
-			err = RunFuncOnConditionGroup(input, astValue, f)
-		case CONDITION:
-			err = f(input, v)
-		}
-		if err != nil && i == 0 && v.Operator == OR {
-			errors = append(errors, err)
-		} else if err != nil && i == 0 && v.Operator == AND {
-			return err
-		} else if err != nil && i > 0 && astValue.ConditionGroup[i-1].Operator == OR {
-			errors = append(errors, err)
-		} else if err != nil {
-			return err
-		}
-	}
-	if len(astValue.ConditionGroup) > 0 && len(errors) >= len(astValue.ConditionGroup) {
-		return fmt.Errorf("no condition fulfilled, all errors: %v", errors)
-	}
-	return nil
-}
-
 // Operator is the type for all available operators.
 type Operator string
 

@@ -95,6 +95,8 @@ func (r *Validation) GetValidValue(in interface{}) (interface{}, error) {
 	switch in := in.(type) {
 	case string:
 		out, err = r.InterfaceFromString(in)
+	case bool:
+		out, err = r.InterfaceFromString(strconv.FormatBool(in))
 	case int:
 		out, err = r.InterfaceFromInt(in)
 	case int64:

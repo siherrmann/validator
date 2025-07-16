@@ -608,8 +608,8 @@ func TestCaseStructNotFrom(t *testing.T) {
 func TestCaseStructRex(t *testing.T) {
 	type TestStructRex struct {
 		String string   `vld:"rex'^[a-zA-Z0-9]+$'"`
-		Int    int      `vld:"rex'^(2|3)$'"`
-		Float  float64  `vld:"rex'^(2|3)$'"`
+		Int    int      `vld:"rex'^(2|3)[.]*[0]*$'"`
+		Float  float64  `vld:"rex'^(2|3)[.]*[0]*$'"`
 		Array  []string `vld:"-"`
 	}
 
