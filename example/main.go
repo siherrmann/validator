@@ -25,4 +25,19 @@ func main() {
 
 	err = validators.ValidateEqual(map[string]int{"a": 1, "b": 2}, &model.AstValue{ConditionValue: "1"})
 	fmt.Printf("Validation result: %v\n", err)
+
+	err = validators.ValidateMin(2, &model.AstValue{ConditionValue: "3"})
+	fmt.Printf("Validation result: %v\n", err)
+
+	err = validators.ValidateMin(5.1, &model.AstValue{ConditionValue: "5.2"})
+	fmt.Printf("Validation result: %v\n", err)
+
+	err = validators.ValidateMin("test", &model.AstValue{ConditionValue: "5"})
+	fmt.Printf("Validation result: %v\n", err)
+
+	err = validators.ValidateMin([]int{1, 2}, &model.AstValue{ConditionValue: "3"})
+	fmt.Printf("Validation result: %v\n", err)
+
+	err = validators.ValidateContains([]string{"apple", "banana"}, &model.AstValue{ConditionValue: "banana"})
+	fmt.Printf("Validation result: %v\n", err)
 }
