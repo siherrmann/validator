@@ -72,7 +72,7 @@ func RunFuncOnConditionGroup[T comparable](input T, astValue *AstValue, f func(T
 		case EMPTY:
 			return nil
 		case GROUP:
-			err = RunFuncOnConditionGroup(input, astValue, f)
+			err = RunFuncOnConditionGroup(input, v, f)
 		case CONDITION:
 			err = f(input, v)
 		}
