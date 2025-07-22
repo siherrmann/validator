@@ -2,7 +2,6 @@ package validators
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"regexp"
 	"slices"
@@ -15,8 +14,6 @@ func CheckArray[T comparable](v T, c *model.AstValue) error {
 	if len(c.ConditionValue) == 0 {
 		return nil
 	}
-
-	log.Printf("Type %v, Kind %v, Type dirct: %T", reflect.TypeOf(v), reflect.ValueOf(v).Kind(), v)
 
 	rv := reflect.ValueOf(v)
 	if rv.Kind() != reflect.Array && rv.Kind() != reflect.Slice {
