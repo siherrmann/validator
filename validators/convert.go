@@ -114,10 +114,10 @@ func ConditionValueToT[T Comparable](v T, ast *model.AstValue) (T, error) {
 	}
 }
 
-func ConditionValueToArrayOfT[T Comparable](v T, ast *model.AstValue) ([]T, error) {
-	conditionList := strings.Split(ast.ConditionValue, ",")
-	if len(conditionList) == 0 {
-		return []T{}, fmt.Errorf("empty condition list %s value", ast.ConditionType)
+func ConditionValueToArrayOfT[T Comparable](v T, condition string) ([]T, error) {
+	conditionList := strings.Split(condition, ",")
+	if len(conditionList) == 0 || (len(conditionList) == 1 && len(strings.TrimSpace(conditionList[0])) == 0) {
+		return []T{}, fmt.Errorf("empty condition list")
 	}
 
 	switch any(v).(type) {
@@ -126,15 +126,15 @@ func ConditionValueToArrayOfT[T Comparable](v T, ast *model.AstValue) ([]T, erro
 	case bool:
 		values, err := ArrayOfStringToArrayOfT(v, conditionList)
 		if err != nil {
-			return []T{}, fmt.Errorf("invalid condition value for bool: %v", ast.ConditionValue)
+			return []T{}, fmt.Errorf("invalid condition value for bool: %v", condition)
 		}
 		return any(values).([]T), nil
 	case time.Time:
 		var date time.Time
 		var err error
-		date, err = model.UnixStringToTime(ast.ConditionValue)
+		date, err = model.UnixStringToTime(condition)
 		if err != nil {
-			date, err = model.ISO8601StringToTime(ast.ConditionValue)
+			date, err = model.ISO8601StringToTime(condition)
 			if err != nil {
 				return nil, err
 			}
@@ -143,73 +143,73 @@ func ConditionValueToArrayOfT[T Comparable](v T, ast *model.AstValue) ([]T, erro
 	case int:
 		values, err := ArrayOfStringToArrayOfT(v, conditionList)
 		if err != nil {
-			return []T{}, fmt.Errorf("invalid condition value for int: %v", ast.ConditionValue)
+			return []T{}, fmt.Errorf("invalid condition value for int: %v", condition)
 		}
 		return any(values).([]T), nil
 	case int8:
 		values, err := ArrayOfStringToArrayOfT(v, conditionList)
 		if err != nil {
-			return []T{}, fmt.Errorf("invalid condition value for int8: %v", ast.ConditionValue)
+			return []T{}, fmt.Errorf("invalid condition value for int8: %v", condition)
 		}
 		return any(values).([]T), nil
 	case int16:
 		values, err := ArrayOfStringToArrayOfT(v, conditionList)
 		if err != nil {
-			return []T{}, fmt.Errorf("invalid condition value for int16: %v", ast.ConditionValue)
+			return []T{}, fmt.Errorf("invalid condition value for int16: %v", condition)
 		}
 		return any(values).([]T), nil
 	case int32:
 		values, err := ArrayOfStringToArrayOfT(v, conditionList)
 		if err != nil {
-			return []T{}, fmt.Errorf("invalid condition value for int32: %v", ast.ConditionValue)
+			return []T{}, fmt.Errorf("invalid condition value for int32: %v", condition)
 		}
 		return any(values).([]T), nil
 	case int64:
 		values, err := ArrayOfStringToArrayOfT(v, conditionList)
 		if err != nil {
-			return []T{}, fmt.Errorf("invalid condition value for int64: %v", ast.ConditionValue)
+			return []T{}, fmt.Errorf("invalid condition value for int64: %v", condition)
 		}
 		return any(values).([]T), nil
 	case uint:
 		values, err := ArrayOfStringToArrayOfT(v, conditionList)
 		if err != nil {
-			return []T{}, fmt.Errorf("invalid condition value for uint: %v", ast.ConditionValue)
+			return []T{}, fmt.Errorf("invalid condition value for uint: %v", condition)
 		}
 		return any(values).([]T), nil
 	case uint8:
 		values, err := ArrayOfStringToArrayOfT(v, conditionList)
 		if err != nil {
-			return []T{}, fmt.Errorf("invalid condition value for uint8: %v", ast.ConditionValue)
+			return []T{}, fmt.Errorf("invalid condition value for uint8: %v", condition)
 		}
 		return any(values).([]T), nil
 	case uint16:
 		values, err := ArrayOfStringToArrayOfT(v, conditionList)
 		if err != nil {
-			return []T{}, fmt.Errorf("invalid condition value for uint16: %v", ast.ConditionValue)
+			return []T{}, fmt.Errorf("invalid condition value for uint16: %v", condition)
 		}
 		return any(values).([]T), nil
 	case uint32:
 		values, err := ArrayOfStringToArrayOfT(v, conditionList)
 		if err != nil {
-			return []T{}, fmt.Errorf("invalid condition value for uint32: %v", ast.ConditionValue)
+			return []T{}, fmt.Errorf("invalid condition value for uint32: %v", condition)
 		}
 		return any(values).([]T), nil
 	case uint64:
 		values, err := ArrayOfStringToArrayOfT(v, conditionList)
 		if err != nil {
-			return []T{}, fmt.Errorf("invalid condition value for uint64: %v", ast.ConditionValue)
+			return []T{}, fmt.Errorf("invalid condition value for uint64: %v", condition)
 		}
 		return any(values).([]T), nil
 	case float32:
 		values, err := ArrayOfStringToArrayOfT(v, conditionList)
 		if err != nil {
-			return []T{}, fmt.Errorf("invalid condition value for float32: %v", ast.ConditionValue)
+			return []T{}, fmt.Errorf("invalid condition value for float32: %v", condition)
 		}
 		return any(values).([]T), nil
 	case float64:
 		values, err := ArrayOfStringToArrayOfT(v, conditionList)
 		if err != nil {
-			return []T{}, fmt.Errorf("invalid condition value for float64: %v", ast.ConditionValue)
+			return []T{}, fmt.Errorf("invalid condition value for float64: %v", condition)
 		}
 		return any(values).([]T), nil
 	default:
@@ -217,10 +217,10 @@ func ConditionValueToArrayOfT[T Comparable](v T, ast *model.AstValue) ([]T, erro
 	}
 }
 
-func ArrayConditionValueToArrayOfT[T Comparable](v []T, ast *model.AstValue) ([]T, error) {
-	conditionList := strings.Split(ast.ConditionValue, ",")
-	if len(conditionList) == 0 {
-		return []T{}, fmt.Errorf("empty condition list %s value", ast.ConditionType)
+func ArrayConditionValueToArrayOfT[T Comparable](v []T, condition string) ([]T, error) {
+	conditionList := strings.Split(condition, ",")
+	if len(conditionList) == 0 || (len(conditionList) == 1 && len(strings.TrimSpace(conditionList[0])) == 0) {
+		return []T{}, fmt.Errorf("empty condition list")
 	}
 
 	switch any(v).(type) {
@@ -230,91 +230,91 @@ func ArrayConditionValueToArrayOfT[T Comparable](v []T, ast *model.AstValue) ([]
 		b := false
 		values, err := ArrayOfStringToArrayOfT(b, conditionList)
 		if err != nil {
-			return v, fmt.Errorf("invalid condition value for bool: %v", ast.ConditionValue)
+			return v, fmt.Errorf("invalid condition value for bool: %v", condition)
 		}
 		return any(values).([]T), nil
 	case []int:
 		i := int(0)
 		values, err := ArrayOfStringToArrayOfT(i, conditionList)
 		if err != nil {
-			return v, fmt.Errorf("invalid condition value for int: %v", ast.ConditionValue)
+			return v, fmt.Errorf("invalid condition value for int: %v", condition)
 		}
 		return any(values).([]T), nil
 	case []int8:
 		i := int8(0)
 		values, err := ArrayOfStringToArrayOfT(i, conditionList)
 		if err != nil {
-			return v, fmt.Errorf("invalid condition value for int8: %v", ast.ConditionValue)
+			return v, fmt.Errorf("invalid condition value for int8: %v", condition)
 		}
 		return any(values).([]T), nil
 	case []int16:
 		i := int16(0)
 		values, err := ArrayOfStringToArrayOfT(i, conditionList)
 		if err != nil {
-			return v, fmt.Errorf("invalid condition value for int16: %v", ast.ConditionValue)
+			return v, fmt.Errorf("invalid condition value for int16: %v", condition)
 		}
 		return any(values).([]T), nil
 	case []int32:
 		i := int32(0)
 		values, err := ArrayOfStringToArrayOfT(i, conditionList)
 		if err != nil {
-			return v, fmt.Errorf("invalid condition value for int32: %v", ast.ConditionValue)
+			return v, fmt.Errorf("invalid condition value for int32: %v", condition)
 		}
 		return any(values).([]T), nil
 	case []int64:
 		i := int64(0)
 		values, err := ArrayOfStringToArrayOfT(i, conditionList)
 		if err != nil {
-			return v, fmt.Errorf("invalid condition value for int64: %v", ast.ConditionValue)
+			return v, fmt.Errorf("invalid condition value for int64: %v", condition)
 		}
 		return any(values).([]T), nil
 	case []uint:
 		u := uint(0)
 		values, err := ArrayOfStringToArrayOfT(u, conditionList)
 		if err != nil {
-			return v, fmt.Errorf("invalid condition value for uint: %v", ast.ConditionValue)
+			return v, fmt.Errorf("invalid condition value for uint: %v", condition)
 		}
 		return any(values).([]T), nil
 	case []uint8:
 		u := uint8(0)
 		values, err := ArrayOfStringToArrayOfT(u, conditionList)
 		if err != nil {
-			return v, fmt.Errorf("invalid condition value for uint8: %v", ast.ConditionValue)
+			return v, fmt.Errorf("invalid condition value for uint8: %v", condition)
 		}
 		return any(values).([]T), nil
 	case []uint16:
 		u := uint16(0)
 		values, err := ArrayOfStringToArrayOfT(u, conditionList)
 		if err != nil {
-			return v, fmt.Errorf("invalid condition value for uint16: %v", ast.ConditionValue)
+			return v, fmt.Errorf("invalid condition value for uint16: %v", condition)
 		}
 		return any(values).([]T), nil
 	case []uint32:
 		u := uint32(0)
 		values, err := ArrayOfStringToArrayOfT(u, conditionList)
 		if err != nil {
-			return v, fmt.Errorf("invalid condition value for uint32: %v", ast.ConditionValue)
+			return v, fmt.Errorf("invalid condition value for uint32: %v", condition)
 		}
 		return any(values).([]T), nil
 	case []uint64:
 		u := uint64(0)
 		values, err := ArrayOfStringToArrayOfT(u, conditionList)
 		if err != nil {
-			return v, fmt.Errorf("invalid condition value for uint64: %v", ast.ConditionValue)
+			return v, fmt.Errorf("invalid condition value for uint64: %v", condition)
 		}
 		return any(values).([]T), nil
 	case []float32:
 		f := float32(0)
 		values, err := ArrayOfStringToArrayOfT(f, conditionList)
 		if err != nil {
-			return v, fmt.Errorf("invalid condition value for float32: %v", ast.ConditionValue)
+			return v, fmt.Errorf("invalid condition value for float32: %v", condition)
 		}
 		return any(values).([]T), nil
 	case []float64:
 		f := float64(0)
 		values, err := ArrayOfStringToArrayOfT(f, conditionList)
 		if err != nil {
-			return v, fmt.Errorf("invalid condition value for float64: %v", ast.ConditionValue)
+			return v, fmt.Errorf("invalid condition value for float64: %v", condition)
 		}
 		return any(values).([]T), nil
 	default:
@@ -441,7 +441,7 @@ func ArrayOfStringToArrayOfT[T Comparable](v T, sa []string) ([]T, error) {
 
 func ConditionValueToArrayOfString(condition string) ([]string, error) {
 	conditionList := strings.Split(condition, ",")
-	if len(conditionList) == 0 {
+	if len(conditionList) == 0 || (len(conditionList) == 1 && len(strings.TrimSpace(conditionList[0])) == 0) {
 		return []string{}, fmt.Errorf("empty condition list %s value", condition)
 	}
 	return conditionList, nil
@@ -586,8 +586,8 @@ type Number interface {
 	int | float64
 }
 
-func ValueToFloat[V Comparable | Array | Map](v V) (float64, error) {
-	switch v := any(v).(type) {
+func ValueToFloat(v any) (float64, error) {
+	switch v := v.(type) {
 	case string:
 		return float64(len(v)), nil
 	case time.Time:
@@ -615,7 +615,7 @@ func ValueToFloat[V Comparable | Array | Map](v V) (float64, error) {
 	case float32:
 		return float64(v), nil
 	case float64:
-		return float64(v), nil
+		return v, nil
 	case []string:
 		return float64(len(v)), nil
 	case []bool:

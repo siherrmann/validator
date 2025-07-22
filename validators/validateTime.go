@@ -45,7 +45,7 @@ func CheckTime[T comparable](v T, c *model.AstValue) error {
 		if t.Before(minValue.(time.Time)) {
 			return fmt.Errorf("value smaller than %v", minValue)
 		}
-	case model.MAX_VLAUE:
+	case model.MAX_VALUE:
 		maxValue, err := validation.InterfaceFromString(c.ConditionValue)
 		if err != nil {
 			return err

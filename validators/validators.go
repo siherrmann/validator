@@ -7,8 +7,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-
-	"github.com/siherrmann/validator/model"
 )
 
 func Equal[T comparable](a, equal T) bool {
@@ -161,278 +159,266 @@ func Contains(va any, contain string) (bool, error) {
 	}
 }
 
-func From(v any, ast *model.AstValue, not bool) (bool, error) {
+func From(v any, from string, not bool) (bool, error) {
 	switch v := v.(type) {
 	case string:
-		from, err := ConditionValueToArrayOfString(ast.ConditionValue)
+		f, err := ConditionValueToArrayOfString(from)
 		if err != nil {
 			return false, err
 		}
-		return !not == slices.Contains(from, v), nil
-	case int:
-		i := int(0)
-		from, err := ConditionValueToArrayOfT(i, ast)
-		if err != nil {
-			return false, err
-		}
-		return !not == slices.Contains(from, v), nil
-	case int8:
-		i := int8(0)
-		from, err := ConditionValueToArrayOfT(i, ast)
-		if err != nil {
-			return false, err
-		}
-		return !not == slices.Contains(from, v), nil
-	case int16:
-		i := int16(0)
-		from, err := ConditionValueToArrayOfT(i, ast)
-		if err != nil {
-			return false, err
-		}
-		return !not == slices.Contains(from, v), nil
-	case int32:
-		i := int32(0)
-		from, err := ConditionValueToArrayOfT(i, ast)
-		if err != nil {
-			return false, err
-		}
-		return !not == slices.Contains(from, v), nil
-	case int64:
-		i := int64(0)
-		from, err := ConditionValueToArrayOfT(i, ast)
-		if err != nil {
-			return false, err
-		}
-		return !not == slices.Contains(from, v), nil
-	case uint:
-		i := uint(0)
-		from, err := ConditionValueToArrayOfT(i, ast)
-		if err != nil {
-			return false, err
-		}
-		return !not == slices.Contains(from, v), nil
-	case uint8:
-		i := uint8(0)
-		from, err := ConditionValueToArrayOfT(i, ast)
-		if err != nil {
-			return false, err
-		}
-		return !not == slices.Contains(from, v), nil
-	case uint16:
-		i := uint16(0)
-		from, err := ConditionValueToArrayOfT(i, ast)
-		if err != nil {
-			return false, err
-		}
-		return !not == slices.Contains(from, v), nil
-	case uint32:
-		i := uint32(0)
-		from, err := ConditionValueToArrayOfT(i, ast)
-		if err != nil {
-			return false, err
-		}
-		return !not == slices.Contains(from, v), nil
-	case uint64:
-		i := uint64(0)
-		from, err := ConditionValueToArrayOfT(i, ast)
-		if err != nil {
-			return false, err
-		}
-		return !not == slices.Contains(from, v), nil
-	case float32:
-		i := float32(0)
-		from, err := ConditionValueToArrayOfT(i, ast)
-		if err != nil {
-			return false, err
-		}
-		return !not == slices.Contains(from, v), nil
-	case float64:
-		i := float64(0)
-		from, err := ConditionValueToArrayOfT(i, ast)
-		if err != nil {
-			return false, err
-		}
-		return !not == slices.Contains(from, v), nil
+		return !not == slices.Contains(f, v), nil
 	case bool:
-		b, err := ConditionValueToArrayOfT(v, ast)
+		b, err := ConditionValueToArrayOfT(v, from)
 		if err != nil {
 			return false, err
 		}
 		return !not == slices.Contains(b, v), nil
+	case int:
+		f, err := ConditionValueToArrayOfT(v, from)
+		if err != nil {
+			return false, err
+		}
+		return !not == slices.Contains(f, v), nil
+	case int8:
+		f, err := ConditionValueToArrayOfT(v, from)
+		if err != nil {
+			return false, err
+		}
+		return !not == slices.Contains(f, v), nil
+	case int16:
+		f, err := ConditionValueToArrayOfT(v, from)
+		if err != nil {
+			return false, err
+		}
+		return !not == slices.Contains(f, v), nil
+	case int32:
+		f, err := ConditionValueToArrayOfT(v, from)
+		if err != nil {
+			return false, err
+		}
+		return !not == slices.Contains(f, v), nil
+	case int64:
+		f, err := ConditionValueToArrayOfT(v, from)
+		if err != nil {
+			return false, err
+		}
+		return !not == slices.Contains(f, v), nil
+	case uint:
+		f, err := ConditionValueToArrayOfT(v, from)
+		if err != nil {
+			return false, err
+		}
+		return !not == slices.Contains(f, v), nil
+	case uint8:
+		f, err := ConditionValueToArrayOfT(v, from)
+		if err != nil {
+			return false, err
+		}
+		return !not == slices.Contains(f, v), nil
+	case uint16:
+		f, err := ConditionValueToArrayOfT(v, from)
+		if err != nil {
+			return false, err
+		}
+		return !not == slices.Contains(f, v), nil
+	case uint32:
+		f, err := ConditionValueToArrayOfT(v, from)
+		if err != nil {
+			return false, err
+		}
+		return !not == slices.Contains(f, v), nil
+	case uint64:
+		f, err := ConditionValueToArrayOfT(v, from)
+		if err != nil {
+			return false, err
+		}
+		return !not == slices.Contains(f, v), nil
+	case float32:
+		f, err := ConditionValueToArrayOfT(v, from)
+		if err != nil {
+			return false, err
+		}
+		return !not == slices.Contains(f, v), nil
+	case float64:
+		f, err := ConditionValueToArrayOfT(v, from)
+		if err != nil {
+			return false, err
+		}
+		return !not == slices.Contains(f, v), nil
 	case []string:
-		from, err := ArrayConditionValueToArrayOfT(v, ast)
+		f, err := ArrayConditionValueToArrayOfT(v, from)
 		if err != nil {
 			return false, err
 		}
-		return FromArray(v, from, not)
+		return FromArray(v, f, not)
 	case []int:
-		from, err := ArrayConditionValueToArrayOfT(v, ast)
+		f, err := ArrayConditionValueToArrayOfT(v, from)
 		if err != nil {
 			return false, err
 		}
-		return FromArray(v, from, not)
+		return FromArray(v, f, not)
 	case []int8:
-		from, err := ArrayConditionValueToArrayOfT(v, ast)
+		f, err := ArrayConditionValueToArrayOfT(v, from)
 		if err != nil {
 			return false, err
 		}
-		return FromArray(v, from, not)
+		return FromArray(v, f, not)
 	case []int16:
-		from, err := ArrayConditionValueToArrayOfT(v, ast)
+		f, err := ArrayConditionValueToArrayOfT(v, from)
 		if err != nil {
 			return false, err
 		}
-		return FromArray(v, from, not)
+		return FromArray(v, f, not)
 	case []int32:
-		from, err := ArrayConditionValueToArrayOfT(v, ast)
+		f, err := ArrayConditionValueToArrayOfT(v, from)
 		if err != nil {
 			return false, err
 		}
-		return FromArray(v, from, not)
+		return FromArray(v, f, not)
 	case []int64:
-		from, err := ArrayConditionValueToArrayOfT(v, ast)
+		f, err := ArrayConditionValueToArrayOfT(v, from)
 		if err != nil {
 			return false, err
 		}
-		return FromArray(v, from, not)
+		return FromArray(v, f, not)
 	case []uint:
-		from, err := ArrayConditionValueToArrayOfT(v, ast)
+		f, err := ArrayConditionValueToArrayOfT(v, from)
 		if err != nil {
 			return false, err
 		}
-		return FromArray(v, from, not)
+		return FromArray(v, f, not)
 	case []uint8:
-		from, err := ArrayConditionValueToArrayOfT(v, ast)
+		f, err := ArrayConditionValueToArrayOfT(v, from)
 		if err != nil {
 			return false, err
 		}
-		return FromArray(v, from, not)
+		return FromArray(v, f, not)
 	case []uint16:
-		from, err := ArrayConditionValueToArrayOfT(v, ast)
+		f, err := ArrayConditionValueToArrayOfT(v, from)
 		if err != nil {
 			return false, err
 		}
-		return FromArray(v, from, not)
+		return FromArray(v, f, not)
 	case []uint32:
-		from, err := ArrayConditionValueToArrayOfT(v, ast)
+		f, err := ArrayConditionValueToArrayOfT(v, from)
 		if err != nil {
 			return false, err
 		}
-		return FromArray(v, from, not)
+		return FromArray(v, f, not)
 	case []uint64:
-		from, err := ArrayConditionValueToArrayOfT(v, ast)
+		f, err := ArrayConditionValueToArrayOfT(v, from)
 		if err != nil {
 			return false, err
 		}
-		return FromArray(v, from, not)
+		return FromArray(v, f, not)
 	case []float32:
-		from, err := ArrayConditionValueToArrayOfT(v, ast)
+		f, err := ArrayConditionValueToArrayOfT(v, from)
 		if err != nil {
 			return false, err
 		}
-		return FromArray(v, from, not)
+		return FromArray(v, f, not)
 	case []float64:
-		from, err := ArrayConditionValueToArrayOfT(v, ast)
+		f, err := ArrayConditionValueToArrayOfT(v, from)
 		if err != nil {
 			return false, err
 		}
-		return FromArray(v, from, not)
+		return FromArray(v, f, not)
 	case []bool:
-		from, err := ArrayConditionValueToArrayOfT(v, ast)
+		f, err := ArrayConditionValueToArrayOfT(v, from)
 		if err != nil {
 			return false, err
 		}
-		return FromArray(v, from, not)
+		return FromArray(v, f, not)
 	case map[string]string:
-		from, err := ConditionValueToArrayOfString(ast.ConditionValue)
+		f, err := ConditionValueToArrayOfString(from)
 		if err != nil {
 			return false, err
 		}
-		return FromMap(v, from, not)
+		return FromMap(v, f, not)
 	case map[string]int:
-		from, err := ConditionValueToArrayOfString(ast.ConditionValue)
+		f, err := ConditionValueToArrayOfString(from)
 		if err != nil {
 			return false, err
 		}
-		return FromMap(v, from, not)
+		return FromMap(v, f, not)
 	case map[string]int8:
-		from, err := ConditionValueToArrayOfString(ast.ConditionValue)
+		f, err := ConditionValueToArrayOfString(from)
 		if err != nil {
 			return false, err
 		}
-		return FromMap(v, from, not)
+		return FromMap(v, f, not)
 	case map[string]int16:
-		from, err := ConditionValueToArrayOfString(ast.ConditionValue)
+		f, err := ConditionValueToArrayOfString(from)
 		if err != nil {
 			return false, err
 		}
-		return FromMap(v, from, not)
+		return FromMap(v, f, not)
 	case map[string]int32:
-		from, err := ConditionValueToArrayOfString(ast.ConditionValue)
+		f, err := ConditionValueToArrayOfString(from)
 		if err != nil {
 			return false, err
 		}
-		return FromMap(v, from, not)
+		return FromMap(v, f, not)
 	case map[string]int64:
-		from, err := ConditionValueToArrayOfString(ast.ConditionValue)
+		f, err := ConditionValueToArrayOfString(from)
 		if err != nil {
 			return false, err
 		}
-		return FromMap(v, from, not)
+		return FromMap(v, f, not)
 	case map[string]uint:
-		from, err := ConditionValueToArrayOfString(ast.ConditionValue)
+		f, err := ConditionValueToArrayOfString(from)
 		if err != nil {
 			return false, err
 		}
-		return FromMap(v, from, not)
+		return FromMap(v, f, not)
 	case map[string]uint8:
-		from, err := ConditionValueToArrayOfString(ast.ConditionValue)
+		f, err := ConditionValueToArrayOfString(from)
 		if err != nil {
 			return false, err
 		}
-		return FromMap(v, from, not)
+		return FromMap(v, f, not)
 	case map[string]uint16:
-		from, err := ConditionValueToArrayOfString(ast.ConditionValue)
+		f, err := ConditionValueToArrayOfString(from)
 		if err != nil {
 			return false, err
 		}
-		return FromMap(v, from, not)
+		return FromMap(v, f, not)
 	case map[string]uint32:
-		from, err := ConditionValueToArrayOfString(ast.ConditionValue)
+		f, err := ConditionValueToArrayOfString(from)
 		if err != nil {
 			return false, err
 		}
-		return FromMap(v, from, not)
+		return FromMap(v, f, not)
 	case map[string]uint64:
-		from, err := ConditionValueToArrayOfString(ast.ConditionValue)
+		f, err := ConditionValueToArrayOfString(from)
 		if err != nil {
 			return false, err
 		}
-		return FromMap(v, from, not)
+		return FromMap(v, f, not)
 	case map[string]float32:
-		from, err := ConditionValueToArrayOfString(ast.ConditionValue)
+		f, err := ConditionValueToArrayOfString(from)
 		if err != nil {
 			return false, err
 		}
-		return FromMap(v, from, not)
+		return FromMap(v, f, not)
 	case map[string]float64:
-		from, err := ConditionValueToArrayOfString(ast.ConditionValue)
+		f, err := ConditionValueToArrayOfString(from)
 		if err != nil {
 			return false, err
 		}
-		return FromMap(v, from, not)
+		return FromMap(v, f, not)
 	case map[string]bool:
-		from, err := ConditionValueToArrayOfString(ast.ConditionValue)
+		f, err := ConditionValueToArrayOfString(from)
 		if err != nil {
 			return false, err
 		}
-		return FromMap(v, from, not)
+		return FromMap(v, f, not)
 	case map[string]any:
-		from, err := ConditionValueToArrayOfString(ast.ConditionValue)
+		f, err := ConditionValueToArrayOfString(from)
 		if err != nil {
 			return false, err
 		}
-		return FromMap(v, from, not)
+		return FromMap(v, f, not)
 	default:
 		return false, fmt.Errorf("type %v not supported for From validation", reflect.TypeOf(v))
 	}

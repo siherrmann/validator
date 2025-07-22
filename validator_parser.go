@@ -7,9 +7,8 @@ import (
 )
 
 func ValidateValueWithParser[T comparable](input T, validation *model.Validation) error {
-	lexer := parser.NewLexer(validation.Requirement)
-	p := parser.NewParser(lexer)
-	r, err := p.ParseValidation()
+	p := parser.NewParser()
+	r, err := p.ParseValidation(validation.Requirement)
 	if err != nil {
 		return err
 	}

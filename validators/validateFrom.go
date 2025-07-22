@@ -7,7 +7,7 @@ import (
 )
 
 func ValidateFrom[T any](v T, ast *model.AstValue) error {
-	from, err := From(v, ast, false)
+	from, err := From(v, ast.ConditionValue, false)
 	if err != nil {
 		return fmt.Errorf("error checking from: %v", err)
 	}
@@ -19,7 +19,7 @@ func ValidateFrom[T any](v T, ast *model.AstValue) error {
 }
 
 func ValidateNotFrom[T any](v T, ast *model.AstValue) error {
-	notFrom, err := From(v, ast, true)
+	notFrom, err := From(v, ast.ConditionValue, true)
 	if err != nil {
 		return fmt.Errorf("error checking not from: %v", err)
 	}

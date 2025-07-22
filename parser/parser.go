@@ -17,21 +17,21 @@ type Parser struct {
 	peekToken    model.Token
 }
 
-// New takes a Lexer, creates a Parser with that Lexer, sets the current token and
-// the peek token and returns the Parser.
-func NewParser(l *Lexer) *Parser {
-	p := &Parser{lexer: l}
+// NewParser creates a new Parser instance.
+func NewParser() *Parser {
+	return &Parser{}
+}
+
+// ParseValidation parses tokens and creates an AST. It returns the RootNode
+// which holds a Value and in it the rest of the tree.
+func (p *Parser) ParseValidation(validation string) (model.RootNode, error) {
+	p.errors = []string{}
+	p.lexer = NewLexer(validation)
 
 	// Read two tokens, so currentToken and peekToken are both set.
 	p.nextToken()
 	p.nextToken()
 
-	return p
-}
-
-// ParseValidation parses tokens and creates an AST. It returns the RootNode
-// which holds a Value and in it the rest of the tree.
-func (p *Parser) ParseValidation() (model.RootNode, error) {
 	var rootNode model.RootNode
 
 	val := p.parseGroup(true)
@@ -87,7 +87,7 @@ func (p *Parser) parseGroup(root bool) *model.AstValue {
 				return group
 			} else {
 				p.parseError(fmt.Sprintf(
-					"error parsing validation group, expected `(`, `-` or condition, got: %s",
+					"error parsing validation group, expected left brace, `-` or condition, got: %s",
 					p.currentToken.Literal,
 				))
 				return nil
@@ -117,7 +117,7 @@ func (p *Parser) parseGroup(root bool) *model.AstValue {
 				p.nextToken()
 			} else {
 				p.parseError(fmt.Sprintf(
-					"error parsing group, expected `)`, condition or operator, got: %s, type: %v",
+					"error parsing group, expected right brace, condition or operator, got: %s, type: %v",
 					p.currentToken.Literal,
 					p.currentToken.Type,
 				))

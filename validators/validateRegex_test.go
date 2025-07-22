@@ -18,7 +18,7 @@ func TestValidateRegex(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Valid regex",
+			name: "Valid regex string",
 			args: args{
 				v:   "hello123",
 				ast: &model.AstValue{ConditionValue: "^[a-z]+[0-9]+$"},
@@ -26,9 +26,25 @@ func TestValidateRegex(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Invalid regex",
+			name: "Invalid regex string",
 			args: args{
 				v:   "hello@123",
+				ast: &model.AstValue{ConditionValue: "^[a-z]+[0-9]+$"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid regex array",
+			args: args{
+				v:   []string{"hello123"},
+				ast: &model.AstValue{ConditionValue: "^[a-z]+[0-9]+$"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid regex array",
+			args: args{
+				v:   []string{"hello@123"},
 				ast: &model.AstValue{ConditionValue: "^[a-z]+[0-9]+$"},
 			},
 			wantErr: true,
@@ -37,6 +53,14 @@ func TestValidateRegex(t *testing.T) {
 			name: "Invalid value type",
 			args: args{
 				v:   args{},
+				ast: &model.AstValue{ConditionValue: "^[a-z]+[0-9]+$"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Invalid value type array",
+			args: args{
+				v:   []struct{}{},
 				ast: &model.AstValue{ConditionValue: "^[a-z]+[0-9]+$"},
 			},
 			wantErr: true,

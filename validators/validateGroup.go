@@ -20,7 +20,7 @@ func ValidateGroups(groups map[string]*model.Group, groupSize map[string]int, gr
 						return fmt.Errorf("less then %v in group %s without error, all errors: %v", minValue, groupName, groupErrors[groupName])
 					}
 				}
-			case model.MAX_VLAUE:
+			case model.MAX_VALUE:
 				if len(group.ConditionValue) != 0 {
 					maxValue, err := strconv.Atoi(group.ConditionValue)
 					if err != nil {

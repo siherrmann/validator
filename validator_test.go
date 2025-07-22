@@ -2080,54 +2080,51 @@ func TestCaseParser(t *testing.T) {
 	type TestUpdate struct {
 		String string `json:"string" upd:"(min10 && max100) || equ'Bar'"`
 	}
+	p := parser.NewParser()
 
-	lexer := parser.NewLexer(`(min10 && max100) || equ'Bar'`)
-	p := parser.NewParser(lexer)
-	r, err := p.ParseValidation()
-	if err != nil {
-		t.Errorf("error parsing: %v", err)
-	}
+	t.Run("validParser", func(t *testing.T) {
+		r, err := p.ParseValidation(`(min10 && max100) || equ'Bar'`)
+		if err != nil {
+			t.Errorf("error parsing: %v", err)
+		}
 
-	expectedValidation := "(min'10' && max'100') || equ'Bar'"
-	if r.RootValue.AstGroupToString() != expectedValidation {
-		t.Errorf("test case parser - wanted %s, got: %s", expectedValidation, r.RootValue.AstGroupToString())
-	}
+		expectedValidation := "(min'10' && max'100') || equ'Bar'"
+		if r.RootValue.AstGroupToString() != expectedValidation {
+			t.Errorf("test case parser - wanted %s, got: %s", expectedValidation, r.RootValue.AstGroupToString())
+		}
+	})
 
-	data := &TestUpdate{
-		String: "test",
-	}
-	err = UnmapValidateAndUpdate(url.Values{"string": []string{"Bar"}}, data)
-	assertErrorUpdate(t, "validSingle", err, false)
+	t.Run("validParserWithUrlValues", func(t *testing.T) {
+		data := &TestUpdate{
+			String: "test",
+		}
+		err := UnmapValidateAndUpdate(url.Values{"string": []string{"Bar"}}, data)
+		assertErrorUpdate(t, "validSingle", err, false)
 
-	lexer = parser.NewLexer(`(min10 && max100) || (equ'Bar')`)
-	p = parser.NewParser(lexer)
-	r, err = p.ParseValidation()
-	if err != nil {
-		t.Errorf("error parsing: %v", err)
-	}
+		p = parser.NewParser()
+		r, err := p.ParseValidation(`(min10 && max100) || (equ'Bar')`)
+		if err != nil {
+			t.Errorf("error parsing: %v", err)
+		}
 
-	expectedValidation = "(min'10' && max'100') || (equ'Bar')"
-	if r.RootValue.AstGroupToString() != expectedValidation {
-		t.Errorf("test case parser - wanted %s, got: %s", expectedValidation, r.RootValue.AstGroupToString())
-	}
+		expectedValidation := "(min'10' && max'100') || (equ'Bar')"
+		if r.RootValue.AstGroupToString() != expectedValidation {
+			t.Errorf("test case parser - wanted %s, got: %s", expectedValidation, r.RootValue.AstGroupToString())
+		}
+	})
 
-	lexer = parser.NewLexer(`frmhappy,sad,neutral || equ''`)
-	p = parser.NewParser(lexer)
-	r, err = p.ParseValidation()
-	if err != nil {
-		t.Errorf("error parsing: %v", err)
-	}
+	t.Run("invalidParser", func(t *testing.T) {
+		p = parser.NewParser()
+		r, err := p.ParseValidation(`frmhappy,sad,neutral || equ''`)
+		if err != nil {
+			t.Errorf("error parsing: %v", err)
+		}
 
-	expectedValidation = "frm'happy,sad,neutral' || equ''"
-	if r.RootValue.AstGroupToString() != expectedValidation {
-		t.Errorf("test case parser - wanted %s, got: %s", expectedValidation, r.RootValue.AstGroupToString())
-	}
-
-	data = &TestUpdate{
-		String: "test",
-	}
-	err = UnmapValidateAndUpdate(url.Values{"string": []string{"Bar"}}, data)
-	assertErrorUpdate(t, "validSingle", err, false)
+		expectedValidation := "frm'happy,sad,neutral' || equ''"
+		if r.RootValue.AstGroupToString() != expectedValidation {
+			t.Errorf("test case parser - wanted %s, got: %s", expectedValidation, r.RootValue.AstGroupToString())
+		}
+	})
 }
 
 func assertError(t testing.TB, testCase string, err error, invalidField string) {
@@ -2151,9 +2148,8 @@ func assertErrorUpdate(t testing.TB, testCase string, err error, errorExpected b
 }
 
 func TestParser(t *testing.T) {
-	lexer := parser.NewLexer(`min1 max2 || ((max0) && equ90 || rex')(sa jkdnf')`)
-	p := parser.NewParser(lexer)
-	r, err := p.ParseValidation()
+	p := parser.NewParser()
+	r, err := p.ParseValidation(`min1 max2 || ((max0) && equ90 || rex')(sa jkdnf')`)
 	if r.RootValue == nil {
 		t.Log(r.RootValue)
 	} else {

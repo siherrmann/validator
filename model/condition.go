@@ -15,7 +15,7 @@ const (
 	EQUAL        ConditionType = "equ"
 	NOT_EQUAL    ConditionType = "neq"
 	MIN_VALUE    ConditionType = "min"
-	MAX_VLAUE    ConditionType = "max"
+	MAX_VALUE    ConditionType = "max"
 	CONTAINS     ConditionType = "con"
 	NOT_CONTAINS ConditionType = "nco"
 	FROM         ConditionType = "frm"
@@ -28,7 +28,7 @@ var ValidConditionTypes = map[ConditionType]int{
 	EQUAL:        1,
 	NOT_EQUAL:    2,
 	MIN_VALUE:    3,
-	MAX_VLAUE:    4,
+	MAX_VALUE:    4,
 	CONTAINS:     5,
 	NOT_CONTAINS: 6,
 	FROM:         7,

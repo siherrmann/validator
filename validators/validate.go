@@ -19,7 +19,7 @@ func RunFuncOnConditionGroup[T comparable](input T, astValue *model.AstValue) er
 		case model.EMPTY:
 			return nil
 		case model.GROUP:
-			err = RunFuncOnConditionGroup(input, astValue)
+			err = RunFuncOnConditionGroup(input, v)
 		case model.CONDITION:
 			switch v.ConditionType {
 			case model.NONE:
@@ -30,7 +30,7 @@ func RunFuncOnConditionGroup[T comparable](input T, astValue *model.AstValue) er
 				err = ValidateNotEqual(input, v)
 			case model.MIN_VALUE:
 				err = ValidateMin(input, v)
-			case model.MAX_VLAUE:
+			case model.MAX_VALUE:
 				err = ValidateMax(input, v)
 			case model.CONTAINS:
 				err = ValidateContains(input, v)
@@ -46,14 +46,12 @@ func RunFuncOnConditionGroup[T comparable](input T, astValue *model.AstValue) er
 				return fmt.Errorf("unknown condition type: %v", v.ConditionType)
 			}
 		}
-		if err != nil && i == 0 && v.Operator == model.OR {
-			errors = append(errors, err)
-		} else if err != nil && i == 0 && v.Operator == model.AND {
-			return err
-		} else if err != nil && i > 0 && astValue.ConditionGroup[i-1].Operator == model.OR {
-			errors = append(errors, err)
-		} else if err != nil {
-			return err
+		if err != nil {
+			if (i == 0 && v.Operator == model.OR) || (i > 0 && astValue.ConditionGroup[i-1].Operator == model.OR) {
+				errors = append(errors, err)
+			} else {
+				return err
+			}
 		}
 	}
 	if len(astValue.ConditionGroup) > 0 && len(errors) >= len(astValue.ConditionGroup) {
