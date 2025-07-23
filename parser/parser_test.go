@@ -22,6 +22,18 @@ func TestParser(t *testing.T) {
 			wantErr:  false,
 		},
 		{
+			name:     "Valid input with string",
+			input:    "equ'valid'",
+			expected: "equ'valid'",
+			wantErr:  false,
+		},
+		{
+			name:     "Valid input with newline",
+			input:    "equ'valid'\n|| equ'valid2'",
+			expected: "equ'valid' || equ'valid2'",
+			wantErr:  false,
+		},
+		{
 			name:     "Empty input",
 			input:    "",
 			expected: "",
@@ -34,8 +46,20 @@ func TestParser(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name:     "Invalid condition",
+			name:     "Invalid condition 1",
 			input:    "invalid",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Invalid condition 2",
+			input:    "1",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Empty condition value",
+			input:    "(equ)",
 			expected: "",
 			wantErr:  true,
 		},
@@ -45,26 +69,30 @@ func TestParser(t *testing.T) {
 			expected: "",
 			wantErr:  true,
 		},
-		// TODO fix
-		// {
-		// 	name:     "Invalid group end",
-		// 	input:    "(equapple || invalid",
-		// 	expected: "",
-		// 	wantErr:  true,
-		// },
+		{
+			name:     "Invalid group end",
+			input:    "(equapple || invalid",
+			expected: "",
+			wantErr:  true,
+		},
 		{
 			name:     "Invalid second condition",
 			input:    "equapple invalid",
 			expected: "",
 			wantErr:  true,
 		},
-		// TODO fix
-		// {
-		// 	name:     "Missing second condition in group",
-		// 	input:    "equapple && (|| equbanana)",
-		// 	expected: "",
-		// 	wantErr:  true,
-		// },
+		{
+			name:     "Missing second condition in group",
+			input:    "equapple && (|| equbanana)",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Invalid operator",
+			input:    "equapple &| equbanana",
+			expected: "",
+			wantErr:  true,
+		},
 		{
 			name:     "Condition group without operator",
 			input:    "min1 max2",
