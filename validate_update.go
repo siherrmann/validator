@@ -67,43 +67,8 @@ func UnmapValidateAndUpdate(values url.Values, structToUpdate interface{}, tagTy
 	return nil
 }
 
-// ValidateAndUpdate validates a given struct by upd tags.
-// ValidateAndUpdate needs a struct pointer and a json map as input.
-// The given struct is updated by the values in the json map.
-//
-// All fields in the struct need a upd tag.
-// The tag has to contain the key value for the json struct.
-// If no tag is present the field in the struct is ignored and does not get updated.
-//
-// The second part of the tag contains the conditions for the validation.
-//
-// If you want to use multiple conditions you can add them with a space in between them.
-//
-// A complex example for password would be:
-// `upd:"password, min8 max30 rex^(.*[A-Z])+(.*)$ rex^(.*[a-z])+(.*)$ rex^(.*\\d)+(.*)$ rex^(.*[\x60!@#$%^&*()_+={};':\"|\\,.<>/?~-])+(.*)$"`
-//
-// If you want don't want to validate the field you can add `upd:"json_key, -"`.
-// If you don't add the upd tag to every field the function will fail with an error.
-//
-// Conditions have different usages per variable type:
-//
-// equ - int/float/string == condition, len(array) == condition
-//
-// neq - int/float/string != condition, len(array) != condition
-//
-// min - int/float >= condition, len(string/array) >= condition
-//
-// max - int/float <= condition, len(string/array) <= condition
-//
-// con - strings.Contains(string, condition), contains(array, condition), int/float ignored
-//
-// rex - regexp.MatchString(condition, int/float/string), array ignored
-//
-// For con you need to put in a condition that is convertable to the underlying type of the arrary.
-// Eg. for an array of int the condition must be convertable to int (bad: `upd:"array, conA"`, good: `upd:"array, con1"`).
-//
-// In the case of rex the int and float input will get converted to a string (strconv.Itoa(int) and fmt.Sprintf("%f", f)).
-// If you want to check more complex cases you can obviously replace equ, neq, min, max and con with one regular expression.
+// ValidateAndUpdate validates a given JsonMap by the given validations and updates the struct.
+// It checks if the keys are in the map, validates the values and returns a new JsonMap.
 func ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate interface{}, tagType ...string) error {
 	tagTypeSet := model.VLD
 	if len(tagType) > 0 {

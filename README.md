@@ -49,26 +49,16 @@ You can do for example `vld:"max0 || ((min10 && max30) || equTest)"` for a strin
 ### Condition types
 
 Conditions have different usages per variable type:
-
-**-** - not validating/update without validating
-
-**equ** - `int/float/string == condition`, `len(array) == condition`
-
-**neq** - `int/float/string != condition`, `len(array) != condition`
-
-**min** - `int/float >= condition`, `len(strings.TrimSpace(string)/array) >= condition`
-
-**max** - `int/float <= condition`, `len(strings.TrimSpace(string)/array) <= condition`
-
-**con** - `strings.Contains(string, condition)`, `contains(array, condition)`, int/float ignored
-
-**nco** - `!strings.Contains(string, condition)`, `!contains(array, condition)`, int/float ignored
-
-**frm** - checks if given comma seperated list contains value/every item in array is contained in the comma seperated list, bool ignored
-
-**nfr** - checks if given comma seperated list does not contain value/every item in array is not contained in the comma seperated list, bool ignored
-
-**rex** - `regexp.MatchString(condition, strconv.Itoa(int)/strconv.FormatFloat(float, 'f', 3, 64)/string)`, array ignored
+- **-** - Not validating/update without validating.
+- **equ** - `int/float/string == condition`, `len(array) == condition`
+- **neq** - `int/float/string != condition`, `len(array) != condition`
+- **min** - `int/float >= condition`, `len(strings.TrimSpace(string)/array) >= condition`
+- **max** - `int/float <= condition`, `len(strings.TrimSpace(string)/array) <= condition`
+- **con** - `strings.Contains(string, condition)`, `contains(array, condition)`, int/float ignored
+- **nco** - `!strings.Contains(string, condition)`, `!contains(array, condition)`, int/float ignored
+- **frm** - Checks if given comma seperated list contains value/every item in array/every key in map.
+- **nfr** - Checks if given comma seperated list does not contain value/every item in array/every key in map.
+- **rex** - `regexp.MatchString(condition, strconv.Itoa(int)/strconv.FormatFloat(float, 'f', 3, 64)/string)`, array ignored
 
 For con you need to put in a condition that is convertable to the underlying type of the arrary.
 Eg. for an array of int the condition must be convertable to int (bad: `` `vld:"conA"` ``, good: `` `vld:"con1"` ``).
