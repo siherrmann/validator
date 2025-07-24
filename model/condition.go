@@ -21,6 +21,7 @@ const (
 	FROM         ConditionType = "frm"
 	NOT_FROM     ConditionType = "nfr"
 	REGX         ConditionType = "rex"
+	FUNC         ConditionType = "fun"
 )
 
 var ValidConditionTypes = map[ConditionType]int{
@@ -45,6 +46,9 @@ func LookupConditionType(conType ConditionType) error {
 	return fmt.Errorf("expected a valid condition type, found: %s", conType)
 }
 
+// GetConditionType returns the condition type from a string.
+// It checks if the string starts with a valid condition type prefix.
+// If the string is not valid, an error is returned.
 func GetConditionType(s string) (ConditionType, error) {
 	var conditionType ConditionType
 	if len(s) > 2 {
@@ -59,6 +63,9 @@ func GetConditionType(s string) (ConditionType, error) {
 	return conditionType, nil
 }
 
+// GetConditionByType extracts the condition value from a string based on the condition type.
+// It trims the prefix of the condition type from the string and returns the remaining part.
+// If the condition type is not valid or the value is empty, an error is returned.
 func GetConditionByType(conditionFull string, conditionType ConditionType) (string, error) {
 	if len(conditionType) != 3 {
 		return "", fmt.Errorf("length of conditionType has to be 3: %s", conditionType)
@@ -70,6 +77,8 @@ func GetConditionByType(conditionFull string, conditionType ConditionType) (stri
 	return condition, nil
 }
 
+// GetArrayFromCondition splits a condition string by commas and returns a slice of strings.
+// If the condition string is empty, an error is returned.
 func GetArrayFromCondition(condition string) ([]string, error) {
 	conditionList := strings.Split(condition, ",")
 	if len(conditionList) == 0 {
@@ -78,6 +87,8 @@ func GetArrayFromCondition(condition string) ([]string, error) {
 	return conditionList, nil
 }
 
+// GetConditionsAndOrFromString splits a condition string by spaces and returns a slice of strings.
+// It also checks if the string contains the "OR" operator and returns a boolean indicating its presence.
 func GetConditionsAndOrFromString(in string) ([]string, bool) {
 	or := false
 	conditions := strings.Split(in, " ")

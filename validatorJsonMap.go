@@ -110,17 +110,26 @@ func UnmapStructToJsonMap(structInput interface{}, jsonMapToUpdate *model.JsonMa
 	return nil
 }
 
-func UpdateJsonMap(validatedValues model.JsonMap, jsonMapToUpdate *model.JsonMap) error {
+func UpdateJsonMap(validatedValues model.JsonMap, jsonMapToUpdate *model.JsonMap) {
 	for k, v := range validatedValues {
 		(*jsonMapToUpdate)[k] = v
 	}
-	return nil
 }
 
 func SetStructValueByJson(fv reflect.Value, jsonValue interface{}) error {
 	if fv.IsValid() && fv.CanSet() {
 		switch fv.Kind() {
-		case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
+		case reflect.String:
+			if _, ok := jsonValue.(string); !ok {
+				return fmt.Errorf("input value has to be of type %v, was %v", fv.Kind(), reflect.ValueOf(jsonValue).Kind())
+			}
+			fv.SetString(string(jsonValue.(string)))
+		case reflect.Bool:
+			if _, ok := jsonValue.(bool); !ok {
+				return fmt.Errorf("input value has to be of type %v, was %v", fv.Kind(), reflect.ValueOf(jsonValue).Kind())
+			}
+			fv.SetBool(bool(jsonValue.(bool)))
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			var newInt int64
 			if fl, ok := jsonValue.(float64); ok {
 				// This case is for the case that json.Unmarshal unmarshals an int value into a float64 value.
@@ -143,7 +152,7 @@ func SetStructValueByJson(fv reflect.Value, jsonValue interface{}) error {
 				return fmt.Errorf("cannot set overflowing int")
 			}
 			fv.SetInt(newInt)
-		case reflect.Float64, reflect.Float32:
+		case reflect.Float32, reflect.Float64:
 			var newFloat float64
 			if fl, ok := jsonValue.(float64); ok {
 				newFloat = float64(fl)
@@ -157,16 +166,6 @@ func SetStructValueByJson(fv reflect.Value, jsonValue interface{}) error {
 				return fmt.Errorf("cannot set overflowing float")
 			}
 			fv.SetFloat(newFloat)
-		case reflect.String:
-			if _, ok := jsonValue.(string); !ok {
-				return fmt.Errorf("input value has to be of type %v, was %v", fv.Kind(), reflect.ValueOf(jsonValue).Kind())
-			}
-			fv.SetString(string(jsonValue.(string)))
-		case reflect.Bool:
-			if _, ok := jsonValue.(bool); !ok {
-				return fmt.Errorf("input value has to be of type %v, was %v", fv.Kind(), reflect.ValueOf(jsonValue).Kind())
-			}
-			fv.SetBool(bool(jsonValue.(bool)))
 		case reflect.Struct:
 			if v, ok := jsonValue.(string); ok {
 				validation := &model.Validation{Type: model.Time}
@@ -198,90 +197,6 @@ func SetStructValueByJson(fv reflect.Value, jsonValue interface{}) error {
 			}
 
 			switch t := reflect.TypeOf(fv.Interface()).Elem().Kind(); t {
-			case reflect.Int:
-				if v, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int](v)
-					if err != nil {
-						return err
-					}
-					fv.Set(reflect.ValueOf(typedArray))
-				} else if _, ok := jsonValue.([]int); ok {
-					fv.Set(reflect.ValueOf(jsonValue.([]int)))
-				} else {
-					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
-				}
-			case reflect.Int64:
-				if v, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int64](v)
-					if err != nil {
-						return err
-					}
-					fv.Set(reflect.ValueOf(typedArray))
-				} else if _, ok := jsonValue.([]int64); ok {
-					fv.Set(reflect.ValueOf(jsonValue.([]int64)))
-				} else {
-					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
-				}
-			case reflect.Int32:
-				if v, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int32](v)
-					if err != nil {
-						return err
-					}
-					fv.Set(reflect.ValueOf(typedArray))
-				} else if _, ok := jsonValue.([]int32); ok {
-					fv.Set(reflect.ValueOf(jsonValue.([]int32)))
-				} else {
-					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
-				}
-			case reflect.Int16:
-				if v, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int16](v)
-					if err != nil {
-						return err
-					}
-					fv.Set(reflect.ValueOf(typedArray))
-				} else if _, ok := jsonValue.([]int16); ok {
-					fv.Set(reflect.ValueOf(jsonValue.([]int16)))
-				} else {
-					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
-				}
-			case reflect.Int8:
-				if v, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int8](v)
-					if err != nil {
-						return err
-					}
-					fv.Set(reflect.ValueOf(typedArray))
-				} else if _, ok := jsonValue.([]int8); ok {
-					fv.Set(reflect.ValueOf(jsonValue.([]int8)))
-				} else {
-					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
-				}
-			case reflect.Float64:
-				if v, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := helper.ArrayOfInterfaceToArrayOf[float64](v)
-					if err != nil {
-						return err
-					}
-					fv.Set(reflect.ValueOf(typedArray))
-				} else if _, ok := jsonValue.([]float64); ok {
-					fv.Set(reflect.ValueOf(jsonValue.([]float64)))
-				} else {
-					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
-				}
-			case reflect.Float32:
-				if v, ok := jsonValue.([]interface{}); ok {
-					typedArray, err := helper.ArrayOfInterfaceToArrayOf[float32](v)
-					if err != nil {
-						return err
-					}
-					fv.Set(reflect.ValueOf(typedArray))
-				} else if _, ok := jsonValue.([]float32); ok {
-					fv.Set(reflect.ValueOf(jsonValue.([]float32)))
-				} else {
-					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
-				}
 			case reflect.String:
 				if v, ok := jsonValue.([]interface{}); ok {
 					typedArray, err := helper.ArrayOfInterfaceToArrayOf[string](v)
@@ -303,6 +218,90 @@ func SetStructValueByJson(fv reflect.Value, jsonValue interface{}) error {
 					fv.Set(reflect.ValueOf(typedArray))
 				} else if _, ok := jsonValue.([]bool); ok {
 					fv.Set(reflect.ValueOf(jsonValue.([]bool)))
+				} else {
+					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
+				}
+			case reflect.Int:
+				if v, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int](v)
+					if err != nil {
+						return err
+					}
+					fv.Set(reflect.ValueOf(typedArray))
+				} else if _, ok := jsonValue.([]int); ok {
+					fv.Set(reflect.ValueOf(jsonValue.([]int)))
+				} else {
+					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
+				}
+			case reflect.Int8:
+				if v, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int8](v)
+					if err != nil {
+						return err
+					}
+					fv.Set(reflect.ValueOf(typedArray))
+				} else if _, ok := jsonValue.([]int8); ok {
+					fv.Set(reflect.ValueOf(jsonValue.([]int8)))
+				} else {
+					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
+				}
+			case reflect.Int16:
+				if v, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int16](v)
+					if err != nil {
+						return err
+					}
+					fv.Set(reflect.ValueOf(typedArray))
+				} else if _, ok := jsonValue.([]int16); ok {
+					fv.Set(reflect.ValueOf(jsonValue.([]int16)))
+				} else {
+					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
+				}
+			case reflect.Int32:
+				if v, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int32](v)
+					if err != nil {
+						return err
+					}
+					fv.Set(reflect.ValueOf(typedArray))
+				} else if _, ok := jsonValue.([]int32); ok {
+					fv.Set(reflect.ValueOf(jsonValue.([]int32)))
+				} else {
+					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
+				}
+			case reflect.Int64:
+				if v, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[int64](v)
+					if err != nil {
+						return err
+					}
+					fv.Set(reflect.ValueOf(typedArray))
+				} else if _, ok := jsonValue.([]int64); ok {
+					fv.Set(reflect.ValueOf(jsonValue.([]int64)))
+				} else {
+					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
+				}
+			case reflect.Float32:
+				if v, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[float32](v)
+					if err != nil {
+						return err
+					}
+					fv.Set(reflect.ValueOf(typedArray))
+				} else if _, ok := jsonValue.([]float32); ok {
+					fv.Set(reflect.ValueOf(jsonValue.([]float32)))
+				} else {
+					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
+				}
+			case reflect.Float64:
+				if v, ok := jsonValue.([]interface{}); ok {
+					typedArray, err := helper.ArrayOfInterfaceToArrayOf[float64](v)
+					if err != nil {
+						return err
+					}
+					fv.Set(reflect.ValueOf(typedArray))
+				} else if _, ok := jsonValue.([]float64); ok {
+					fv.Set(reflect.ValueOf(jsonValue.([]float64)))
 				} else {
 					return fmt.Errorf("input value has to be of type %v, was %v", t, reflect.TypeOf(jsonValue).Elem().Kind())
 				}

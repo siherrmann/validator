@@ -15,6 +15,7 @@ import (
 // Default tag type.
 const VLD string = "vld"
 
+// Validation represents a validation rule for a struct field.
 type Validation struct {
 	Key         string
 	Type        ValidatorType
@@ -25,6 +26,8 @@ type Validation struct {
 	InnerValidation []Validation
 }
 
+// GetValidationsFromStruct extracts validation rules from a struct based on the provided tag type.
+// It iterates over the struct fields, checks for the specified tag type, and constructs Validation.
 func GetValidationsFromStruct(in interface{}, tagType string) ([]Validation, error) {
 	err := helper.CheckValidPointerToStruct(in)
 	if err != nil {
@@ -50,6 +53,9 @@ func GetValidationsFromStruct(in interface{}, tagType string) ([]Validation, err
 	return validations, nil
 }
 
+// GetValidationFromStructField extracts validation rules from a struct field based on the provided tag type.
+// It checks the field's tag for the specified tag type and constructs a Validation object.
+// If no json tag is found, it uses the field name as the key.
 func GetValidationFromStructField(tagType string, fieldValue reflect.Value, fieldType reflect.StructField) (Validation, error) {
 	validation := Validation{}
 	validation.Key = fieldType.Name
@@ -89,6 +95,11 @@ func GetValidationFromStructField(tagType string, fieldValue reflect.Value, fiel
 	return validation, nil
 }
 
+// GetValidValue converts the input value to a valid type based on the Validation's Type.
+// It handles various types such as string, int, float, bool, and arrays.
+// If the input is a JsonMap, it converts it to a map[string]interface{}.
+// If the input type is not recognized, it returns the input as is.
+// It returns an error if the conversion fails.
 func (r *Validation) GetValidValue(in interface{}) (interface{}, error) {
 	var out interface{}
 	var err error
@@ -122,8 +133,11 @@ func (r *Validation) GetValidValue(in interface{}) (interface{}, error) {
 	return out, err
 }
 
+// ValidatorMap is a map of validation keys to Validation objects.
+// It is used to store and manage multiple validation rules for different struct fields.
 type ValidatorMap map[string]Validation
 
+// ValidatorType is the type for all available validation types.
 type ValidatorType string
 
 const (
@@ -139,6 +153,11 @@ const (
 	TimeUnix    ValidatorType = "timeUnix"
 )
 
+// TypeFromInterface determines the ValidatorType based on the type of the input interface.
+// It checks the type of the input and returns the corresponding ValidatorType.
+// If the type is not recognized, it defaults to Struct.
+// It handles basic types like string, int, float, bool, and complex types like JsonMap and arrays.
+// It also checks for time.Time type and returns the appropriate ValidatorType.
 func TypeFromInterface(in interface{}) ValidatorType {
 	switch in.(type) {
 	case string:
@@ -174,6 +193,10 @@ func TypeFromInterface(in interface{}) ValidatorType {
 	}
 }
 
+// InterfaceFromString converts a string input to the appropriate interface type based on the Validation's Type.
+// It handles various types such as string, int, float, bool, array, map, and time.
+// It uses helper functions to parse Unix and ISO8601 date strings.
+// It returns an error if the conversion fails.
 func (r *Validation) InterfaceFromString(in string) (interface{}, error) {
 	switch r.Type {
 	case String:
@@ -237,6 +260,10 @@ func (r *Validation) InterfaceFromString(in string) (interface{}, error) {
 	}
 }
 
+// InterfaceFromInt converts an integer input to the appropriate interface type based on the Validation's Type.
+// It handles various types such as int, float, bool, and time.
+// It uses helper functions to parse Unix date strings.
+// It returns an error if the conversion fails.
 func (r *Validation) InterfaceFromInt(in int) (interface{}, error) {
 	switch r.Type {
 	case Int:
@@ -259,6 +286,10 @@ func (r *Validation) InterfaceFromInt(in int) (interface{}, error) {
 	}
 }
 
+// InterfaceFromFloat converts a float input to the appropriate interface type based on the Validation's Type.
+// It handles various types such as int, float, bool, and time.
+// It uses helper functions to parse Unix date strings.
+// It returns an error if the conversion fails.
 func (r *Validation) InterfaceFromFloat(in float64) (interface{}, error) {
 	switch r.Type {
 	case Int:
@@ -281,6 +312,10 @@ func (r *Validation) InterfaceFromFloat(in float64) (interface{}, error) {
 	}
 }
 
+// InterfaceFromArrayOfString converts an array of strings to the appropriate interface type based on the Validation's Type.
+// If the Validation's Type is Array, it returns the array as is.
+// If the Validation's Type is not Array, it returns the first element of the array as a string.
+// It returns an error if the conversion fails.
 func (r *Validation) InterfaceFromArrayOfString(in []string) (interface{}, error) {
 	switch r.Type {
 	case Array:
@@ -295,6 +330,8 @@ func (r *Validation) InterfaceFromArrayOfString(in []string) (interface{}, error
 	}
 }
 
+// UnixStringToTime converts a Unix timestamp string to a time.Time object.
+// It checks if the string is a valid Unix timestamp and parses it.
 func UnixStringToTime(in string) (time.Time, error) {
 	// Unix seconds date string
 	match, _ := regexp.MatchString("^[0-9]{1,}$", in)
@@ -309,6 +346,9 @@ func UnixStringToTime(in string) (time.Time, error) {
 	return time.Unix(seconds, 0), nil
 }
 
+// ISO8601StringToTime converts an ISO8601 date string to a time.Time object.
+// It checks the format of the string and parses it accordingly.
+// It supports various formats including local time, UTC time, with and without microseconds.
 func ISO8601StringToTime(in string) (time.Time, error) {
 	layout := ""
 	// Iso8601 date string in local time (yyyy-MM-ddTHH:mm:ss.mmmuuu)

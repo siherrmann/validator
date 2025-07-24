@@ -11,13 +11,15 @@ Validator for structs and json maps to validate fields by tag.
 The goal of the validator package is to provide a fast, simple validation tool that can validate existing structs and validate url values and json bodys to update an empty struct with these values if they are valid.
 
 Main focus is centralisation of validation to one object. You can obviously do one request object for each request type (which is sometimes still needed), but with this package you can do even something like that:
+
 ```go
 type User struct {
-	ID		int		`json:"id" del:"min1"`
+	ID	int	`json:"id" del:"min1"`
 	Name	string	`json:"name" cre:"min1" upd:"min1, gr1min1"`
 	Adress	string	`json:"adress" cre:"min1" upd:"min1, gr1min1"`
 }
 ```
+
 You can see the 3 different tags (`cre`, `upd`, `del`). With these tags you can use the same object in 3 different handlers with 3 different validations. In this example for creation you need name and adress, for an update you need at least one of name or adress, and for deletion you need an id greater 0.
 
 ---
@@ -49,19 +51,19 @@ You can do for example `vld:"max0 || ((min10 && max30) || equTest)"` for a strin
 ### Condition types
 
 Conditions have different usages per variable type:
-- **-** - Not validating/update without validating.
-- **equ** - `int/float/string == condition`, `len(array) == condition`
-- **neq** - `int/float/string != condition`, `len(array) != condition`
-- **min** - `int/float >= condition`, `len(strings.TrimSpace(string)/array) >= condition`
-- **max** - `int/float <= condition`, `len(strings.TrimSpace(string)/array) <= condition`
-- **con** - `strings.Contains(string, condition)`, `contains(array, condition)`, int/float ignored
-- **nco** - `!strings.Contains(string, condition)`, `!contains(array, condition)`, int/float ignored
-- **frm** - Checks if given comma seperated list contains value/every item in array/every key in map.
-- **nfr** - Checks if given comma seperated list does not contain value/every item in array/every key in map.
-- **rex** - `regexp.MatchString(condition, strconv.Itoa(int)/strconv.FormatFloat(float, 'f', 3, 64)/string)`, array ignored
+- `-` - Not validating/update without validating.
+- `equ` - `int/float/string == condition`, `len(array) == condition`
+- `neq` - `int/float/string != condition`, `len(array) != condition`
+- `min` - `int/float >= condition`, `len(strings.TrimSpace(string)/array) >= condition`
+- `max` - `int/float <= condition`, `len(strings.TrimSpace(string)/array) <= condition`
+- `con` - `strings.Contains(string, condition)`, `contains(array, condition)`, int/float ignored
+- `nco` - `!strings.Contains(string, condition)`, `!contains(array, condition)`, int/float ignored
+- `frm` - Checks if given comma seperated list contains value/every item in array/every key in map.
+- `nfr` - Checks if given comma seperated list does not contain value/every item in array/every key in map.
+- `rex` - `regexp.MatchString(condition, strconv.Itoa(int)/strconv.FormatFloat(float, 'f', 3, 64)/string)`, array ignored
 
 For con you need to put in a condition that is convertable to the underlying type of the arrary.
-Eg. for an array of int the condition must be convertable to int (bad: `` `vld:"conA"` ``, good: `` `vld:"con1"` ``).
+Eg. for an array of int the condition must be convertable to int (bad: `vld:"conA"`, good: `vld:"con1"`).
 
 In the case of rex the int and float input will get converted to a string (`strconv.Itoa(int)` and `fmt.Sprintf("%f", f)`).
 If you want to check more complex cases you can obviously replace `equ`, `neq`, `min`, `max` and `con` with one regular expression.

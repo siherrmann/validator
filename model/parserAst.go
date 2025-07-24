@@ -22,6 +22,7 @@ type AstValue struct {
 	End            int
 }
 
+// AstValueType is the type for all available AST value types.
 type AstValueType string
 
 const (
@@ -30,8 +31,14 @@ const (
 	CONDITION AstValueType = "Condition"
 )
 
+// ConditionGroup is a slice of AstValue pointers.
 type ConditionGroup []*AstValue
 
+// AstGroupToString converts the AstValue's ConditionGroup to a string representation.
+// It iterates over each AstValue in the group and formats it based on its type.
+// If the AstValue is a group, it recursively calls itself to get the string representation of the group.
+// If the AstValue is a condition, it formats it as a string with its ConditionType and ConditionValue.
+// The resulting string is a concatenation of all conditions and groups, separated by spaces.
 func (r AstValue) AstGroupToString() string {
 	groupConditions := []string{}
 	groupString := ""
@@ -51,6 +58,10 @@ func (r AstValue) AstGroupToString() string {
 	return groupString
 }
 
+// AstConditionToString converts the AstValue's ConditionType and ConditionValue to a string representation.
+// If the AstValue has an Operator, it includes that in the string.
+// The resulting string is formatted as "<ConditionType>'<ConditionValue>' <Operator>" if the Operator is present,
+// or as "<ConditionType>'<ConditionValue>'" if the Operator is not present.
 func (r AstValue) AstConditionToString() string {
 	if len(r.Operator) > 0 {
 		return fmt.Sprintf("%v'%v' %v", r.ConditionType, r.ConditionValue, r.Operator)
@@ -69,6 +80,8 @@ const (
 	OR  Operator = "||"
 )
 
+// validOperator is a map that holds valid operators and their corresponding integer values.
+// This map is used to validate operators in the AST.
 var validOperator = map[Operator]int{
 	AND: 0,
 	OR:  1,
