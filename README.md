@@ -14,9 +14,9 @@ Main focus is centralisation of validation to one object. You can obviously do o
 
 ```go
 type User struct {
-	ID	int	`json:"id" del:"min1"`
-	Name	string	`json:"name" cre:"min1" upd:"min1, gr1min1"`
-	Adress	string	`json:"adress" cre:"min1" upd:"min1, gr1min1"`
+    ID     int    `json:"id" del:"min1"`
+    Name   string `json:"name" cre:"min1" upd:"min1, gr1min1"`
+    Adress string `json:"adress" cre:"min1" upd:"min1, gr1min1"`
 }
 ```
 
@@ -48,22 +48,22 @@ type User struct {
 }
 
 user := User{
-	Name:  "John Doe",
-	Email: "john.doe@example.com",
-	Age:   25,
+    Name:  "John Doe",
+    Email: "john.doe@example.com",
+    Age:   25,
 }
 
 // Example with validator
 v := validator.NewValidator()
 err = v.Validate(user)
 if err != nil {
-	fmt.Println("Validation failed for user:", err)
+    fmt.Println("Validation failed for user:", err)
 }
 
 // Example with wrapper functions (uses a new validator instance internally)
 err = Validate(user)
 if err != nil {
-	fmt.Println("Validation failed for user:", err)
+    fmt.Println("Validation failed for user:", err)
 }
 ```
 
@@ -76,12 +76,12 @@ If you want to directly validate bytes and update for example the `User` struct 
 
 ```go
 func CreateUser(w http.ResponseWriter, r *http.Request) {
-	user := &User{}
-	err := v.UnmapOrUnmarshalValidateAndUpdate(r, user)
-	if err != nil {
-		fmt.Println("Validation failed for new user:", err)
-	}
-	...
+    user := &User{}
+    err := v.UnmapOrUnmarshalValidateAndUpdate(r, user)
+    if err != nil {
+        fmt.Println("Validation failed for new user:", err)
+    }
+    ...
 }
 ```
 
@@ -89,37 +89,37 @@ If you want to use the `User` struct for multiple handlers like `CreateUser`, `U
 
 ```go
 type User struct {
-	ID    int    `delete:"min1"`
+    ID    int    `delete:"min1"`
     Name  string `create:"min3" update:"min3, gr1min1"`
     Email string `create:"rex^[^@]+@[^@]+\\.[^@]+$" update:"rex^[^@]+@[^@]+\\.[^@]+$, gr1min1"`
     Age   int    `create:"min18" update:"min18, gr1min1"`
 }
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
-	user := &User{}
-	err := v.UnmapOrUnmarshalValidateAndUpdate(r, user, "create")
-	if err != nil {
-		fmt.Println("Validation failed for new user:", err)
-	}
-	...
+    user := &User{}
+    err := v.UnmapOrUnmarshalValidateAndUpdate(r, user, "create")
+    if err != nil {
+        fmt.Println("Validation failed for new user:", err)
+    }
+    ...
 }
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
-	user := &User{}
-	err := v.UnmapOrUnmarshalValidateAndUpdate(r, user, "update")
-	if err != nil {
-		fmt.Println("Validation failed for new user:", err)
-	}
-	...
+    user := &User{}
+    err := v.UnmapOrUnmarshalValidateAndUpdate(r, user, "update")
+    if err != nil {
+        fmt.Println("Validation failed for new user:", err)
+    }
+    ...
 }
 
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
-	user := &User{}
-	err := v.UnmapOrUnmarshalValidateAndUpdate(r, user, "delete")
-	if err != nil {
-		fmt.Println("Validation failed for new user:", err)
-	}
-	...
+    user := &User{}
+    err := v.UnmapOrUnmarshalValidateAndUpdate(r, user, "delete")
+    if err != nil {
+        fmt.Println("Validation failed for new user:", err)
+    }
+    ...
 }
 ```
 
@@ -175,11 +175,11 @@ A small code example would be:
 
 ```go
 type Error struct {
-	ID                  int       `json:"id"`
-	StatusCode          int       `json:"status_code" vld:"min100" upd:"min100, gr1min1"`
-	Message             string    `json:"message" vld:"min1" upd:"min1, gr1min1"`
-	UnderlyingException string    `json:"underlying_exception" vld:"min1, gr1min1" upd:"min1, gr1min1"`
-	CreatedAt           time.Time `json:"created_at" vld:"-"`
+    ID                  int       `json:"id"`
+    StatusCode          int       `json:"status_code" vld:"min100" upd:"min100, gr1min1"`
+    Message             string    `json:"message" vld:"min1" upd:"min1, gr1min1"`
+    UnderlyingException string    `json:"underlying_exception" vld:"min1, gr1min1" upd:"min1, gr1min1"`
+    CreatedAt           time.Time `json:"created_at" vld:"-"`
 }
 ```
 
