@@ -201,9 +201,12 @@ To run benchmarks run `go test -bench . -count 100 > bench.txt` (with memory all
 
 # ⭐ Features
 
-- Validate structs by `vld` tag.
 - Validate json or form values by struct tag.
 - Validate json or form values by validations.
 - Validate and update a struct from `JsonMap`.
-- Use custom tags.
-- Use multiple custom tags in one struct for multiple validation situations.
+- **Tag-based validation**: Define validation rules directly within struct tags using a concise syntax (e.g., min, max, regx, required). Use multiple custom tags in one struct for multiple validation situations. The dafault tag is `vld`.
+- **Custom validation functions**: Extend the validation capabilities by registering and using your own custom validation logic.
+- **Nested struct support**: Seamlessly validate complex data structures containing nested structs.
+- **Array validation**: Apply validation rules to elements within arrays and slices.
+- **Grouped validations**: Organize validation rules into logical groups for more granular control.
+- **Advanced logical conditions**: Implement complex validation scenarios using logical operators (e.g., AND, OR) within your tags.
