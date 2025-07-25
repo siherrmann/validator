@@ -24,13 +24,110 @@ You can see the 3 different tags (`cre`, `upd`, `del`). With these tags you can 
 
 ---
 
+# 🛠️ Installation
+
+To integrate the validator package into your Go project, use the standard go get command:
+
+```
+go get github.com/siherrmann/validator
+```
+
+---
+
 # 🚀 Getting started
 
-`Validate` validates a given struct by `vld` or custom tags. `ValidateAndUpdate` does update the given struct with the given json after validating the json. `UnmarshalValidateAndUpdate` and similar functions are unpacking something (request body or url values), then validating the input and updating the given struct. `ValidateAndUpdateWithValidation` gives you the ability to update a map with the values from a json map by using an array of `Validation` (which is the equivalent for tags in a struct).
+To begin validating your structs, you either first create a new `Validator` instance and then invoke its `Validate` method on your target struct or use the wrapper function.
+
+Here's a simple example demonstrating how to validate a User struct:
+
+```go
+type User struct {
+    Name  string `vld:"min3"`
+    Email string `vld:"rex^[^@]+@[^@]+\\.[^@]+$"`
+    Age   int    `vld:"min18"`
+}
+
+user := User{
+	Name:  "John Doe",
+	Email: "john.doe@example.com",
+	Age:   25,
+}
+
+// Example with validator
+v := validator.NewValidator()
+err = v.Validate(user)
+if err != nil {
+	fmt.Println("Validation failed for user:", err)
+}
+
+// Example with wrapper functions (uses a new validator instance internally)
+err = Validate(user)
+if err != nil {
+	fmt.Println("Validation failed for user:", err)
+}
+```
+
+In these examples:
+- `vld:"min3"`: Ensures the string field Name has a minimum length of 3 characters.
+- `vld:"rex^[^@]+@[^@]+\\.[^@]+$"`: Validates Email against a regular expression pattern.
+- `vld:"min18"`: Checks that the integer field Age has a minimum value of 18.
+
+If you want to directly validate bytes and update for example the `User` struct if the values are valid you can use `UnmapOrUnmarshalValidateAndUpdate`.
+
+```go
+func CreateUser(w http.ResponseWriter, r *http.Request) {
+	user := &User{}
+	err := v.UnmapOrUnmarshalValidateAndUpdate(r, user)
+	if err != nil {
+		fmt.Println("Validation failed for new user:", err)
+	}
+	...
+}
+```
+
+If you want to use the `User` struct for multiple handlers like `CreateUser`, `UpdateUser` and `DeleteUser`, you could use custom tags like this:
+
+```go
+type User struct {
+	ID    int    `delete:"min1"`
+    Name  string `create:"min3" update:"min3, gr1min1"`
+    Email string `create:"rex^[^@]+@[^@]+\\.[^@]+$" update:"rex^[^@]+@[^@]+\\.[^@]+$, gr1min1"`
+    Age   int    `create:"min18" update:"min18, gr1min1"`
+}
+
+func CreateUser(w http.ResponseWriter, r *http.Request) {
+	user := &User{}
+	err := v.UnmapOrUnmarshalValidateAndUpdate(r, user, "create")
+	if err != nil {
+		fmt.Println("Validation failed for new user:", err)
+	}
+	...
+}
+
+func UpdateUser(w http.ResponseWriter, r *http.Request) {
+	user := &User{}
+	err := v.UnmapOrUnmarshalValidateAndUpdate(r, user, "update")
+	if err != nil {
+		fmt.Println("Validation failed for new user:", err)
+	}
+	...
+}
+
+func DeleteUser(w http.ResponseWriter, r *http.Request) {
+	user := &User{}
+	err := v.UnmapOrUnmarshalValidateAndUpdate(r, user, "delete")
+	if err != nil {
+		fmt.Println("Validation failed for new user:", err)
+	}
+	...
+}
+```
 
 ---
 
 # Validation
+
+`Validate` validates a given struct by `vld` or custom tags. `ValidateAndUpdate` does update the given struct with the given json after validating the json. `UnmarshalValidateAndUpdate` and similar functions are unpacking something (request body or url values), then validating the input and updating the given struct. `ValidateAndUpdateWithValidation` gives you the ability to update a map with the values from a json map by using an array of `Validation` (which is the equivalent for tags in a struct).
 
 You can add a validate tag with the syntax `vld:"[requirement], [groups]"`.
 Groups are seperated by a space (eg. `gr1min1 gr2max1`).
@@ -61,6 +158,7 @@ Conditions have different usages per variable type:
 - `frm` - Checks if given comma seperated list contains value/every item in array/every key in map.
 - `nfr` - Checks if given comma seperated list does not contain value/every item in array/every key in map.
 - `rex` - `regexp.MatchString(condition, strconv.Itoa(int)/strconv.FormatFloat(float, 'f', 3, 64)/string)`, array ignored
+- `fun` - Checks the value with a custom function. The function has to be added to the validator, so it does not work with the wrapped functions.
 
 For con you need to put in a condition that is convertable to the underlying type of the arrary.
 Eg. for an array of int the condition must be convertable to int (bad: `vld:"conA"`, good: `vld:"con1"`).
