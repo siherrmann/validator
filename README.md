@@ -204,7 +204,7 @@ To run benchmarks run `go test -bench . -count 100 > bench.txt` (with memory all
 - Validate json or form values by struct tag.
 - Validate json or form values by validations.
 - Validate and update a struct from `JsonMap`.
-- **Tag-based validation**: Define validation rules directly within struct tags using a concise syntax (e.g., min, max, rex). Use multiple custom tags in one struct for multiple validation situations. The dafault tag is `vld`.
+- **Tag-based validation**: Define validation rules directly within struct tags using a concise syntax (e.g. `vld:"(min3 && ncotest) || max0"`). Use multiple custom tags in one struct for multiple validation situations. The dafault tag is `vld`.
 - **Custom validation functions**: Extend the validation capabilities by registering and using your own custom validation logic. Use it beside other requirements like `min3 && funYourCheckFunction`. This also allows you to check unsupported types by only using `funYourCheckFunction`.
 - **Nested struct support**: Seamlessly validate complex data structures containing nested structs.
 - **Array validation**: Apply validation rules to elements within arrays and slices.
