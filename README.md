@@ -158,7 +158,7 @@ Conditions have different usages per variable type:
 - `frm` - Checks if given comma seperated list contains value/every item in array/every key in map.
 - `nfr` - Checks if given comma seperated list does not contain value/every item in array/every key in map.
 - `rex` - `regexp.MatchString(condition, strconv.Itoa(int)/strconv.FormatFloat(float, 'f', 3, 64)/string)`, array ignored
-- `fun` - Checks the value with a custom function. The function has to be added to the validator, so it does not work with the wrapped functions.
+- `fun` - Checks the value with a custom function. The function has to be added to the validator, so it does not work with the wrapped functions. It can be used beside other requirements like `min3 && funYourCheckFunction`. This also allows you to check unsupported types by only using `funYourCheckFunction`.
 
 For con you need to put in a condition that is convertable to the underlying type of the arrary.
 Eg. for an array of int the condition must be convertable to int (bad: `vld:"conA"`, good: `vld:"con1"`).
@@ -204,8 +204,8 @@ To run benchmarks run `go test -bench . -count 100 > bench.txt` (with memory all
 - Validate json or form values by struct tag.
 - Validate json or form values by validations.
 - Validate and update a struct from `JsonMap`.
-- **Tag-based validation**: Define validation rules directly within struct tags using a concise syntax (e.g., min, max, regx, required). Use multiple custom tags in one struct for multiple validation situations. The dafault tag is `vld`.
-- **Custom validation functions**: Extend the validation capabilities by registering and using your own custom validation logic.
+- **Tag-based validation**: Define validation rules directly within struct tags using a concise syntax (e.g., min, max, rex). Use multiple custom tags in one struct for multiple validation situations. The dafault tag is `vld`.
+- **Custom validation functions**: Extend the validation capabilities by registering and using your own custom validation logic. Use it beside other requirements like `min3 && funYourCheckFunction`. This also allows you to check unsupported types by only using `funYourCheckFunction`.
 - **Nested struct support**: Seamlessly validate complex data structures containing nested structs.
 - **Array validation**: Apply validation rules to elements within arrays and slices.
 - **Grouped validations**: Organize validation rules into logical groups for more granular control.
