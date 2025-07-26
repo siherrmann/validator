@@ -18,7 +18,7 @@ import (
 // It is actually doing the same as UnmapOrUnmarshalValidateAndUpdate, but in another order.
 // It does directly update the struct and validates afterwards.
 // Normally you would either only use Validate or use UnmapOrUnmarshalValidateAndUpdate for early return on error.
-func (r *Validator) UnmapOrUnmarshalAndValidate(request *http.Request, structToUpdate interface{}, tagType ...string) error {
+func (r *Validator) UnmapOrUnmarshalAndValidate(request *http.Request, structToUpdate any, tagType ...string) error {
 	err := request.ParseForm()
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func (r *Validator) UnmapOrUnmarshalAndValidate(request *http.Request, structToU
 // It is actually doing the same as UnmarshalValidateAndUpdate, but in another order.
 // It does directly update the struct and validates afterwards.
 // Normally you would either only use Validate or use UnmarshalValidateAndUpdate for early return on error.
-func (r *Validator) UnmarshalAndValidate(jsonInput []byte, structToValidate interface{}, tagType ...string) error {
+func (r *Validator) UnmarshalAndValidate(jsonInput []byte, structToValidate any, tagType ...string) error {
 	err := helper.CheckValidPointerToStruct(structToValidate)
 	if err != nil {
 		return err
@@ -71,7 +71,7 @@ func (r *Validator) UnmarshalAndValidate(jsonInput []byte, structToValidate inte
 // It is actually doing the same as UnmapValidateAndUpdate, but in another order.
 // It does directly update the struct and validates afterwards.
 // Normally you would either only use Validate or use UnmapValidateAndUpdate for early return on error.
-func (r *Validator) UnmapAndValidate(values url.Values, structToValidate interface{}, tagType ...string) error {
+func (r *Validator) UnmapAndValidate(values url.Values, structToValidate any, tagType ...string) error {
 	err := helper.CheckValidPointerToStruct(structToValidate)
 	if err != nil {
 		return err
@@ -100,7 +100,7 @@ func (r *Validator) UnmapAndValidate(values url.Values, structToValidate interfa
 // It returns an error if the unmapping, validation or update fails.
 //
 // For more information look at ValidateAndUpdate.
-func (r *Validator) UnmapOrUnmarshalValidateAndUpdate(request *http.Request, structToUpdate interface{}, tagType ...string) error {
+func (r *Validator) UnmapOrUnmarshalValidateAndUpdate(request *http.Request, structToUpdate any, tagType ...string) error {
 	err := request.ParseForm()
 	if err != nil {
 		return err
@@ -124,7 +124,7 @@ func (r *Validator) UnmapOrUnmarshalValidateAndUpdate(request *http.Request, str
 // It returns an error if the unmapping, validation or update fails.
 //
 // For more information look at ValidateAndUpdate.
-func (r *Validator) UnmarshalValidateAndUpdate(jsonInput []byte, structToUpdate interface{}, tagType ...string) error {
+func (r *Validator) UnmarshalValidateAndUpdate(jsonInput []byte, structToUpdate any, tagType ...string) error {
 	jsonUnmarshaled := model.JsonMap{}
 
 	err := json.Unmarshal(jsonInput, &jsonUnmarshaled)
@@ -144,7 +144,7 @@ func (r *Validator) UnmarshalValidateAndUpdate(jsonInput []byte, structToUpdate 
 // It returns an error if the unmapping, validation or update fails.
 //
 // For more information look at ValidateAndUpdate.
-func (r *Validator) UnmapValidateAndUpdate(values url.Values, structToUpdate interface{}, tagType ...string) error {
+func (r *Validator) UnmapValidateAndUpdate(values url.Values, structToUpdate any, tagType ...string) error {
 	mapOut, err := UnmapUrlValuesToJsonMap(values)
 	if err != nil {
 		return fmt.Errorf("error unmapping form values: %v", err)

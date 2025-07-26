@@ -7,7 +7,7 @@ import (
 	"github.com/siherrmann/validator/model"
 )
 
-func ValidateRegex[T Comparable | Array | Map](v T, ast *model.AstValue) error {
+func ValidateRegex(v any, ast *model.AstValue) error {
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.Array, reflect.Slice, reflect.Map:
 		checks, err := ValueToArrayOfString(v)

@@ -6,8 +6,8 @@ import (
 	"errors"
 )
 
-// JsonMap is a type that represents a map of string keys to interface{} values.
-type JsonMap map[string]interface{}
+// JsonMap is a type that represents a map of string keys to any values.
+type JsonMap map[string]any
 
 // JsonMap implements the sql.Valuer and sql.Scanner interfaces for JSON data.
 func (c JsonMap) Value() (driver.Value, error) {
@@ -15,7 +15,7 @@ func (c JsonMap) Value() (driver.Value, error) {
 }
 
 // Scan implements the sql.Scanner interface for JsonMap.
-func (c *JsonMap) Scan(value interface{}) error {
+func (c *JsonMap) Scan(value any) error {
 	return c.Unmarshal(value)
 }
 
@@ -25,7 +25,7 @@ func (r JsonMap) Marshal() ([]byte, error) {
 }
 
 // Unmarshal unmarshals a JSON value into the JsonMap.
-func (r *JsonMap) Unmarshal(value interface{}) error {
+func (r *JsonMap) Unmarshal(value any) error {
 	if s, ok := value.(JsonMap); ok {
 		*r = JsonMap(s)
 	} else {

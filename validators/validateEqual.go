@@ -7,9 +7,9 @@ import (
 	"github.com/siherrmann/validator/model"
 )
 
-func ValidateEqual[T Comparable | Array | Map](v T, ast *model.AstValue) error {
-	var check interface{}
-	var compare interface{}
+func ValidateEqual(v any, ast *model.AstValue) error {
+	var check any
+	var compare any
 	var err error
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.Array, reflect.Slice, reflect.Map:
@@ -32,9 +32,9 @@ func ValidateEqual[T Comparable | Array | Map](v T, ast *model.AstValue) error {
 	return nil
 }
 
-func ValidateNotEqual[T Comparable | Array | Map](v T, ast *model.AstValue) error {
-	var check interface{}
-	var compare interface{}
+func ValidateNotEqual(v any, ast *model.AstValue) error {
+	var check any
+	var compare any
 	var err error
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.Array, reflect.Slice, reflect.Map:

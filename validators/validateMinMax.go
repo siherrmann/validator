@@ -6,7 +6,7 @@ import (
 	"github.com/siherrmann/validator/model"
 )
 
-func ValidateMin[T Comparable | Array | Map](v T, ast *model.AstValue) error {
+func ValidateMin(v any, ast *model.AstValue) error {
 	check, err := ValueToFloat(v)
 	if err != nil {
 		return fmt.Errorf("invalid value for min validation: %v", err)
@@ -22,7 +22,7 @@ func ValidateMin[T Comparable | Array | Map](v T, ast *model.AstValue) error {
 	return nil
 }
 
-func ValidateMax[T Comparable | Array | Map](v T, ast *model.AstValue) error {
+func ValidateMax(v any, ast *model.AstValue) error {
 	check, err := ValueToFloat(v)
 	if err != nil {
 		return fmt.Errorf("invalid value for max validation: %v", err)

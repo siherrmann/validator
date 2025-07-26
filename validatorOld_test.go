@@ -11,24 +11,24 @@ package validator
 // )
 
 // type TestRequestWrapper struct {
-// 	Data         interface{}
+// 	Data         any
 // 	InvalidField string
 // }
 
 // type TestRequestWrapperUpdate struct {
-// 	Data          interface{}
+// 	Data          any
 // 	JsonMapUpdate model.JsonMap
 // 	Error         bool
 // }
 
 // type TestRequestWrapperUpdateWithJson struct {
-// 	Data       interface{}
+// 	Data       any
 // 	JsonUpdate string
 // 	Error      bool
 // }
 
 // type TestRequestWrapperUpdateWithUrlValues struct {
-// 	Data            interface{}
+// 	Data            any
 // 	UrlValuesUpdate url.Values
 // 	Error           bool
 // }
@@ -1078,7 +1078,7 @@ package validator
 // 					"key": "foo",
 // 				},
 // 			},
-// 			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []interface{}{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+// 			map[string]any{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []any{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 // 			false,
 // 		},
 // 		"invalidJsonStringUpdate": {
@@ -1090,7 +1090,7 @@ package validator
 // 				Array:  []int{1},
 // 				Date:   time.Time{},
 // 			},
-// 			map[string]interface{}{"string": "", "int": 2, "float": "1.2", "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+// 			map[string]any{"string": "", "int": 2, "float": "1.2", "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 // 			true,
 // 		},
 // 		"invalidTypeStringUpdate": {
@@ -1102,7 +1102,7 @@ package validator
 // 				Array:  []int{1},
 // 				Date:   time.Time{},
 // 			},
-// 			map[string]interface{}{"string": 1, "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+// 			map[string]any{"string": 1, "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 // 			true,
 // 		},
 // 		"invalidJsonIntUpdate": {
@@ -1114,7 +1114,7 @@ package validator
 // 				Array:  []int{1},
 // 				Date:   time.Time{},
 // 			},
-// 			map[string]interface{}{"string": "Bar", "int": 0, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+// 			map[string]any{"string": "Bar", "int": 0, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 // 			true,
 // 		},
 // 		// TODO add strict case/case for json or url values?
@@ -1126,7 +1126,7 @@ package validator
 // 		// 		Array:  []int{1},
 // 		// 		Date:   time.Time{},
 // 		// 	},
-// 		// 	map[string]interface{}{"string": "Bar", "int": "2", "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+// 		// 	map[string]any{"string": "Bar", "int": "2", "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 // 		// 	true,
 // 		// },
 // 		"invalidJsonFloatUpdate": {
@@ -1138,7 +1138,7 @@ package validator
 // 				Array:  []int{1},
 // 				Date:   time.Time{},
 // 			},
-// 			map[string]interface{}{"string": "Bar", "int": 2, "float": 0.0, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+// 			map[string]any{"string": "Bar", "int": 2, "float": 0.0, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 // 			true,
 // 		},
 // 		// TODO add strict case/case for json or url values?
@@ -1150,7 +1150,7 @@ package validator
 // 		// 		Array:  []int{1},
 // 		// 		Date:   time.Time{},
 // 		// 	},
-// 		// 	map[string]interface{}{"string": "Bar", "int": 2, "float": "1.2", "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+// 		// 	map[string]any{"string": "Bar", "int": 2, "float": "1.2", "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 // 		// 	true,
 // 		// },
 // 		"invalidJsonBoolUpdate": {
@@ -1168,7 +1168,7 @@ package validator
 // 					"key": "foo",
 // 				},
 // 			},
-// 			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": false, "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+// 			map[string]any{"string": "Bar", "int": 2, "float": 1.2, "bool": false, "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 // 			true,
 // 		},
 // 		"invalidTypeBoolUpdate": {
@@ -1186,7 +1186,7 @@ package validator
 // 					"key": "foo",
 // 				},
 // 			},
-// 			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": "23", "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+// 			map[string]any{"string": "Bar", "int": 2, "float": 1.2, "bool": "23", "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 // 			true,
 // 		},
 // 		"invalidJsonArrayUpdate": {
@@ -1198,7 +1198,7 @@ package validator
 // 				Array:  []int{1},
 // 				Date:   time.Time{},
 // 			},
-// 			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+// 			map[string]any{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 // 			true,
 // 		},
 // 		"invalidTypeArrayUpdate": {
@@ -1210,7 +1210,7 @@ package validator
 // 				Array:  []int{1},
 // 				Date:   time.Time{},
 // 			},
-// 			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []string{"2"}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+// 			map[string]any{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []string{"2"}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 // 			true,
 // 		},
 // 		"invalidJsonDateUpdate": {
@@ -1222,7 +1222,7 @@ package validator
 // 				Array:  []int{1},
 // 				Date:   time.Time{},
 // 			},
-// 			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03 15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+// 			map[string]any{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03 15:04:05.000", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 // 			true,
 // 		},
 // 		// TODO add case for time.Time with timeUnix in tag
@@ -1234,7 +1234,7 @@ package validator
 // 		// 		Array:  []int{1},
 // 		// 		Date:   time.Time{},
 // 		// 	},
-// 		// 	map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": 2024, "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+// 		// 	map[string]any{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": 2024, "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 // 		// 	true,
 // 		// },
 // 		"invalidJsonStructUpdate": {
@@ -1246,7 +1246,7 @@ package validator
 // 				Array:  []int{1},
 // 				Date:   time.Time{},
 // 			},
-// 			map[string]interface{}{"string": 2, "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "testing"}, "map": map[string]any{"key": "test"}},
+// 			map[string]any{"string": 2, "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": map[string]any{"string": "testing"}, "map": map[string]any{"key": "test"}},
 // 			true,
 // 		},
 // 		"invalidTypeStructUpdate": {
@@ -1258,7 +1258,7 @@ package validator
 // 				Array:  []int{1},
 // 				Date:   time.Time{},
 // 			},
-// 			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": 2, "map": map[string]any{"key": "test"}},
+// 			map[string]any{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000", "struct": 2, "map": map[string]any{"key": "test"}},
 // 			true,
 // 		},
 // 		"invalidJsonMapUpdate": {
@@ -1276,7 +1276,7 @@ package validator
 // 					"key": "foo",
 // 				},
 // 			},
-// 			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"test": "test"}},
+// 			map[string]any{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"test": "test"}},
 // 			true,
 // 		},
 // 		"invalidTypeMapUpdate": {
@@ -1294,7 +1294,7 @@ package validator
 // 					"key": "foo",
 // 				},
 // 			},
-// 			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[int]any{2: "test"}},
+// 			map[string]any{"string": "Bar", "int": 2, "float": 1.2, "bool": true, "array": []int{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[int]any{2: "test"}},
 // 			true,
 // 		},
 // 	}
@@ -1334,7 +1334,7 @@ package validator
 // 					"key": "foo",
 // 				},
 // 			},
-// 			map[string]interface{}{"string": "Bar", "array": []interface{}{2}},
+// 			map[string]any{"string": "Bar", "array": []any{2}},
 // 			false,
 // 		},
 // 		"validUpdateMoreValues": {
@@ -1350,7 +1350,7 @@ package validator
 // 					"key": "foo",
 // 				},
 // 			},
-// 			map[string]interface{}{"string": "Bar", "int": 2, "float": 1.2, "array": []interface{}{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
+// 			map[string]any{"string": "Bar", "int": 2, "float": 1.2, "array": []any{2}, "date": "2022-01-03T15:04:05.000Z", "struct": map[string]any{"string": "test"}, "map": map[string]any{"key": "test"}},
 // 			false,
 // 		},
 // 		"invalidJsonStringUpdate": {
@@ -1361,7 +1361,7 @@ package validator
 // 				Array:  []int{1},
 // 				Date:   time.Time{},
 // 			},
-// 			map[string]interface{}{"string": "", "array": []int{2}},
+// 			map[string]any{"string": "", "array": []int{2}},
 // 			true,
 // 		},
 // 		"invalidJsonArrayUpdate": {
@@ -1372,7 +1372,7 @@ package validator
 // 				Array:  []int{1},
 // 				Date:   time.Time{},
 // 			},
-// 			map[string]interface{}{"string": "Bar", "array": []int{}},
+// 			map[string]any{"string": "Bar", "array": []int{}},
 // 			true,
 // 		},
 // 	}
@@ -1399,14 +1399,14 @@ package validator
 // 					{String: "test"},
 // 				},
 // 			},
-// 			map[string]interface{}{"array_of_struct": []interface{}{map[string]any{"string": "test"}, map[string]any{"string": "test"}}},
+// 			map[string]any{"array_of_struct": []any{map[string]any{"string": "test"}, map[string]any{"string": "test"}}},
 // 			false,
 // 		},
 // 		"tooShort": {
 // 			&TestArrayOfStruct{
 // 				ArrayOfStruct: []TestUpdateInner{},
 // 			},
-// 			map[string]interface{}{"array_of_struct": []interface{}{}},
+// 			map[string]any{"array_of_struct": []any{}},
 // 			true,
 // 		},
 // 		"tooLong": {
@@ -1417,7 +1417,7 @@ package validator
 // 					{String: "test"},
 // 				},
 // 			},
-// 			map[string]interface{}{"array_of_struct": []interface{}{map[string]any{"string": "test"}, map[string]any{"string": "test"}, map[string]any{"string": "test"}}},
+// 			map[string]any{"array_of_struct": []any{map[string]any{"string": "test"}, map[string]any{"string": "test"}, map[string]any{"string": "test"}}},
 // 			true,
 // 		},
 // 		"invalidInner": {
@@ -1426,7 +1426,7 @@ package validator
 // 					{String: "foo"},
 // 				},
 // 			},
-// 			map[string]interface{}{"array_of_struct": []interface{}{map[string]any{"string": "foo"}}},
+// 			map[string]any{"array_of_struct": []any{map[string]any{"string": "foo"}}},
 // 			true,
 // 		},
 // 	}
@@ -1465,7 +1465,7 @@ package validator
 // 					String: "foo",
 // 				},
 // 			},
-// 			map[string]interface{}{"string": "Bar", "int": 3, "float": 3.2, "array": []string{"a", "b", "c"}, "struct": map[string]any{"string": "test"}, "map": map[string]any{"key1": "test", "key2": "test", "key3": "test"}},
+// 			map[string]any{"string": "Bar", "int": 3, "float": 3.2, "array": []string{"a", "b", "c"}, "struct": map[string]any{"string": "test"}, "map": map[string]any{"key1": "test", "key2": "test", "key3": "test"}},
 // 			false,
 // 		},
 // 		"validOnlyString": {
@@ -1481,7 +1481,7 @@ package validator
 // 					String: "foo",
 // 				},
 // 			},
-// 			map[string]interface{}{"string": "Bar"},
+// 			map[string]any{"string": "Bar"},
 // 			false,
 // 		},
 // 	}
@@ -1766,7 +1766,7 @@ package validator
 // 					String: "foo",
 // 				},
 // 			},
-// 			map[string]interface{}{"string": "Bar", "int": 3, "float": 3.2, "array": []string{"a", "b", "c"}, "struct": map[string]any{"string": "test"}, "map": map[string]any{"key1": "test", "key2": "test", "key3": "test"}},
+// 			map[string]any{"string": "Bar", "int": 3, "float": 3.2, "array": []string{"a", "b", "c"}, "struct": map[string]any{"string": "test"}, "map": map[string]any{"key1": "test", "key2": "test", "key3": "test"}},
 // 			false,
 // 		},
 // 		"invalid": {
@@ -1782,7 +1782,7 @@ package validator
 // 					String: "foo",
 // 				},
 // 			},
-// 			map[string]interface{}{"string": "Bar", "int": 3, "float": 3.2, "array": []string{"a", "b", "c"}, "struct": map[string]any{"string": "test"}, "map": map[string]any{"key1": "test", "key2": "test", "key3": "test"}},
+// 			map[string]any{"string": "Bar", "int": 3, "float": 3.2, "array": []string{"a", "b", "c"}, "struct": map[string]any{"string": "test"}, "map": map[string]any{"key1": "test", "key2": "test", "key3": "test"}},
 // 			true,
 // 		},
 // 	}

@@ -28,7 +28,7 @@ type Validation struct {
 
 // GetValidationsFromStruct extracts validation rules from a struct based on the provided tag type.
 // It iterates over the struct fields, checks for the specified tag type, and constructs Validation.
-func GetValidationsFromStruct(in interface{}, tagType string) ([]Validation, error) {
+func GetValidationsFromStruct(in any, tagType string) ([]Validation, error) {
 	err := helper.CheckValidPointerToStruct(in)
 	if err != nil {
 		return nil, err
@@ -97,11 +97,11 @@ func GetValidationFromStructField(tagType string, fieldValue reflect.Value, fiel
 
 // GetValidValue converts the input value to a valid type based on the Validation's Type.
 // It handles various types such as string, int, float, bool, and arrays.
-// If the input is a JsonMap, it converts it to a map[string]interface{}.
+// If the input is a JsonMap, it converts it to a map[string]any.
 // If the input type is not recognized, it returns the input as is.
 // It returns an error if the conversion fails.
-func (r *Validation) GetValidValue(in interface{}) (interface{}, error) {
-	var out interface{}
+func (r *Validation) GetValidValue(in any) (any, error) {
+	var out any
 	var err error
 	switch in := in.(type) {
 	case string:
@@ -126,7 +126,7 @@ func (r *Validation) GetValidValue(in interface{}) (interface{}, error) {
 		out, err = r.InterfaceFromArrayOfString(in)
 	default:
 		if v, ok := in.(JsonMap); ok {
-			return map[string]interface{}(v), nil
+			return map[string]any(v), nil
 		}
 		return in, nil
 	}
@@ -158,7 +158,7 @@ const (
 // If the type is not recognized, it defaults to Struct.
 // It handles basic types like string, int, float, bool, and complex types like JsonMap and arrays.
 // It also checks for time.Time type and returns the appropriate ValidatorType.
-func TypeFromInterface(in interface{}) ValidatorType {
+func TypeFromInterface(in any) ValidatorType {
 	switch in.(type) {
 	case string:
 		return String
@@ -197,7 +197,7 @@ func TypeFromInterface(in interface{}) ValidatorType {
 // It handles various types such as string, int, float, bool, array, map, and time.
 // It uses helper functions to parse Unix and ISO8601 date strings.
 // It returns an error if the conversion fails.
-func (r *Validation) InterfaceFromString(in string) (interface{}, error) {
+func (r *Validation) InterfaceFromString(in string) (any, error) {
 	switch r.Type {
 	case String:
 		return in, nil
@@ -224,7 +224,7 @@ func (r *Validation) InterfaceFromString(in string) (interface{}, error) {
 		}
 		return out, nil
 	case Array:
-		out := []interface{}{}
+		out := []any{}
 		if strings.Contains(in, "[") {
 			err := json.Unmarshal([]byte(in), &out)
 			if err != nil {
@@ -235,7 +235,7 @@ func (r *Validation) InterfaceFromString(in string) (interface{}, error) {
 		}
 		return out, nil
 	case Map, Struct:
-		out := map[string]interface{}{}
+		out := map[string]any{}
 		err := json.Unmarshal([]byte(in), &out)
 		if err != nil {
 			return nil, err
@@ -264,7 +264,7 @@ func (r *Validation) InterfaceFromString(in string) (interface{}, error) {
 // It handles various types such as int, float, bool, and time.
 // It uses helper functions to parse Unix date strings.
 // It returns an error if the conversion fails.
-func (r *Validation) InterfaceFromInt(in int) (interface{}, error) {
+func (r *Validation) InterfaceFromInt(in int) (any, error) {
 	switch r.Type {
 	case Int:
 		return in, nil
@@ -290,7 +290,7 @@ func (r *Validation) InterfaceFromInt(in int) (interface{}, error) {
 // It handles various types such as int, float, bool, and time.
 // It uses helper functions to parse Unix date strings.
 // It returns an error if the conversion fails.
-func (r *Validation) InterfaceFromFloat(in float64) (interface{}, error) {
+func (r *Validation) InterfaceFromFloat(in float64) (any, error) {
 	switch r.Type {
 	case Int:
 		return int(in), nil
@@ -316,7 +316,7 @@ func (r *Validation) InterfaceFromFloat(in float64) (interface{}, error) {
 // If the Validation's Type is Array, it returns the array as is.
 // If the Validation's Type is not Array, it returns the first element of the array as a string.
 // It returns an error if the conversion fails.
-func (r *Validation) InterfaceFromArrayOfString(in []string) (interface{}, error) {
+func (r *Validation) InterfaceFromArrayOfString(in []string) (any, error) {
 	switch r.Type {
 	case Array:
 		return in, nil

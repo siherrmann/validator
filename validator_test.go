@@ -153,7 +153,7 @@ func TestValidateAndUpdateWithValidation(t *testing.T) {
 	tests := []struct {
 		name     string
 		args     args
-		expected interface{}
+		expected any
 		wantErr  bool
 	}{
 		{
@@ -218,7 +218,7 @@ func TestValidateWithValidation(t *testing.T) {
 	tests := []struct {
 		name     string
 		args     args
-		expected interface{}
+		expected any
 		wantErr  bool
 	}{
 		{
@@ -400,7 +400,7 @@ func TestValidateWithValidation(t *testing.T) {
 			args: args{
 				jsonMap: model.JsonMap{
 					"fruit": "apple",
-					"nested": map[string]interface{}{
+					"nested": map[string]any{
 						"fruit": "banana",
 					},
 				},
@@ -517,7 +517,7 @@ func TestValidateWithValidation(t *testing.T) {
 			name: "Valid array of struct validation",
 			args: args{
 				jsonMap: model.JsonMap{
-					"fruits": []interface{}{
+					"fruits": []any{
 						model.JsonMap{
 							"fruit": "apple",
 						},
@@ -541,7 +541,7 @@ func TestValidateWithValidation(t *testing.T) {
 			name: "Invalid array of struct validation",
 			args: args{
 				jsonMap: model.JsonMap{
-					"fruits": []interface{}{
+					"fruits": []any{
 						model.JsonMap{
 							"fruit": "banana",
 						},
@@ -587,7 +587,7 @@ func TestValidateWithValidation(t *testing.T) {
 			name: "Invalid array element type of struct validation",
 			args: args{
 				jsonMap: model.JsonMap{
-					"fruits": []interface{}{
+					"fruits": []any{
 						map[string]int{
 							"fruit": 1,
 						},

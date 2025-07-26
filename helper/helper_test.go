@@ -67,7 +67,7 @@ func TestCheckValidPointerToStruct(t *testing.T) {
 
 func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 	t.Run("Successfully convert to array of int", func(t *testing.T) {
-		input := []interface{}{1, 2, 3}
+		input := []any{1, 2, 3}
 		expected := []int{1, 2, 3}
 
 		result, err := ArrayOfInterfaceToArrayOf[int](input)
@@ -77,7 +77,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 			assert.Equal(t, expected[i], v, "expected value at index %d to match expected value", i)
 		}
 
-		input = []interface{}{float64(1), float64(2), float64(3)}
+		input = []any{float64(1), float64(2), float64(3)}
 		expected = []int{1, 2, 3}
 
 		result, err = ArrayOfInterfaceToArrayOf[int](input)
@@ -89,7 +89,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 	})
 
 	t.Run("Error converting to array of int with invalid input type", func(t *testing.T) {
-		input := []interface{}{"one", "two", "three"}
+		input := []any{"one", "two", "three"}
 
 		result, err := ArrayOfInterfaceToArrayOf[int](input)
 		assert.Error(t, err, "expected error converting array of interface to array of int with invalid input type")
@@ -97,7 +97,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 	})
 
 	t.Run("Successfully convert to array of int8", func(t *testing.T) {
-		input := []interface{}{int8(1), int8(2), int8(3)}
+		input := []any{int8(1), int8(2), int8(3)}
 		expected := []int8{1, 2, 3}
 
 		result, err := ArrayOfInterfaceToArrayOf[int8](input)
@@ -107,7 +107,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 			assert.EqualValues(t, expected[i], v, "expected value at index %d to match expected value", i)
 		}
 
-		input = []interface{}{float64(1), float64(2), float64(3)}
+		input = []any{float64(1), float64(2), float64(3)}
 		expected = []int8{1, 2, 3}
 
 		result, err = ArrayOfInterfaceToArrayOf[int8](input)
@@ -119,7 +119,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 	})
 
 	t.Run("Error converting to array of int8 with invalid input type", func(t *testing.T) {
-		input := []interface{}{"one", "two", "three"}
+		input := []any{"one", "two", "three"}
 
 		result, err := ArrayOfInterfaceToArrayOf[int8](input)
 		assert.Error(t, err, "expected error converting array of interface to array of int8 with invalid input type")
@@ -127,7 +127,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 	})
 
 	t.Run("Successfully convert to array of int16", func(t *testing.T) {
-		input := []interface{}{int16(1), int16(2), int16(3)}
+		input := []any{int16(1), int16(2), int16(3)}
 		expected := []int16{1, 2, 3}
 
 		result, err := ArrayOfInterfaceToArrayOf[int16](input)
@@ -137,7 +137,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 			assert.EqualValues(t, expected[i], v, "expected value at index %d to match expected value", i)
 		}
 
-		input = []interface{}{float64(1), float64(2), float64(3)}
+		input = []any{float64(1), float64(2), float64(3)}
 		expected = []int16{1, 2, 3}
 
 		result, err = ArrayOfInterfaceToArrayOf[int16](input)
@@ -149,7 +149,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 	})
 
 	t.Run("Error converting to array of int16 with invalid input type", func(t *testing.T) {
-		input := []interface{}{"one", "two", "three"}
+		input := []any{"one", "two", "three"}
 
 		result, err := ArrayOfInterfaceToArrayOf[int16](input)
 		assert.Error(t, err, "expected error converting array of interface to array of int16 with invalid input type")
@@ -157,7 +157,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 	})
 
 	t.Run("Successfully convert to array of int32", func(t *testing.T) {
-		input := []interface{}{int32(1), int32(2), int32(3)}
+		input := []any{int32(1), int32(2), int32(3)}
 		expected := []int32{1, 2, 3}
 
 		result, err := ArrayOfInterfaceToArrayOf[int32](input)
@@ -167,7 +167,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 			assert.EqualValues(t, expected[i], v, "expected value at index %d to match expected value", i)
 		}
 
-		input = []interface{}{float64(1), float64(2), float64(3)}
+		input = []any{float64(1), float64(2), float64(3)}
 		expected = []int32{1, 2, 3}
 
 		result, err = ArrayOfInterfaceToArrayOf[int32](input)
@@ -179,7 +179,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 	})
 
 	t.Run("Error converting to array of int32 with invalid input type", func(t *testing.T) {
-		input := []interface{}{"one", "two", "three"}
+		input := []any{"one", "two", "three"}
 
 		result, err := ArrayOfInterfaceToArrayOf[int32](input)
 		assert.Error(t, err, "expected error converting array of interface to array of int32 with invalid input type")
@@ -187,7 +187,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 	})
 
 	t.Run("Successfully convert to array of int64", func(t *testing.T) {
-		input := []interface{}{int64(1), int64(2), int64(3)}
+		input := []any{int64(1), int64(2), int64(3)}
 		expected := []int64{1, 2, 3}
 
 		result, err := ArrayOfInterfaceToArrayOf[int64](input)
@@ -197,7 +197,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 			assert.EqualValues(t, expected[i], v, "expected value at index %d to match expected value", i)
 		}
 
-		input = []interface{}{float64(1), float64(2), float64(3)}
+		input = []any{float64(1), float64(2), float64(3)}
 		expected = []int64{1, 2, 3}
 
 		result, err = ArrayOfInterfaceToArrayOf[int64](input)
@@ -209,7 +209,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 	})
 
 	t.Run("Error converting to array of int64 with invalid input type", func(t *testing.T) {
-		input := []interface{}{"one", "two", "three"}
+		input := []any{"one", "two", "three"}
 
 		result, err := ArrayOfInterfaceToArrayOf[int64](input)
 		assert.Error(t, err, "expected error converting array of interface to array of int64 with invalid input type")
@@ -217,7 +217,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 	})
 
 	t.Run("Successfully convert to array of float64", func(t *testing.T) {
-		input := []interface{}{1.1, 2.2, 3.3}
+		input := []any{1.1, 2.2, 3.3}
 		expected := []float64{1.1, 2.2, 3.3}
 
 		result, err := ArrayOfInterfaceToArrayOf[float64](input)
@@ -229,7 +229,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 	})
 
 	t.Run("Error converting to array of float64 with invalid input type", func(t *testing.T) {
-		input := []interface{}{"one", "two", "three"}
+		input := []any{"one", "two", "three"}
 
 		result, err := ArrayOfInterfaceToArrayOf[float64](input)
 		assert.Error(t, err, "expected error converting array of interface to array of float64 with invalid input type")
@@ -237,7 +237,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 	})
 
 	t.Run("Successfully convert to array of string", func(t *testing.T) {
-		input := []interface{}{"one", "two", "three"}
+		input := []any{"one", "two", "three"}
 		expected := []string{"one", "two", "three"}
 
 		result, err := ArrayOfInterfaceToArrayOf[string](input)
@@ -249,7 +249,7 @@ func TestArrayOfInterfaceToArrayOf(t *testing.T) {
 	})
 
 	t.Run("Error converting to array of string with invalid input type", func(t *testing.T) {
-		input := []interface{}{1, 2, 3}
+		input := []any{1, 2, 3}
 
 		result, err := ArrayOfInterfaceToArrayOf[string](input)
 		assert.Error(t, err, "expected error converting array of interface to array of string with invalid input type")

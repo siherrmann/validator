@@ -62,7 +62,7 @@ func (r *Validator) Validate(v any, tagType ...string) error {
 // ValidateAndUpdate validates a given JsonMap by the given validations and updates the struct.
 // It checks if the keys are in the map, validates the values and updates the struct if the validation passes.
 // It returns an error if the validation fails or if the struct cannot be updated.
-func (r *Validator) ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate interface{}, tagType ...string) error {
+func (r *Validator) ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate any, tagType ...string) error {
 	tagTypeSet := model.VLD
 	if len(tagType) > 0 {
 		tagTypeSet = tagType[0]
@@ -129,7 +129,7 @@ func (r *Validator) ValidateWithValidation(jsonInput model.JsonMap, validations 
 		}
 
 		var ok bool
-		var jsonValue interface{}
+		var jsonValue any
 		if jsonValue, ok = jsonInput[validation.Key]; !ok {
 			if strings.TrimSpace(validation.Requirement) == string(model.NONE) {
 				continue
@@ -157,7 +157,7 @@ func (r *Validator) ValidateWithValidation(jsonInput model.JsonMap, validations 
 			}
 		case model.Array:
 			if helper.IsArray(jsonValue) && len(validation.InnerValidation) > 0 {
-				jsonArray, ok := jsonValue.([]interface{})
+				jsonArray, ok := jsonValue.([]any)
 				if !ok {
 					return model.JsonMap{}, fmt.Errorf("field %v must be of type array, was %T", validation.Key, jsonValue)
 				}

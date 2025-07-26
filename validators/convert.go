@@ -9,25 +9,7 @@ import (
 	"github.com/siherrmann/validator/model"
 )
 
-type Comparable interface {
-	string | bool | int | int8 | int16 | int32 | int64 |
-		uint | uint8 | uint16 | uint32 | uint64 |
-		float32 | float64 | any
-}
-
-type Array interface {
-	[]string | []bool | []int | []int8 | []int16 | []int32 | []int64 |
-		[]uint | []uint8 | []uint16 | []uint32 | []uint64 |
-		[]float32 | []float64 | []any
-}
-
-type Map interface {
-	map[string]string | map[string]bool | map[string]int | map[string]int8 | map[string]int16 | map[string]int32 | map[string]int64 |
-		map[string]uint | map[string]uint8 | map[string]uint16 | map[string]uint32 | map[string]uint64 |
-		map[string]float32 | map[string]float64 | map[string]any
-}
-
-func ConditionValueToT[T Comparable](v T, ast *model.AstValue) (T, error) {
+func ConditionValueToT[T comparable](v T, ast *model.AstValue) (T, error) {
 	switch any(v).(type) {
 	case string:
 		return any(ast.ConditionValue).(T), nil
@@ -114,7 +96,7 @@ func ConditionValueToT[T Comparable](v T, ast *model.AstValue) (T, error) {
 	}
 }
 
-func ConditionValueToArrayOfT[T Comparable](v T, condition string) ([]T, error) {
+func ConditionValueToArrayOfT[T comparable](v T, condition string) ([]T, error) {
 	conditionList := strings.Split(condition, ",")
 	if len(conditionList) == 0 || (len(conditionList) == 1 && len(strings.TrimSpace(conditionList[0])) == 0) {
 		return []T{}, fmt.Errorf("empty condition list")
@@ -217,7 +199,7 @@ func ConditionValueToArrayOfT[T Comparable](v T, condition string) ([]T, error) 
 	}
 }
 
-func ArrayConditionValueToArrayOfT[T Comparable](v []T, condition string) ([]T, error) {
+func ArrayConditionValueToArrayOfT[T comparable](v []T, condition string) ([]T, error) {
 	conditionList := strings.Split(condition, ",")
 	if len(conditionList) == 0 || (len(conditionList) == 1 && len(strings.TrimSpace(conditionList[0])) == 0) {
 		return []T{}, fmt.Errorf("empty condition list")
@@ -322,7 +304,7 @@ func ArrayConditionValueToArrayOfT[T Comparable](v []T, condition string) ([]T, 
 	}
 }
 
-func ArrayOfStringToArrayOfT[T Comparable](v T, sa []string) ([]T, error) {
+func ArrayOfStringToArrayOfT[T comparable](v T, sa []string) ([]T, error) {
 	array := make([]T, len(sa))
 	switch any(v).(type) {
 	case string:
