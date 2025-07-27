@@ -253,3 +253,23 @@ func TestMapJsonToStruct(t *testing.T) {
 	assert.Equal(t, map[int]string{1: "value1", 2: "value2"}, testStruct.MapIntStringJson, "Expected mapIntStringJson to match")
 	assert.Equal(t, map[int8]string{3: "value3", 4: "value4"}, testStruct.MapInt8StringJson, "Expected mapInt8StringJson to match")
 }
+
+func TestUnmarshalJsonToJsonMap(t *testing.T) {
+	t.Run("Valid JSON", func(t *testing.T) {
+		jsonData := []byte(`{"key1": "value1", "key2": 2, "key3": true}`)
+
+		mapOut, err := UnmarshalJsonToJsonMap(jsonData)
+		assert.NoError(t, err, "Expected no error when unmarshaling JSON to JsonMap")
+		assert.Equal(t, "value1", mapOut["key1"], "Expected key1 to match")
+		assert.Equal(t, float64(2), mapOut["key2"], "Expected key2 to match")
+		assert.Equal(t, true, mapOut["key3"], "Expected key3 to match")
+	})
+
+	t.Run("Invalid JSON", func(t *testing.T) {
+		jsonData := []byte(`<html><body>Invalid JSON</body></html>`)
+
+		_, err := UnmarshalJsonToJsonMap(jsonData)
+		assert.Error(t, err, "Expected error when unmarshaling invalid JSON")
+		assert.Contains(t, err.Error(), "error unmarshaling:", "Expected error to contain JSON parsing error")
+	})
+}
