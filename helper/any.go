@@ -130,7 +130,9 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 			}
 		}
 	case reflect.Int:
-		if v, ok := in.(float64); ok {
+		if v, ok := in.(int); ok {
+			return v, nil
+		} else if v, ok := in.(float64); ok {
 			return any(int(v)), nil
 		} else if v, ok := in.(string); ok {
 			i, err := strconv.ParseInt(v, 10, 64)
@@ -138,13 +140,13 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 				return nil, fmt.Errorf("error parsing string to int64: %v", err)
 			}
 			return any(int(i)), nil
-		} else if v, ok := in.(int); ok {
-			return v, nil
 		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
 			return reflect.ValueOf(in).Convert(expected).Interface(), nil
 		}
 	case reflect.Int8:
-		if v, ok := in.(float64); ok {
+		if v, ok := in.(int8); ok {
+			return v, nil
+		} else if v, ok := in.(float64); ok {
 			return any(int8(v)), nil
 		} else if v, ok := in.(string); ok {
 			i, err := strconv.ParseInt(v, 10, 8)
@@ -152,13 +154,13 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 				return nil, fmt.Errorf("error parsing string to int8: %v", err)
 			}
 			return any(int8(i)), nil
-		} else if v, ok := in.(int8); ok {
-			return v, nil
 		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
 			return reflect.ValueOf(in).Convert(expected).Interface(), nil
 		}
 	case reflect.Int16:
-		if v, ok := in.(float64); ok {
+		if v, ok := in.(int16); ok {
+			return v, nil
+		} else if v, ok := in.(float64); ok {
 			return any(int16(v)), nil
 		} else if v, ok := in.(string); ok {
 			i, err := strconv.ParseInt(v, 10, 16)
@@ -166,13 +168,13 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 				return nil, fmt.Errorf("error parsing string to int16: %v", err)
 			}
 			return any(int16(i)), nil
-		} else if v, ok := in.(int16); ok {
-			return v, nil
 		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
 			return reflect.ValueOf(in).Convert(expected).Interface(), nil
 		}
 	case reflect.Int32:
-		if v, ok := in.(float64); ok {
+		if v, ok := in.(int32); ok {
+			return v, nil
+		} else if v, ok := in.(float64); ok {
 			return any(int32(v)), nil
 		} else if v, ok := in.(string); ok {
 			i, err := strconv.ParseInt(v, 10, 32)
@@ -180,13 +182,13 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 				return nil, fmt.Errorf("error parsing string to int32: %v", err)
 			}
 			return any(int32(i)), nil
-		} else if v, ok := in.(int32); ok {
-			return v, nil
 		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
 			return reflect.ValueOf(in).Convert(expected).Interface(), nil
 		}
 	case reflect.Int64:
-		if v, ok := in.(float64); ok {
+		if v, ok := in.(int64); ok {
+			return v, nil
+		} else if v, ok := in.(float64); ok {
 			return any(int64(v)), nil
 		} else if v, ok := in.(string); ok {
 			i, err := strconv.ParseInt(v, 10, 64)
@@ -194,13 +196,13 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 				return nil, fmt.Errorf("error parsing string to int64: %v", err)
 			}
 			return any(int64(i)), nil
-		} else if v, ok := in.(int64); ok {
-			return v, nil
 		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
 			return reflect.ValueOf(in).Convert(expected).Interface(), nil
 		}
 	case reflect.Uint:
-		if v, ok := in.(float64); ok {
+		if v, ok := in.(uint); ok {
+			return v, nil
+		} else if v, ok := in.(float64); ok {
 			return any(uint(v)), nil
 		} else if v, ok := in.(string); ok {
 			u, err := strconv.ParseUint(v, 10, 64)
@@ -208,13 +210,13 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 				return nil, fmt.Errorf("error parsing string to uint64: %v", err)
 			}
 			return any(uint(u)), nil
-		} else if v, ok := in.(uint); ok {
-			return v, nil
 		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
 			return reflect.ValueOf(in).Convert(expected).Interface(), nil
 		}
 	case reflect.Uint8:
-		if v, ok := in.(float64); ok {
+		if v, ok := in.(uint8); ok {
+			return v, nil
+		} else if v, ok := in.(float64); ok {
 			return any(uint8(v)), nil
 		} else if v, ok := in.(string); ok {
 			u, err := strconv.ParseUint(v, 10, 8)
@@ -222,13 +224,13 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 				return nil, fmt.Errorf("error parsing string to uint8: %v", err)
 			}
 			return any(uint8(u)), nil
-		} else if v, ok := in.(uint8); ok {
-			return v, nil
 		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
 			return reflect.ValueOf(in).Convert(expected).Interface(), nil
 		}
 	case reflect.Uint16:
-		if v, ok := in.(float64); ok {
+		if v, ok := in.(uint16); ok {
+			return v, nil
+		} else if v, ok := in.(float64); ok {
 			return any(uint16(v)), nil
 		} else if v, ok := in.(string); ok {
 			u, err := strconv.ParseUint(v, 10, 16)
@@ -236,13 +238,13 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 				return nil, fmt.Errorf("error parsing string to uint16: %v", err)
 			}
 			return any(uint16(u)), nil
-		} else if v, ok := in.(uint16); ok {
-			return v, nil
 		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
 			return reflect.ValueOf(in).Convert(expected).Interface(), nil
 		}
 	case reflect.Uint32:
-		if v, ok := in.(float64); ok {
+		if v, ok := in.(uint32); ok {
+			return v, nil
+		} else if v, ok := in.(float64); ok {
 			return any(uint32(v)), nil
 		} else if v, ok := in.(string); ok {
 			u, err := strconv.ParseUint(v, 10, 32)
@@ -250,13 +252,13 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 				return nil, fmt.Errorf("error parsing string to uint32: %v", err)
 			}
 			return any(uint32(u)), nil
-		} else if v, ok := in.(uint32); ok {
-			return v, nil
 		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
 			return reflect.ValueOf(in).Convert(expected).Interface(), nil
 		}
 	case reflect.Uint64:
-		if v, ok := in.(float64); ok {
+		if v, ok := in.(uint64); ok {
+			return v, nil
+		} else if v, ok := in.(float64); ok {
 			return any(uint64(v)), nil
 		} else if v, ok := in.(string); ok {
 			u, err := strconv.ParseUint(v, 10, 64)
@@ -264,13 +266,13 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 				return nil, fmt.Errorf("error parsing string to uint64: %v", err)
 			}
 			return u, nil
-		} else if v, ok := in.(uint64); ok {
-			return v, nil
 		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
 			return reflect.ValueOf(in).Convert(expected).Interface(), nil
 		}
 	case reflect.Float32:
-		if v, ok := in.(float64); ok {
+		if v, ok := in.(float32); ok {
+			return v, nil
+		} else if v, ok := in.(float64); ok {
 			return any(float32(v)), nil
 		} else if v, ok := in.(string); ok {
 			f, err := strconv.ParseFloat(v, 32)
@@ -278,8 +280,6 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 				return nil, fmt.Errorf("error parsing string to float32: %v", err)
 			}
 			return any(float32(f)), nil
-		} else if v, ok := in.(float32); ok {
-			return v, nil
 		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
 			return reflect.ValueOf(in).Convert(expected).Interface(), nil
 		}
