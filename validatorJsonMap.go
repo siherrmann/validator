@@ -6,10 +6,10 @@ import (
 	"log"
 	"net/url"
 	"reflect"
-	"strconv"
 
 	"github.com/siherrmann/validator/helper"
 	"github.com/siherrmann/validator/model"
+	"github.com/siherrmann/validator/validators"
 )
 
 func GetValidMap(in any) (model.JsonMap, error) {
@@ -119,220 +119,14 @@ func UpdateJsonMap(validatedValues model.JsonMap, jsonMapToUpdate *model.JsonMap
 	}
 }
 
-func InterfaceToType(in any, expected reflect.Type) (out any, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("error converting interface to type %v: %v", expected, r)
-		}
-	}()
-
-	log.Printf("Converting %v with type %T to %v", in, in, expected)
-	switch expected.Kind() {
-	case reflect.String:
-		if v, ok := in.(string); ok {
-			return v, nil
-		}
-	case reflect.Bool:
-		if v, ok := in.(bool); ok {
-			return v, nil
-		} else if v, ok := in.(string); ok {
-			switch v {
-			// Case on and off are for form values.
-			case "on":
-				return any(true), nil
-			case "off":
-				return any(false), nil
-			default:
-				b, err := strconv.ParseBool(v)
-				if err != nil {
-					return nil, fmt.Errorf("error parsing string to bool: %v", err)
-				}
-				return any(b), nil
-			}
-		}
-	case reflect.Int:
-		log.Printf("Converting %v with type %T to int", in, in)
-		if v, ok := in.(float64); ok {
-			return any(int(v)), nil
-		} else if v, ok := in.(string); ok {
-			i, err := strconv.ParseInt(v, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("error parsing string to int64: %v", err)
-			}
-			return any(int(i)), nil
-		} else if v, ok := in.(int); ok {
-			return v, nil
-		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
-			return reflect.ValueOf(in).Convert(expected).Interface(), nil
-		}
-	case reflect.Int8:
-		if v, ok := in.(float64); ok {
-			return any(int8(v)), nil
-		} else if v, ok := in.(string); ok {
-			i, err := strconv.ParseInt(v, 10, 8)
-			if err != nil {
-				return nil, fmt.Errorf("error parsing string to int8: %v", err)
-			}
-			return any(int8(i)), nil
-		} else if v, ok := in.(int8); ok {
-			return v, nil
-		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
-			return reflect.ValueOf(in).Convert(expected).Interface(), nil
-		}
-	case reflect.Int16:
-		if v, ok := in.(float64); ok {
-			return any(int16(v)), nil
-		} else if v, ok := in.(string); ok {
-			i, err := strconv.ParseInt(v, 10, 16)
-			if err != nil {
-				return nil, fmt.Errorf("error parsing string to int16: %v", err)
-			}
-			return any(int16(i)), nil
-		} else if v, ok := in.(int16); ok {
-			return v, nil
-		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
-			return reflect.ValueOf(in).Convert(expected).Interface(), nil
-		}
-	case reflect.Int32:
-		if v, ok := in.(float64); ok {
-			return any(int32(v)), nil
-		} else if v, ok := in.(string); ok {
-			i, err := strconv.ParseInt(v, 10, 32)
-			if err != nil {
-				return nil, fmt.Errorf("error parsing string to int32: %v", err)
-			}
-			return any(int32(i)), nil
-		} else if v, ok := in.(int32); ok {
-			return v, nil
-		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
-			return reflect.ValueOf(in).Convert(expected).Interface(), nil
-		}
-	case reflect.Int64:
-		if v, ok := in.(float64); ok {
-			return any(int64(v)), nil
-		} else if v, ok := in.(string); ok {
-			i, err := strconv.ParseInt(v, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("error parsing string to int64: %v", err)
-			}
-			return any(int64(i)), nil
-		} else if v, ok := in.(int64); ok {
-			return v, nil
-		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
-			return reflect.ValueOf(in).Convert(expected).Interface(), nil
-		}
-	case reflect.Uint:
-		if v, ok := in.(float64); ok {
-			return any(uint(v)), nil
-		} else if v, ok := in.(string); ok {
-			u, err := strconv.ParseUint(v, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("error parsing string to uint64: %v", err)
-			}
-			return any(uint(u)), nil
-		} else if v, ok := in.(uint); ok {
-			return v, nil
-		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
-			return reflect.ValueOf(in).Convert(expected).Interface(), nil
-		}
-	case reflect.Uint8:
-		if v, ok := in.(float64); ok {
-			return any(uint8(v)), nil
-		} else if v, ok := in.(string); ok {
-			u, err := strconv.ParseUint(v, 10, 8)
-			if err != nil {
-				return nil, fmt.Errorf("error parsing string to uint8: %v", err)
-			}
-			return any(uint8(u)), nil
-		} else if v, ok := in.(uint8); ok {
-			return v, nil
-		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
-			return reflect.ValueOf(in).Convert(expected).Interface(), nil
-		}
-	case reflect.Uint16:
-		if v, ok := in.(float64); ok {
-			return any(uint16(v)), nil
-		} else if v, ok := in.(string); ok {
-			u, err := strconv.ParseUint(v, 10, 16)
-			if err != nil {
-				return nil, fmt.Errorf("error parsing string to uint16: %v", err)
-			}
-			return any(uint16(u)), nil
-		} else if v, ok := in.(uint16); ok {
-			return v, nil
-		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
-			return reflect.ValueOf(in).Convert(expected).Interface(), nil
-		}
-	case reflect.Uint32:
-		if v, ok := in.(float64); ok {
-			return any(uint32(v)), nil
-		} else if v, ok := in.(string); ok {
-			u, err := strconv.ParseUint(v, 10, 32)
-			if err != nil {
-				return nil, fmt.Errorf("error parsing string to uint32: %v", err)
-			}
-			return any(uint32(u)), nil
-		} else if v, ok := in.(uint32); ok {
-			return v, nil
-		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
-			return reflect.ValueOf(in).Convert(expected).Interface(), nil
-		}
-	case reflect.Uint64:
-		if v, ok := in.(float64); ok {
-			return any(uint64(v)), nil
-		} else if v, ok := in.(string); ok {
-			u, err := strconv.ParseUint(v, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("error parsing string to uint64: %v", err)
-			}
-			return u, nil
-		} else if v, ok := in.(uint64); ok {
-			return v, nil
-		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
-			return reflect.ValueOf(in).Convert(expected).Interface(), nil
-		}
-	case reflect.Float32:
-		if v, ok := in.(float64); ok {
-			return any(float32(v)), nil
-		} else if v, ok := in.(string); ok {
-			f, err := strconv.ParseFloat(v, 32)
-			if err != nil {
-				return nil, fmt.Errorf("error parsing string to float32: %v", err)
-			}
-			return any(float32(f)), nil
-		} else if v, ok := in.(float32); ok {
-			return v, nil
-		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
-			return reflect.ValueOf(in).Convert(expected).Interface(), nil
-		}
-	case reflect.Float64:
-		if v, ok := in.(float64); ok {
-			return v, nil
-		} else if v, ok := in.(string); ok {
-			f, err := strconv.ParseFloat(v, 64)
-			if err != nil {
-				return nil, fmt.Errorf("error parsing string to float64: %v", err)
-			}
-			return any(float64(f)), nil
-		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
-			return reflect.ValueOf(in).Convert(expected).Interface(), nil
-		}
-	case reflect.Interface:
-		return in, nil
-	default:
-		return nil, fmt.Errorf("unsupported type %T", expected)
-	}
-	return nil, fmt.Errorf("unsupported type %T", expected)
-}
-
 func JsonMapToMapKV(m map[string]any, expectedKey reflect.Type, expectedValue reflect.Type) (reflect.Value, error) {
 	targetMapValue := reflect.MakeMap(reflect.MapOf(expectedKey, expectedValue))
 	for key, value := range m {
-		valueConverted, err := InterfaceToType(value, expectedValue)
+		valueConverted, err := validators.InterfaceToType(value, expectedValue)
 		if err != nil {
 			return reflect.Value{}, fmt.Errorf("error converting value for key %s: %v", key, err)
 		}
-		keyConverted, err := InterfaceToType(key, expectedKey)
+		keyConverted, err := validators.InterfaceToType(key, expectedKey)
 		if err != nil {
 			return reflect.Value{}, fmt.Errorf("error converting key %s: %v", key, err)
 		}
@@ -345,7 +139,7 @@ func JsonMapToMapKV(m map[string]any, expectedKey reflect.Type, expectedValue re
 func JsonArrayToArrayOf(a []any, expectedValue reflect.Type) (reflect.Value, error) {
 	targetArray := reflect.MakeSlice(reflect.SliceOf(expectedValue), len(a), len(a))
 	for i, item := range a {
-		itemConverted, err := InterfaceToType(item, expectedValue)
+		itemConverted, err := validators.InterfaceToType(item, expectedValue)
 		if err != nil {
 			return reflect.Value{}, fmt.Errorf("error converting item at index %d: %v", i, err)
 		}
@@ -365,7 +159,7 @@ func SetStructValueByJson(fv reflect.Value, jsonValue any) (err error) {
 		switch fv.Kind() {
 		case reflect.String:
 			var newString string = ""
-			b, err := InterfaceToType(jsonValue, reflect.TypeOf(newString))
+			b, err := validators.InterfaceToType(jsonValue, reflect.TypeOf(newString))
 			if err != nil {
 				return fmt.Errorf("error converting value to string: %v", err)
 			}
@@ -373,7 +167,7 @@ func SetStructValueByJson(fv reflect.Value, jsonValue any) (err error) {
 			fv.SetString(newString)
 		case reflect.Bool:
 			var newBool bool = true
-			b, err := InterfaceToType(jsonValue, reflect.TypeOf(newBool))
+			b, err := validators.InterfaceToType(jsonValue, reflect.TypeOf(newBool))
 			if err != nil {
 				return fmt.Errorf("error converting value to bool: %v", err)
 			}
@@ -382,7 +176,7 @@ func SetStructValueByJson(fv reflect.Value, jsonValue any) (err error) {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			log.Printf("Setting field %v to int value %v", fv.Type(), jsonValue)
 			var newInt int64 = 0
-			i, err := InterfaceToType(jsonValue, reflect.TypeOf(newInt))
+			i, err := validators.InterfaceToType(jsonValue, reflect.TypeOf(newInt))
 			if err != nil {
 				return fmt.Errorf("error converting value to int: %v", err)
 			}
@@ -394,7 +188,7 @@ func SetStructValueByJson(fv reflect.Value, jsonValue any) (err error) {
 			fv.SetInt(newInt)
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			var newUint uint64 = 0
-			i, err := InterfaceToType(jsonValue, reflect.TypeOf(newUint))
+			i, err := validators.InterfaceToType(jsonValue, reflect.TypeOf(newUint))
 			if err != nil {
 				return fmt.Errorf("error converting value to uint: %v", err)
 			}
@@ -406,7 +200,7 @@ func SetStructValueByJson(fv reflect.Value, jsonValue any) (err error) {
 			fv.SetUint(newUint)
 		case reflect.Float32, reflect.Float64:
 			var newFloat float64 = 0
-			i, err := InterfaceToType(jsonValue, reflect.TypeOf(newFloat))
+			i, err := validators.InterfaceToType(jsonValue, reflect.TypeOf(newFloat))
 			if err != nil {
 				return fmt.Errorf("error converting value to float: %v", err)
 			}

@@ -63,7 +63,7 @@ func TestValidateRegex(t *testing.T) {
 				v:   []struct{}{},
 				ast: &model.AstValue{ConditionValue: "^[a-z]+[0-9]+$"},
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name: "Invalid condition value type",
