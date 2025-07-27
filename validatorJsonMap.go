@@ -3,7 +3,6 @@ package validator
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/url"
 	"reflect"
 
@@ -80,7 +79,6 @@ func MapJsonMapToStruct(jsonMapInput model.JsonMap, structToUpdate any) error {
 		}
 
 		if jsonValue, ok := jsonMapInput[fieldKey]; ok {
-			log.Printf("Setting field %v (json key: %v) of %v to value %v", fieldType.Name, jsonKey, reflect.TypeOf(structToUpdate), jsonValue)
 			err := SetStructValueByJson(field, jsonValue)
 			if err != nil {
 				return fmt.Errorf("could not set field %v (json key: %v) of %v: %v", fieldType.Name, jsonKey, reflect.TypeOf(structToUpdate), err.Error())
@@ -173,7 +171,6 @@ func SetStructValueByJson(fv reflect.Value, jsonValue any) (err error) {
 			newBool = b.(bool)
 			fv.SetBool(newBool)
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			log.Printf("Setting field %v to int value %v", fv.Type(), jsonValue)
 			var newInt int64 = 0
 			i, err := helper.AnyToType(jsonValue, reflect.TypeOf(newInt))
 			if err != nil {
@@ -232,12 +229,10 @@ func SetStructValueByJson(fv reflect.Value, jsonValue any) (err error) {
 		case reflect.Map:
 			var mapReflect reflect.Value
 			if v, ok := jsonValue.(map[string]any); ok {
-				log.Printf("Converting json map %v to mapKV with key type %v and value type %v", v, fv.Type().Key(), fv.Type().Elem())
 				mapReflect, err = JsonMapToMapKV(v, fv.Type().Key(), fv.Type().Elem())
 				if err != nil {
 					return fmt.Errorf("error converting json map to mapKV: %v", err)
 				}
-				log.Printf("Converted json map to mapKV: %v, %v", mapReflect.Type(), mapReflect.Type().Elem())
 			} else {
 				mapReflect = reflect.ValueOf(jsonValue)
 			}
