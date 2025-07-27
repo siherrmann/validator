@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/siherrmann/validator/helper"
 	"github.com/siherrmann/validator/model"
 )
 
@@ -14,13 +15,13 @@ func ValidateEqual(v any, ast *model.AstValue) error {
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.Array, reflect.Slice, reflect.Map:
 		check = reflect.ValueOf(v).Len()
-		compare, err = ConditionValueToT(check, ast)
+		compare, err = helper.ConditionValueToT(check, ast.ConditionValue)
 		if err != nil {
 			return err
 		}
 	default:
 		check = v
-		compare, err = ConditionValueToT(v, ast)
+		compare, err = helper.ConditionValueToT(v, ast.ConditionValue)
 		if err != nil {
 			return err
 		}
@@ -39,13 +40,13 @@ func ValidateNotEqual(v any, ast *model.AstValue) error {
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.Array, reflect.Slice, reflect.Map:
 		check = reflect.ValueOf(v).Len()
-		compare, err = ConditionValueToT(check, ast)
+		compare, err = helper.ConditionValueToT(check, ast.ConditionValue)
 		if err != nil {
 			return err
 		}
 	default:
 		check = v
-		compare, err = ConditionValueToT(v, ast)
+		compare, err = helper.ConditionValueToT(v, ast.ConditionValue)
 		if err != nil {
 			return err
 		}

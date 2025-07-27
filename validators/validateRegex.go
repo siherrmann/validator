@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/siherrmann/validator/helper"
 	"github.com/siherrmann/validator/model"
 )
 
 func ValidateRegex(v any, ast *model.AstValue) error {
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.Array, reflect.Slice, reflect.Map:
-		checks, err := ValueToArrayOfString(v)
+		checks, err := helper.AnyToArrayOfString(v)
 		if err != nil {
 			return err
 		}
@@ -21,7 +22,7 @@ func ValidateRegex(v any, ast *model.AstValue) error {
 			}
 		}
 	default:
-		check, err := ValueToString(v)
+		check, err := helper.AnyToString(v)
 		if err != nil {
 			return fmt.Errorf("error converting value to string: %v", err)
 		}

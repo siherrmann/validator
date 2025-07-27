@@ -3,15 +3,16 @@ package validators
 import (
 	"fmt"
 
+	"github.com/siherrmann/validator/helper"
 	"github.com/siherrmann/validator/model"
 )
 
 func ValidateMin(v any, ast *model.AstValue) error {
-	check, err := ValueToFloat(v)
+	check, err := helper.AnyToFloat(v)
 	if err != nil {
 		return fmt.Errorf("invalid value for min validation: %v", err)
 	}
-	compare, err := ConditionValueToT(check, ast)
+	compare, err := helper.ConditionValueToT(check, ast.ConditionValue)
 	if err != nil {
 		return err
 	}
@@ -23,11 +24,11 @@ func ValidateMin(v any, ast *model.AstValue) error {
 }
 
 func ValidateMax(v any, ast *model.AstValue) error {
-	check, err := ValueToFloat(v)
+	check, err := helper.AnyToFloat(v)
 	if err != nil {
 		return fmt.Errorf("invalid value for max validation: %v", err)
 	}
-	compare, err := ConditionValueToT(check, ast)
+	compare, err := helper.ConditionValueToT(check, ast.ConditionValue)
 	if err != nil {
 		return err
 	}

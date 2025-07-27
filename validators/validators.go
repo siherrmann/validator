@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+
+	"github.com/siherrmann/validator/helper"
 )
 
 func Equal[T comparable](a, equal T) bool {
@@ -36,11 +38,11 @@ func Contains(va any, contain string) (bool, error) {
 		if rv.Len() == 0 {
 			return false, nil
 		}
-		con, err := InterfaceToType(contain, rt.Elem())
+		con, err := helper.AnyToType(contain, rt.Elem())
 		if err != nil {
 			return false, fmt.Errorf("error converting condition to %T: %v", rt.Elem().Kind, err)
 		}
-		vaany, err := ArrayReflectToArrayOfAny(va)
+		vaany, err := helper.ArrayToArrayOfAny(va)
 		if err != nil {
 			return false, fmt.Errorf("error converting value to array of any: %v", err)
 		}
@@ -49,11 +51,11 @@ func Contains(va any, contain string) (bool, error) {
 		if rv.Len() == 0 {
 			return false, nil
 		}
-		con, err := InterfaceToType(contain, rt.Key())
+		con, err := helper.AnyToType(contain, rt.Key())
 		if err != nil {
 			return false, fmt.Errorf("error converting condition to %T: %v", rt.Elem().Kind, err)
 		}
-		vaany, err := MapKeysToArrayOfAny(va)
+		vaany, err := helper.MapKeysToArrayOfAny(va)
 		if err != nil {
 			return false, fmt.Errorf("error converting value to array of any: %v", err)
 		}
@@ -69,7 +71,7 @@ func From(v any, from string, not bool) (bool, error) {
 		int, int8, int16, int32, int64,
 		uint, uint8, uint16, uint32, uint64,
 		float32, float64:
-		b, err := ConditionValueToArrayOfT(from, reflect.TypeOf(v))
+		b, err := helper.ConditionValueToArrayOfAny(from, reflect.TypeOf(v))
 		if err != nil {
 			return false, err
 		}
@@ -77,11 +79,14 @@ func From(v any, from string, not bool) (bool, error) {
 	default:
 		switch reflect.TypeOf(v).Kind() {
 		case reflect.Array, reflect.Slice:
-			f, err := ConditionValueToArrayOfT(from, reflect.TypeOf(v).Elem())
+			f, err := helper.ConditionValueToArrayOfAny(from, reflect.TypeOf(v).Elem())
 			if err != nil {
 				return false, err
 			}
-			conditionValues := ArrayOfTToArrayOfAny(f)
+			conditionValues, err := helper.ArrayToArrayOfAny(f)
+			if err != nil {
+				return false, err
+			}
 
 			values := []any{}
 			rv := reflect.ValueOf(v)
@@ -92,11 +97,14 @@ func From(v any, from string, not bool) (bool, error) {
 
 			return FromArray(values, conditionValues, not)
 		case reflect.Map:
-			f, err := ConditionValueToArrayOfT(from, reflect.TypeOf(v).Key())
+			f, err := helper.ConditionValueToArrayOfAny(from, reflect.TypeOf(v).Key())
 			if err != nil {
 				return false, err
 			}
-			conditionValues := ArrayOfTToArrayOfAny(f)
+			conditionValues, err := helper.ArrayToArrayOfAny(f)
+			if err != nil {
+				return false, err
+			}
 
 			values := []any{}
 			rv := reflect.ValueOf(v)

@@ -1,138 +1,13 @@
-package validators
+package helper
 
 import (
 	"fmt"
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
-
-	"github.com/siherrmann/validator/model"
 )
 
-func ConditionValueToT[T comparable](v T, ast *model.AstValue) (T, error) {
-	rt := reflect.TypeOf(v)
-	out, err := InterfaceToType(ast.ConditionValue, rt)
-	if err != nil {
-		return v, fmt.Errorf("error converting condition value: %v", err)
-	}
-	return out.(T), nil
-}
-
-func ConditionValueToArrayOfT(condition string, expected reflect.Type) ([]any, error) {
-	conditionList, err := ConditionValueToArrayOfString(condition)
-	if err != nil {
-		return nil, fmt.Errorf("error getting array from condition")
-	}
-
-	values := []any{}
-	for _, c := range conditionList {
-		ct, err := InterfaceToType(any(c), expected)
-		if err != nil {
-			return nil, fmt.Errorf("error converting map key to string: %v", err)
-		}
-		values = append(values, any(ct))
-	}
-
-	return values, nil
-}
-
-func ConditionValueToArrayOfString(condition string) ([]string, error) {
-	conditionList := strings.Split(condition, ",")
-	if len(conditionList) == 0 || (len(conditionList) == 1 && len(strings.TrimSpace(conditionList[0])) == 0) {
-		return []string{}, fmt.Errorf("empty condition list %s value", condition)
-	}
-	return conditionList, nil
-}
-
-func ValueToString(v any) (string, error) {
-	switch v := v.(type) {
-	case string:
-		return v, nil
-	case bool:
-		return fmt.Sprintf("%t", v), nil
-	case time.Time:
-		return fmt.Sprintf("%d", v.Unix()), nil
-	case int, int8, int16, int32, int64,
-		uint, uint8, uint16, uint32, uint64:
-		return fmt.Sprintf("%d", v), nil
-	case float32, float64:
-		return fmt.Sprintf("%f", v), nil
-	default:
-		return "", fmt.Errorf("unsupported type for value: %T", v)
-	}
-}
-
-func ValueToArrayOfString(v any) ([]string, error) {
-	if v, ok := v.([]string); ok {
-		return v, nil
-	}
-
-	rv := reflect.ValueOf(v)
-	switch rv.Type().Kind() {
-	case reflect.Map:
-		keys := []string{}
-		for _, mk := range reflect.ValueOf(v).MapKeys() {
-			mks, err := ValueToString(mk.Interface())
-			if err != nil {
-				return nil, fmt.Errorf("error converting map key to string: %T", v)
-			}
-			keys = append(keys, mks)
-		}
-		return keys, nil
-	case reflect.Array, reflect.Slice:
-		values := []string{}
-		rv := reflect.ValueOf(v)
-		for i := 0; i < rv.Len(); i++ {
-			avs, err := ValueToString(rv.Index(i).Interface())
-			if err != nil {
-				return nil, fmt.Errorf("error converting map key to string: %T", v)
-			}
-			values = append(values, avs)
-		}
-		return values, nil
-	default:
-		return nil, fmt.Errorf("unsupported type for value: %T", v)
-	}
-}
-
-func ArrayOfTToArrayOfAny[T comparable](v []T) []any {
-	aany := []any{}
-	for _, t := range v {
-		aany = append(aany, any(t))
-	}
-	return aany
-}
-
-func ArrayReflectToArrayOfAny(v any) ([]any, error) {
-	aany := []any{}
-	rv := reflect.ValueOf(v)
-	if rv.Type().Kind() != reflect.Array && rv.Type().Kind() != reflect.Slice {
-		return nil, fmt.Errorf("invalid type %v, has to be array or slice", rv.Type().Kind())
-	}
-
-	for i := 0; i < rv.Len(); i++ {
-		aany = append(aany, rv.Index(i).Interface())
-	}
-
-	return aany, nil
-}
-
-func MapKeysToArrayOfAny(v any) ([]any, error) {
-	aany := []any{}
-	rv := reflect.ValueOf(v)
-	if rv.Type().Kind() != reflect.Map {
-		return nil, fmt.Errorf("invalid type %v, has to be map", rv.Type().Kind())
-	}
-
-	for _, mk := range rv.MapKeys() {
-		aany = append(aany, mk.Interface())
-	}
-
-	return aany, nil
-}
-
-func ValueToFloat(v any) (float64, error) {
+func AnyToFloat(v any) (float64, error) {
 	switch v := v.(type) {
 	case string:
 		return float64(len(v)), nil
@@ -173,7 +48,58 @@ func ValueToFloat(v any) (float64, error) {
 	}
 }
 
-func InterfaceToType(in any, expected reflect.Type) (out any, err error) {
+func AnyToString(v any) (string, error) {
+	switch v := v.(type) {
+	case string:
+		return v, nil
+	case bool:
+		return fmt.Sprintf("%t", v), nil
+	case time.Time:
+		return fmt.Sprintf("%d", v.Unix()), nil
+	case int, int8, int16, int32, int64,
+		uint, uint8, uint16, uint32, uint64:
+		return fmt.Sprintf("%d", v), nil
+	case float32, float64:
+		return fmt.Sprintf("%f", v), nil
+	default:
+		return "", fmt.Errorf("unsupported type for value: %T", v)
+	}
+}
+
+func AnyToArrayOfString(v any) ([]string, error) {
+	if v, ok := v.([]string); ok {
+		return v, nil
+	}
+
+	rv := reflect.ValueOf(v)
+	switch rv.Type().Kind() {
+	case reflect.Array, reflect.Slice:
+		values := []string{}
+		rv := reflect.ValueOf(v)
+		for i := 0; i < rv.Len(); i++ {
+			avs, err := AnyToString(rv.Index(i).Interface())
+			if err != nil {
+				return nil, fmt.Errorf("error converting array value to string: %T", v)
+			}
+			values = append(values, avs)
+		}
+		return values, nil
+	case reflect.Map:
+		keys := []string{}
+		for _, mk := range reflect.ValueOf(v).MapKeys() {
+			mks, err := AnyToString(mk.Interface())
+			if err != nil {
+				return nil, fmt.Errorf("error converting map key to string: %T", v)
+			}
+			keys = append(keys, mks)
+		}
+		return keys, nil
+	default:
+		return nil, fmt.Errorf("unsupported type for value: %T", v)
+	}
+}
+
+func AnyToType(in any, expected reflect.Type) (out any, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("error converting interface to type %v: %v", expected, r)
