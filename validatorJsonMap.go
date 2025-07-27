@@ -9,7 +9,6 @@ import (
 
 	"github.com/siherrmann/validator/helper"
 	"github.com/siherrmann/validator/model"
-	"github.com/siherrmann/validator/validators"
 )
 
 func GetValidMap(in any) (model.JsonMap, error) {
@@ -122,11 +121,11 @@ func UpdateJsonMap(validatedValues model.JsonMap, jsonMapToUpdate *model.JsonMap
 func JsonMapToMapKV(m map[string]any, expectedKey reflect.Type, expectedValue reflect.Type) (reflect.Value, error) {
 	targetMapValue := reflect.MakeMap(reflect.MapOf(expectedKey, expectedValue))
 	for key, value := range m {
-		valueConverted, err := validators.AnyToType(value, expectedValue)
+		valueConverted, err := helper.AnyToType(value, expectedValue)
 		if err != nil {
 			return reflect.Value{}, fmt.Errorf("error converting value for key %s: %v", key, err)
 		}
-		keyConverted, err := validators.AnyToType(key, expectedKey)
+		keyConverted, err := helper.AnyToType(key, expectedKey)
 		if err != nil {
 			return reflect.Value{}, fmt.Errorf("error converting key %s: %v", key, err)
 		}
@@ -139,7 +138,7 @@ func JsonMapToMapKV(m map[string]any, expectedKey reflect.Type, expectedValue re
 func JsonArrayToArrayOf(a []any, expectedValue reflect.Type) (reflect.Value, error) {
 	targetArray := reflect.MakeSlice(reflect.SliceOf(expectedValue), len(a), len(a))
 	for i, item := range a {
-		itemConverted, err := validators.AnyToType(item, expectedValue)
+		itemConverted, err := helper.AnyToType(item, expectedValue)
 		if err != nil {
 			return reflect.Value{}, fmt.Errorf("error converting item at index %d: %v", i, err)
 		}
@@ -159,7 +158,7 @@ func SetStructValueByJson(fv reflect.Value, jsonValue any) (err error) {
 		switch fv.Kind() {
 		case reflect.String:
 			var newString string = ""
-			b, err := validators.AnyToType(jsonValue, reflect.TypeOf(newString))
+			b, err := helper.AnyToType(jsonValue, reflect.TypeOf(newString))
 			if err != nil {
 				return fmt.Errorf("error converting value to string: %v", err)
 			}
@@ -167,7 +166,7 @@ func SetStructValueByJson(fv reflect.Value, jsonValue any) (err error) {
 			fv.SetString(newString)
 		case reflect.Bool:
 			var newBool bool = true
-			b, err := validators.AnyToType(jsonValue, reflect.TypeOf(newBool))
+			b, err := helper.AnyToType(jsonValue, reflect.TypeOf(newBool))
 			if err != nil {
 				return fmt.Errorf("error converting value to bool: %v", err)
 			}
@@ -176,7 +175,7 @@ func SetStructValueByJson(fv reflect.Value, jsonValue any) (err error) {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			log.Printf("Setting field %v to int value %v", fv.Type(), jsonValue)
 			var newInt int64 = 0
-			i, err := validators.AnyToType(jsonValue, reflect.TypeOf(newInt))
+			i, err := helper.AnyToType(jsonValue, reflect.TypeOf(newInt))
 			if err != nil {
 				return fmt.Errorf("error converting value to int: %v", err)
 			}
@@ -188,7 +187,7 @@ func SetStructValueByJson(fv reflect.Value, jsonValue any) (err error) {
 			fv.SetInt(newInt)
 		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			var newUint uint64 = 0
-			i, err := validators.AnyToType(jsonValue, reflect.TypeOf(newUint))
+			i, err := helper.AnyToType(jsonValue, reflect.TypeOf(newUint))
 			if err != nil {
 				return fmt.Errorf("error converting value to uint: %v", err)
 			}
@@ -200,7 +199,7 @@ func SetStructValueByJson(fv reflect.Value, jsonValue any) (err error) {
 			fv.SetUint(newUint)
 		case reflect.Float32, reflect.Float64:
 			var newFloat float64 = 0
-			i, err := validators.AnyToType(jsonValue, reflect.TypeOf(newFloat))
+			i, err := helper.AnyToType(jsonValue, reflect.TypeOf(newFloat))
 			if err != nil {
 				return fmt.Errorf("error converting value to float: %v", err)
 			}
