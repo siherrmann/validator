@@ -268,6 +268,9 @@ func TestAnyToArrayOfString(t *testing.T) {
 }
 
 func TestAnyToType(t *testing.T) {
+	type testStruct struct {
+		Fruit string `json:"fruit"`
+	}
 	type args struct {
 		v        any
 		expected reflect.Type
@@ -874,18 +877,46 @@ func TestAnyToType(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name: "Invalid type",
+			name: "Valid time.Time to time.Time",
 			args: args{
-				v:        struct{}{},
-				expected: reflect.TypeOf(struct{}{}),
+				v:        time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC),
+				expected: reflect.TypeOf(time.Time{}),
 			},
-			expectedError: true,
+			expected:      any(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)),
+			expectedError: false,
 		},
 		{
-			name: "Invalid convert type",
+			name: "Valid float to time.Time",
+			args: args{
+				v:        float64(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC).Unix()),
+				expected: reflect.TypeOf(time.Time{}),
+			},
+			expected:      any(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)),
+			expectedError: false,
+		},
+		{
+			name: "Valid string to time.Time",
+			args: args{
+				v:        `2025-01-02T00:00:00.000Z`,
+				expected: reflect.TypeOf(time.Time{}),
+			},
+			expected:      any(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)),
+			expectedError: false,
+		},
+		{
+			name: "Valid string to struct",
+			args: args{
+				v:        `{"fruit": "apple"}`,
+				expected: reflect.TypeOf(testStruct{}),
+			},
+			expected:      any(testStruct{Fruit: "apple"}),
+			expectedError: false,
+		},
+		{
+			name: "Invalid type",
 			args: args{
 				v:        args{},
-				expected: reflect.TypeOf(int(0)),
+				expected: reflect.TypeOf(struct{}{}),
 			},
 			expectedError: true,
 		},

@@ -1,9 +1,13 @@
 package validator
 
 import (
+	"bytes"
 	"encoding/json"
+	"net/http"
 	"regexp"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 type TestStructNoValidation struct {
@@ -67,7 +71,10 @@ func BenchmarkUnmarshalAndValidate(b *testing.B) {
 	// unmarshal and validate
 	jsonString := []byte(`{"string": "test", "int": 2, "float": 3.0, "array": ["", "", ""]}`)
 	unmarshalAndValidate := &TestStructValidation{}
-	err := UnmarshalAndValidate(jsonString, unmarshalAndValidate)
+	req, err := http.NewRequest("POST", "/", bytes.NewBuffer(jsonString))
+	require.NoError(b, err, "Expected no error creating request")
+
+	err = UnmarshalAndValidate(req, unmarshalAndValidate)
 	if err != nil {
 		b.Logf("error unmarshal and validate %v", err)
 	}

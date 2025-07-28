@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -292,6 +293,31 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 				return nil, fmt.Errorf("error parsing string to float64: %v", err)
 			}
 			return any(float64(f)), nil
+		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
+			return reflect.ValueOf(in).Convert(expected).Interface(), nil
+		}
+	case reflect.Struct:
+		if v, ok := in.(time.Time); ok {
+			return v, nil
+		} else if v, ok := in.(float64); ok {
+			date, err := UnixStringToTime(strconv.Itoa(int(v)))
+			if err != nil {
+				return nil, fmt.Errorf("error parsing float to time.Time: %v", err)
+			}
+			return date, nil
+		} else if v, ok := in.(string); ok {
+			structTempt := reflect.New(expected).Interface()
+			if err := json.Unmarshal([]byte(v), structTempt); err != nil {
+				date, err := UnixStringToTime(v)
+				if err != nil {
+					date, err = ISO8601StringToTime(v)
+					if err != nil {
+						return nil, fmt.Errorf("error parsing string to struct: %v", err)
+					}
+				}
+				return date, nil
+			}
+			return reflect.ValueOf(structTempt).Elem().Interface(), nil
 		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
 			return reflect.ValueOf(in).Convert(expected).Interface(), nil
 		}

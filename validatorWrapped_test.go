@@ -8,6 +8,7 @@ import (
 
 	"github.com/siherrmann/validator/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWrappedValidate(t *testing.T) {
@@ -72,8 +73,11 @@ func TestWrappedUnmapAndValidate(t *testing.T) {
 	values.Set("name", "apple")
 	values.Set("age", "2")
 	var s testStruct
+	req, err := http.NewRequest("POST", "/", bytes.NewBufferString(values.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	require.NoError(t, err, "Expected no error creating request")
 
-	err := UnmapAndValidate(values, &s)
+	err = UnmapAndValidate(req, &s)
 	assert.NoError(t, err, "Expected no error on unmap and validate")
 	assert.Equal(t, "apple", s.Name, "Expected name to be 'apple'")
 	assert.Equal(t, 2, s.Age, "Expected age to be 2")
@@ -82,8 +86,11 @@ func TestWrappedUnmapAndValidate(t *testing.T) {
 func TestWrappedUnmarshalAndValidate(t *testing.T) {
 	data := []byte(`{"name":"apple","age":2}`)
 	var s testStruct
+	req, err := http.NewRequest("POST", "/", bytes.NewBuffer(data))
+	req.Header.Set("Content-Type", "application/json")
+	require.NoError(t, err, "Expected no error creating request")
 
-	err := UnmarshalAndValidate(data, &s)
+	err = UnmarshalAndValidate(req, &s)
 	assert.NoError(t, err, "Expected no error on unmarshal and validate")
 	assert.Equal(t, "apple", s.Name, "Expected name to be 'apple'")
 	assert.Equal(t, 2, s.Age, "Expected age to be 2")
@@ -108,8 +115,11 @@ func TestWrappedUnmapValidateAndUpdate(t *testing.T) {
 	values.Set("name", "apple")
 	values.Set("age", "2")
 	var s testStruct
+	req, err := http.NewRequest("POST", "/", bytes.NewBufferString(values.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	require.NoError(t, err, "Expected no error creating request")
 
-	err := UnmapValidateAndUpdate(values, &s)
+	err = UnmapValidateAndUpdate(req, &s)
 	assert.NoError(t, err, "Expected no error on unmap validate and update")
 	assert.Equal(t, "apple", s.Name, "Expected name to be 'apple'")
 	assert.Equal(t, 2, s.Age, "Expected age to be 2")
@@ -118,8 +128,11 @@ func TestWrappedUnmapValidateAndUpdate(t *testing.T) {
 func TestWrappedUnmarshalValidateAndUpdate(t *testing.T) {
 	data := []byte(`{"name":"apple","age":2}`)
 	var s testStruct
+	req, err := http.NewRequest("POST", "/", bytes.NewBuffer(data))
+	req.Header.Set("Content-Type", "application/json")
+	require.NoError(t, err, "Expected no error creating request")
 
-	err := UnmarshalValidateAndUpdate(data, &s)
+	err = UnmarshalValidateAndUpdate(req, &s)
 	assert.NoError(t, err, "Expected no error on unmarshal validate and update")
 	assert.Equal(t, "apple", s.Name, "Expected name to be 'apple'")
 	assert.Equal(t, 2, s.Age, "Expected age to be 2")
@@ -153,8 +166,11 @@ func TestWrappedUnmapValidateAndUpdateWithValidation(t *testing.T) {
 		{Key: "name", Requirement: "equapple"},
 		{Key: "age", Requirement: "min2"},
 	}
+	req, err := http.NewRequest("POST", "/", bytes.NewBufferString(values.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	require.NoError(t, err, "Expected no error creating request")
 
-	err := UnmapValidateAndUpdateWithValidation(values, &mapToUpdate, validations)
+	err = UnmapValidateAndUpdateWithValidation(req, &mapToUpdate, validations)
 	assert.NoError(t, err, "Expected no error on unmap validate and update with validation")
 	assert.Equal(t, "apple", mapToUpdate["name"], "Expected name to be 'apple'")
 	assert.Equal(t, float64(2), mapToUpdate["age"], "Expected age to be 2")
@@ -167,8 +183,11 @@ func TestWrappedUnmarshalValidateAndUpdateWithValidation(t *testing.T) {
 		{Key: "name", Requirement: "equapple"},
 		{Key: "age", Requirement: "min2"},
 	}
+	req, err := http.NewRequest("POST", "/", bytes.NewBuffer(data))
+	req.Header.Set("Content-Type", "application/json")
+	require.NoError(t, err, "Expected no error creating request")
 
-	err := UnmarshalValidateAndUpdateWithValidation(data, &mapToUpdate, validations)
+	err = UnmarshalValidateAndUpdateWithValidation(req, &mapToUpdate, validations)
 	assert.NoError(t, err, "Expected no error on unmarshal validate and update with validation")
 	assert.Equal(t, "apple", mapToUpdate["name"], "Expected name to be 'apple'")
 	assert.Equal(t, float64(2), mapToUpdate["age"], "Expected age to be 2")

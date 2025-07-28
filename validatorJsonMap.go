@@ -3,8 +3,11 @@ package validator
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 	"reflect"
+	"time"
 
 	"github.com/siherrmann/validator/helper"
 	"github.com/siherrmann/validator/model"
@@ -21,6 +24,33 @@ func GetValidMap(in any) (model.JsonMap, error) {
 		}
 	}
 	return v, nil
+}
+
+func UnmarshalRequestToJsonMap(request *http.Request) (model.JsonMap, error) {
+	if request == nil {
+		return nil, fmt.Errorf("request is nil")
+	}
+
+	bodyBytes, err := io.ReadAll(request.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading request body: %v", err)
+	}
+	defer request.Body.Close()
+
+	return UnmarshalJsonToJsonMap(bodyBytes)
+}
+
+func UnmapRequestToJsonMap(request *http.Request) (model.JsonMap, error) {
+	if request == nil {
+		return nil, fmt.Errorf("request is nil")
+	}
+
+	err := request.ParseForm()
+	if err != nil {
+		return nil, fmt.Errorf("error parsing form: %v", err)
+	}
+
+	return UnmapUrlValuesToJsonMap(request.Form)
 }
 
 func UnmarshalJsonToJsonMap(jsonInput []byte) (model.JsonMap, error) {
@@ -208,8 +238,7 @@ func SetStructValueByJson(fv reflect.Value, jsonValue any) (err error) {
 			fv.SetFloat(newFloat)
 		case reflect.Struct:
 			if v, ok := jsonValue.(string); ok {
-				validation := &model.Validation{Type: model.Time}
-				date, err := validation.InterfaceFromString(v)
+				date, err := helper.AnyToType(v, reflect.TypeOf(time.Time{}))
 				if err != nil {
 					return err
 				}
