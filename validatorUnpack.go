@@ -72,12 +72,12 @@ func (r *Validator) UnmarshalAndValidate(request *http.Request, structToValidate
 // It does directly update the struct and validates afterwards.
 // Normally you would either only use Validate or use UnmapValidateAndUpdate for early return on error.
 func (r *Validator) UnmapAndValidate(request *http.Request, structToValidate any, tagType ...string) error {
-	mapOut, err := UnmapRequestToJsonMap(request)
+	mapOut, err := helper.UnmapRequestToJsonMap(request)
 	if err != nil {
 		return fmt.Errorf("error unmapping form values: %v", err)
 	}
 
-	err = MapJsonMapToStruct(mapOut, structToValidate)
+	err = helper.MapJsonMapToStruct(mapOut, structToValidate)
 	if err != nil {
 		return fmt.Errorf("error mapping json map to struct: %v", err)
 	}
@@ -115,7 +115,7 @@ func (r *Validator) UnmapOrUnmarshalValidateAndUpdate(request *http.Request, str
 //
 // For more information look at ValidateAndUpdate.
 func (r *Validator) UnmarshalValidateAndUpdate(request *http.Request, structToUpdate any, tagType ...string) error {
-	mapOut, err := UnmarshalRequestToJsonMap(request)
+	mapOut, err := helper.UnmarshalRequestToJsonMap(request)
 	if err != nil {
 		return fmt.Errorf("error unmarshaling request body: %v", err)
 	}
@@ -133,7 +133,7 @@ func (r *Validator) UnmarshalValidateAndUpdate(request *http.Request, structToUp
 //
 // For more information look at ValidateAndUpdate.
 func (r *Validator) UnmapValidateAndUpdate(request *http.Request, structToUpdate any, tagType ...string) error {
-	mapOut, err := UnmapRequestToJsonMap(request)
+	mapOut, err := helper.UnmapRequestToJsonMap(request)
 	if err != nil {
 		return fmt.Errorf("error unmapping form values: %v", err)
 	}
@@ -149,7 +149,7 @@ func (r *Validator) UnmapValidateAndUpdate(request *http.Request, structToUpdate
 // UnmapOrUnmarshalValidateAndUpdateWithValidation unmarshals given json ([]byte) or given url.Values (from request.Form).
 // It validates the map with the given validations and updates the given map.
 // It returns an error if the unmapping, validation or update fails.
-func (r *Validator) UnmapOrUnmarshalValidateAndUpdateWithValidation(request *http.Request, mapToUpdate *model.JsonMap, validations []model.Validation) error {
+func (r *Validator) UnmapOrUnmarshalValidateAndUpdateWithValidation(request *http.Request, mapToUpdate *map[string]any, validations []model.Validation) error {
 	err := request.ParseForm()
 	if err != nil {
 		return err
@@ -167,8 +167,8 @@ func (r *Validator) UnmapOrUnmarshalValidateAndUpdateWithValidation(request *htt
 // UnmarshalValidateAndUpdateWithValidation unmarshals given json ([]byte) into pointer mapToUpdate.
 // It validates the map by the given validations and updates it.
 // It returns an error if the unmarshaling, validation or update fails.
-func (r *Validator) UnmarshalValidateAndUpdateWithValidation(request *http.Request, mapToUpdate *model.JsonMap, validations []model.Validation) error {
-	mapOut, err := UnmarshalRequestToJsonMap(request)
+func (r *Validator) UnmarshalValidateAndUpdateWithValidation(request *http.Request, mapToUpdate *map[string]any, validations []model.Validation) error {
+	mapOut, err := helper.UnmarshalRequestToJsonMap(request)
 	if err != nil {
 		return fmt.Errorf("error unmarshaling request body: %v", err)
 	}
@@ -184,8 +184,8 @@ func (r *Validator) UnmarshalValidateAndUpdateWithValidation(request *http.Reque
 // UnmapValidateAndUpdateWithValidation unmaps given url.Values into pointer jsonMap.
 // It validates the map by the given validations and updates it.
 // It returns an error if the unmapping, validation or update fails.
-func (r *Validator) UnmapValidateAndUpdateWithValidation(request *http.Request, mapToUpdate *model.JsonMap, validations []model.Validation) error {
-	mapOut, err := UnmapRequestToJsonMap(request)
+func (r *Validator) UnmapValidateAndUpdateWithValidation(request *http.Request, mapToUpdate *map[string]any, validations []model.Validation) error {
+	mapOut, err := helper.UnmapRequestToJsonMap(request)
 	if err != nil {
 		return fmt.Errorf("error unmapping form values: %v", err)
 	}

@@ -297,7 +297,7 @@ func TestUnmapOrUnmarshalValidateAndUpdateWithValidation(t *testing.T) {
 		{Key: "name", Requirement: "equapple"},
 		{Key: "age", Requirement: "min2"},
 	}
-	mapToUpdate := &model.JsonMap{}
+	mapToUpdate := &map[string]any{}
 
 	t.Run("Valid with form values", func(t *testing.T) {
 		form := url.Values{}
@@ -344,7 +344,7 @@ func TestUnmarshalValidateAndUpdateWithValidation(t *testing.T) {
 		{Key: "name", Requirement: "equapple"},
 		{Key: "age", Requirement: "min2"},
 	}
-	mapToUpdate := &model.JsonMap{}
+	mapToUpdate := &map[string]any{}
 
 	t.Run("Valid JSON input", func(t *testing.T) {
 		jsonInput := []byte(`{"name":"apple","age":2}`)
@@ -385,7 +385,7 @@ func TestUnmapValidateAndUpdateWithValidation(t *testing.T) {
 		{Key: "name", Requirement: "equapple"},
 		{Key: "age", Requirement: "min2"},
 	}
-	mapToUpdate := &model.JsonMap{}
+	mapToUpdate := &map[string]any{}
 
 	t.Run("Valid form values", func(t *testing.T) {
 		form := url.Values{}

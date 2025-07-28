@@ -127,7 +127,7 @@ func TypeFromInterface(in any) ValidatorType {
 		return Float
 	case bool:
 		return Bool
-	case JsonMap, map[string]string, map[string]int, map[string]int64, map[string]int32, map[string]int16, map[string]int8, map[string]float64, map[string]float32, map[string]bool:
+	case map[string]string, map[string]int, map[string]int64, map[string]int32, map[string]int16, map[string]int8, map[string]float64, map[string]float32, map[string]bool:
 		return Map
 	case []string, []int, []int64, []int32, []int16, []int8, []float64, []float32, []bool:
 		return Array

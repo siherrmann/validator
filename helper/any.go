@@ -318,6 +318,13 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 				return date, nil
 			}
 			return reflect.ValueOf(structTempt).Elem().Interface(), nil
+		} else if jsonValueMap, ok := in.(map[string]any); ok {
+			structTemp := reflect.New(expected).Interface()
+			err = MapJsonMapToStruct(jsonValueMap, structTemp)
+			if err != nil {
+				return nil, fmt.Errorf("error parsing map to struct: %v", err)
+			}
+			return reflect.ValueOf(structTemp).Elem().Interface(), nil
 		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
 			return reflect.ValueOf(in).Convert(expected).Interface(), nil
 		}

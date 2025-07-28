@@ -18,3 +18,15 @@ func ArrayToArrayOfAny(v any) ([]any, error) {
 
 	return aany, nil
 }
+
+func ArrayToArrayOfType(a []any, expectedValue reflect.Type) (reflect.Value, error) {
+	targetArray := reflect.MakeSlice(reflect.SliceOf(expectedValue), len(a), len(a))
+	for i, item := range a {
+		itemConverted, err := AnyToType(item, expectedValue)
+		if err != nil {
+			return reflect.Value{}, fmt.Errorf("error converting item at index %d: %v", i, err)
+		}
+		targetArray.Index(i).Set(reflect.ValueOf(itemConverted))
+	}
+	return targetArray, nil
+}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/siherrmann/validator/helper"
 	"github.com/siherrmann/validator/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -79,7 +80,7 @@ func TestValidateAndUpdate(t *testing.T) {
 		Fruit string `json:"fruit" vld:"equapple"`
 	}
 	type args struct {
-		v       model.JsonMap
+		v       map[string]any
 		tagType string
 	}
 	tests := []struct {
@@ -90,7 +91,7 @@ func TestValidateAndUpdate(t *testing.T) {
 		{
 			name: "Valid struct validation",
 			args: args{
-				v:       model.JsonMap{"fruit": "apple"},
+				v:       map[string]any{"fruit": "apple"},
 				tagType: model.VLD,
 			},
 			wantErr: false,
@@ -98,7 +99,7 @@ func TestValidateAndUpdate(t *testing.T) {
 		{
 			name: "Invalid struct validation",
 			args: args{
-				v:       model.JsonMap{"fruit": "banana"},
+				v:       map[string]any{"fruit": "banana"},
 				tagType: model.VLD,
 			},
 			wantErr: true,
@@ -114,8 +115,8 @@ func TestValidateAndUpdate(t *testing.T) {
 				assert.Error(t, err, "Expected an error but got none")
 			} else {
 				assert.NoError(t, err, "Expected no error but got one")
-				mapOut := &model.JsonMap{}
-				err := UnmapStructToJsonMap(testStruct, mapOut)
+				mapOut := &map[string]any{}
+				err := helper.UnmapStructToJsonMap(testStruct, mapOut)
 				assert.NoError(t, err, "Expected no error but got one")
 				assert.Equal(t, test.args.v, *mapOut, "Expected output to match input")
 			}
@@ -128,7 +129,7 @@ func TestValidateAndUpdate(t *testing.T) {
 		}
 		testStruct := TestStructInvalid{}
 		r := NewValidator()
-		err := r.ValidateAndUpdate(model.JsonMap{"fruit": "apple"}, testStruct)
+		err := r.ValidateAndUpdate(map[string]any{"fruit": "apple"}, testStruct)
 		require.Error(t, err, "Expected an error for invalid validation")
 		assert.Contains(t, err.Error(), "value has to be of kind pointer", "Expected error to contain 'value has to be of kind pointer'")
 	})
@@ -139,7 +140,7 @@ func TestValidateAndUpdate(t *testing.T) {
 		}
 		testStruct := &TestStructInvalid{}
 		r := NewValidator()
-		err := r.ValidateAndUpdate(model.JsonMap{"fruit": "apple"}, testStruct)
+		err := r.ValidateAndUpdate(map[string]any{"fruit": "apple"}, testStruct)
 		require.Error(t, err, "Expected an error for invalid validation")
 		assert.Contains(t, err.Error(), "invalid group name: gp1", "Expected error to contain 'invalid group name: gp1'")
 	})
@@ -147,7 +148,7 @@ func TestValidateAndUpdate(t *testing.T) {
 
 func TestValidateAndUpdateWithValidation(t *testing.T) {
 	type args struct {
-		jsonMap     model.JsonMap
+		jsonMap     map[string]any
 		validations []model.Validation
 	}
 	tests := []struct {
@@ -159,7 +160,7 @@ func TestValidateAndUpdateWithValidation(t *testing.T) {
 		{
 			name: "Valid validation",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruit": "apple",
 				},
 				validations: []model.Validation{
@@ -175,7 +176,7 @@ func TestValidateAndUpdateWithValidation(t *testing.T) {
 		{
 			name: "Invalid validation",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruit": "banana",
 				},
 				validations: []model.Validation{
@@ -194,7 +195,7 @@ func TestValidateAndUpdateWithValidation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			r := NewValidator()
 
-			mapOut := &model.JsonMap{}
+			mapOut := &map[string]any{}
 			err := r.ValidateAndUpdateWithValidation(test.args.jsonMap, mapOut, test.args.validations)
 			if test.wantErr {
 				assert.Error(t, err, "Expected an error but got none")
@@ -212,7 +213,7 @@ func TestValidateAndUpdateWithValidation(t *testing.T) {
 
 func TestValidateWithValidation(t *testing.T) {
 	type args struct {
-		jsonMap     model.JsonMap
+		jsonMap     map[string]any
 		validations []model.Validation
 	}
 	tests := []struct {
@@ -224,7 +225,7 @@ func TestValidateWithValidation(t *testing.T) {
 		{
 			name: "Valid validation string",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruit": "apple",
 				},
 				validations: []model.Validation{
@@ -240,7 +241,7 @@ func TestValidateWithValidation(t *testing.T) {
 		{
 			name: "Invalid validation string",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruit": "banana",
 				},
 				validations: []model.Validation{
@@ -256,7 +257,7 @@ func TestValidateWithValidation(t *testing.T) {
 		{
 			name: "Invalid validation string with group",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruit": "banana",
 				},
 				validations: []model.Validation{
@@ -277,7 +278,7 @@ func TestValidateWithValidation(t *testing.T) {
 		{
 			name: "Invalid duplicate key",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruit": "apple",
 				},
 				validations: []model.Validation{
@@ -298,7 +299,7 @@ func TestValidateWithValidation(t *testing.T) {
 		{
 			name: "Valid validation with group",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruit":  "apple",
 					"fruit2": "banana",
 				},
@@ -330,7 +331,7 @@ func TestValidateWithValidation(t *testing.T) {
 		{
 			name: "Valid with missing key",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruit": "apple",
 				},
 				validations: []model.Validation{
@@ -351,7 +352,7 @@ func TestValidateWithValidation(t *testing.T) {
 		{
 			name: "Invalid with missing key",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruit": "apple",
 				},
 				validations: []model.Validation{
@@ -372,7 +373,7 @@ func TestValidateWithValidation(t *testing.T) {
 		{
 			name: "Invalid with missing key with group",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruit": "apple",
 				},
 				validations: []model.Validation{
@@ -398,7 +399,7 @@ func TestValidateWithValidation(t *testing.T) {
 		{
 			name: "Valid nested struct validation",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruit": "apple",
 					"nested": map[string]any{
 						"fruit": "banana",
@@ -421,15 +422,15 @@ func TestValidateWithValidation(t *testing.T) {
 					},
 				},
 			},
-			expected: model.JsonMap{"fruit": "apple", "nested": model.JsonMap{"fruit": "banana"}},
+			expected: map[string]any{"fruit": "apple", "nested": map[string]any{"fruit": "banana"}},
 			wantErr:  false,
 		},
 		{
 			name: "Invalid nested struct validation",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruit": "apple",
-					"nested": model.JsonMap{
+					"nested": map[string]any{
 						"fruit": "apple",
 					},
 				},
@@ -455,7 +456,7 @@ func TestValidateWithValidation(t *testing.T) {
 		{
 			name: "Invalid nested struct",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruit": "apple",
 					"nested": map[string]int{
 						"fruit": 1,
@@ -483,7 +484,7 @@ func TestValidateWithValidation(t *testing.T) {
 		{
 			name: "Valid array validation",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruits": []string{"apple", "banana"},
 				},
 				validations: []model.Validation{
@@ -499,7 +500,7 @@ func TestValidateWithValidation(t *testing.T) {
 		{
 			name: "Valid array validation from url values with type string",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruit": "apple",
 				},
 				validations: []model.Validation{
@@ -510,15 +511,15 @@ func TestValidateWithValidation(t *testing.T) {
 					},
 				},
 			},
-			expected: model.JsonMap{"fruit": []string{"apple"}},
+			expected: map[string]any{"fruit": []string{"apple"}},
 			wantErr:  false,
 		},
 		{
 			name: "Valid array of struct validation",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruits": []any{
-						model.JsonMap{
+						map[string]any{
 							"fruit": "apple",
 						},
 					},
@@ -540,9 +541,9 @@ func TestValidateWithValidation(t *testing.T) {
 		{
 			name: "Invalid array of struct validation",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruits": []any{
-						model.JsonMap{
+						map[string]any{
 							"fruit": "banana",
 						},
 					},
@@ -564,8 +565,8 @@ func TestValidateWithValidation(t *testing.T) {
 		{
 			name: "Invalid array type of struct validation",
 			args: args{
-				jsonMap: model.JsonMap{
-					"fruits": []model.JsonMap{{
+				jsonMap: map[string]any{
+					"fruits": []map[string]any{{
 						"fruit": "apple",
 					}},
 				},
@@ -586,7 +587,7 @@ func TestValidateWithValidation(t *testing.T) {
 		{
 			name: "Invalid array element type of struct validation",
 			args: args{
-				jsonMap: model.JsonMap{
+				jsonMap: map[string]any{
 					"fruits": []any{
 						map[string]int{
 							"fruit": 1,

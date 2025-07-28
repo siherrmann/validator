@@ -40,8 +40,8 @@ func (r *Validator) Validate(v any, tagType ...string) error {
 		tagTypeSet = tagType[0]
 	}
 
-	jsonMap := model.JsonMap{}
-	err := UnmapStructToJsonMap(v, &jsonMap)
+	jsonMap := map[string]any{}
+	err := helper.UnmapStructToJsonMap(v, &jsonMap)
 	if err != nil {
 		return fmt.Errorf("error unmapping struct to json map: %v", err)
 	}
@@ -62,7 +62,7 @@ func (r *Validator) Validate(v any, tagType ...string) error {
 // ValidateAndUpdate validates a given JsonMap by the given validations and updates the struct.
 // It checks if the keys are in the map, validates the values and updates the struct if the validation passes.
 // It returns an error if the validation fails or if the struct cannot be updated.
-func (r *Validator) ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate any, tagType ...string) error {
+func (r *Validator) ValidateAndUpdate(jsonInput map[string]any, structToUpdate any, tagType ...string) error {
 	tagTypeSet := model.VLD
 	if len(tagType) > 0 {
 		tagTypeSet = tagType[0]
@@ -78,7 +78,7 @@ func (r *Validator) ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate an
 		return fmt.Errorf("error validating struct: %v", err)
 	}
 
-	err = MapJsonMapToStruct(validatedMap, structToUpdate)
+	err = helper.MapJsonMapToStruct(validatedMap, structToUpdate)
 	if err != nil {
 		return fmt.Errorf("error mapping json map to struct: %v", err)
 	}
@@ -89,13 +89,15 @@ func (r *Validator) ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate an
 // ValidateAndUpdateWithValidation validates a given JsonMap by the given validations and updates the map.
 // It checks if the keys are in the map, validates the values and updates the map if the validation passes.
 // It returns an error if the validation fails or if the map cannot be updated.
-func (r *Validator) ValidateAndUpdateWithValidation(jsonInput model.JsonMap, mapToUpdate *model.JsonMap, validations []model.Validation) error {
+func (r *Validator) ValidateAndUpdateWithValidation(jsonInput map[string]any, mapToUpdate *map[string]any, validations []model.Validation) error {
 	validatedValues, err := r.ValidateWithValidation(jsonInput, validations)
 	if err != nil {
 		return fmt.Errorf("error validating json map: %v", err)
 	}
 
-	UpdateJsonMap(validatedValues, mapToUpdate)
+	for k, v := range validatedValues {
+		(*mapToUpdate)[k] = v
+	}
 
 	return nil
 }
@@ -108,17 +110,17 @@ func (r *Validator) ValidateAndUpdateWithValidation(jsonInput model.JsonMap, map
 // If a validation has a key that is already in the map, it returns an error.
 //
 // It returns a new JsonMap with the validated values or an error if the validation fails.
-func (r *Validator) ValidateWithValidation(jsonInput model.JsonMap, validations []model.Validation) (model.JsonMap, error) {
+func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations []model.Validation) (map[string]any, error) {
 	keys := []string{}
 	groups := map[string]*model.Group{}
 	groupSize := map[string]int{}
 	groupErrors := map[string][]error{}
 
-	validateValues := model.JsonMap{}
+	validateValues := map[string]any{}
 
 	for _, validation := range validations {
 		if len(validation.Key) > 0 && slices.Contains(keys, validation.Key) {
-			return model.JsonMap{}, fmt.Errorf("duplicate validation key: %v", validation.Key)
+			return map[string]any{}, fmt.Errorf("duplicate validation key: %v", validation.Key)
 		} else {
 			keys = append(keys, validation.Key)
 		}
@@ -134,7 +136,7 @@ func (r *Validator) ValidateWithValidation(jsonInput model.JsonMap, validations 
 			if strings.TrimSpace(validation.Requirement) == string(model.NONE) {
 				continue
 			} else if len(validation.Groups) == 0 {
-				return model.JsonMap{}, fmt.Errorf("json %v key not in map", validation.Key)
+				return map[string]any{}, fmt.Errorf("json %v key not in map", validation.Key)
 			} else {
 				for _, group := range validation.Groups {
 					groupErrors[group.Name] = append(groupErrors[group.Name], fmt.Errorf("json %v key not in map", validation.Key))
@@ -146,31 +148,30 @@ func (r *Validator) ValidateWithValidation(jsonInput model.JsonMap, validations 
 		var err error
 		switch validation.Type {
 		case model.Struct:
-			jsonValueInner, err := GetValidMap(jsonValue)
-			if err != nil {
-				return model.JsonMap{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
-			}
-
-			jsonValue, err = r.ValidateWithValidation(jsonValueInner, validation.InnerValidation)
-			if err != nil {
-				return model.JsonMap{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
+			if jsonValueMap, ok := jsonValue.(map[string]any); ok {
+				jsonValue, err = r.ValidateWithValidation(jsonValueMap, validation.InnerValidation)
+				if err != nil {
+					return map[string]any{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
+				}
+			} else {
+				err = r.ValidateValueWithParser(jsonValue, &validation)
 			}
 		case model.Array:
 			if helper.IsArray(jsonValue) && len(validation.InnerValidation) > 0 {
 				jsonArray, ok := jsonValue.([]any)
 				if !ok {
-					return model.JsonMap{}, fmt.Errorf("field %v must be of type array, was %T", validation.Key, jsonValue)
+					return map[string]any{}, fmt.Errorf("field %v must be of type array, was %T", validation.Key, jsonValue)
 				}
 
 				for _, jsonValueInner := range jsonArray {
-					jsonValueInnerMap, err := GetValidMap(jsonValueInner)
+					jsonValueInnerMap, err := helper.GetValidMap(jsonValueInner)
 					if err != nil {
-						return model.JsonMap{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
+						return map[string]any{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
 					}
 
 					_, err = r.ValidateWithValidation(jsonValueInnerMap, validation.InnerValidation)
 					if err != nil {
-						return model.JsonMap{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
+						return map[string]any{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
 					}
 				}
 			} else if helper.IsArray(jsonValue) {
@@ -185,7 +186,7 @@ func (r *Validator) ValidateWithValidation(jsonInput model.JsonMap, validations 
 		}
 
 		if err != nil && len(validation.Groups) == 0 {
-			return model.JsonMap{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
+			return map[string]any{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
 		} else if err != nil {
 			for _, group := range validation.Groups {
 				groupErrors[group.Name] = append(groupErrors[group.Name], fmt.Errorf("field %v invalid: %v", validation.Key, err.Error()))
@@ -198,7 +199,7 @@ func (r *Validator) ValidateWithValidation(jsonInput model.JsonMap, validations 
 
 	err := validators.ValidateGroups(groups, groupSize, groupErrors)
 	if err != nil {
-		return model.JsonMap{}, err
+		return map[string]any{}, err
 	}
 
 	return validateValues, nil

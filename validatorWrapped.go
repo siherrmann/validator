@@ -15,21 +15,21 @@ func Validate(v any, tagType ...string) error {
 
 // ValidateWithValidation is the wrapper function for the ValidateWithValidation method of the Validator struct.
 // More details can be found in the ValidateWithValidation method.
-func ValidateWithValidation(jsonInput model.JsonMap, validations []model.Validation) (model.JsonMap, error) {
+func ValidateWithValidation(jsonInput map[string]any, validations []model.Validation) (map[string]any, error) {
 	r := NewValidator()
 	return r.ValidateWithValidation(jsonInput, validations)
 }
 
 // ValidateAndUpdate is the wrapper function for the ValidateAndUpdate method of the Validator struct.
 // More details can be found in the ValidateAndUpdate method.
-func ValidateAndUpdate(jsonInput model.JsonMap, structToUpdate any, tagType ...string) error {
+func ValidateAndUpdate(jsonInput map[string]any, structToUpdate any, tagType ...string) error {
 	r := NewValidator()
 	return r.ValidateAndUpdate(jsonInput, structToUpdate, tagType...)
 }
 
 // ValidateAndUpdateWithValidation is the wrapper function for the ValidateAndUpdateWithValidation method of the Validator struct.
 // More details can be found in the ValidateAndUpdateWithValidation method.
-func ValidateAndUpdateWithValidation(jsonInput model.JsonMap, mapToUpdate *model.JsonMap, validations []model.Validation) error {
+func ValidateAndUpdateWithValidation(jsonInput map[string]any, mapToUpdate *map[string]any, validations []model.Validation) error {
 	r := NewValidator()
 	return r.ValidateAndUpdateWithValidation(jsonInput, mapToUpdate, validations)
 }
@@ -78,21 +78,21 @@ func UnmarshalValidateAndUpdate(request *http.Request, structToUpdate any, tagTy
 
 // UnmapOrUnmarshalValidateAndUpdateWithValidation is the wrapper function for the UnmapOrUnmarshalValidateAndUpdateWithValidation method of the Validator struct.
 // More details can be found in the UnmapOrUnmarshalValidateAndUpdateWithValidation method.
-func UnmapOrUnmarshalValidateAndUpdateWithValidation(request *http.Request, mapToUpdate *model.JsonMap, validations []model.Validation) error {
+func UnmapOrUnmarshalValidateAndUpdateWithValidation(request *http.Request, mapToUpdate *map[string]any, validations []model.Validation) error {
 	r := NewValidator()
 	return r.UnmapOrUnmarshalValidateAndUpdateWithValidation(request, mapToUpdate, validations)
 }
 
 // UnmapValidateAndUpdateWithValidation is the wrapper function for the UnmapValidateAndUpdateWithValidation method of the Validator struct.
 // More details can be found in the UnmapValidateAndUpdateWithValidation method.
-func UnmapValidateAndUpdateWithValidation(request *http.Request, mapToUpdate *model.JsonMap, validations []model.Validation) error {
+func UnmapValidateAndUpdateWithValidation(request *http.Request, mapToUpdate *map[string]any, validations []model.Validation) error {
 	r := NewValidator()
 	return r.UnmapValidateAndUpdateWithValidation(request, mapToUpdate, validations)
 }
 
 // UnmarshalValidateAndUpdateWithValidation is the wrapper function for the UnmarshalValidateAndUpdateWithValidation method of the Validator struct.
 // More details can be found in the UnmarshalValidateAndUpdateWithValidation method.
-func UnmarshalValidateAndUpdateWithValidation(request *http.Request, mapToUpdate *model.JsonMap, validations []model.Validation) error {
+func UnmarshalValidateAndUpdateWithValidation(request *http.Request, mapToUpdate *map[string]any, validations []model.Validation) error {
 	r := NewValidator()
 	return r.UnmarshalValidateAndUpdateWithValidation(request, mapToUpdate, validations)
 }

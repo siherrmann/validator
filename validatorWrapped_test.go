@@ -18,7 +18,7 @@ func TestWrappedValidate(t *testing.T) {
 }
 
 func TestWrappedValidateWithValidation(t *testing.T) {
-	jsonInput := model.JsonMap{"name": "apple", "age": 2}
+	jsonInput := map[string]any{"name": "apple", "age": 2}
 	validations := []model.Validation{
 		{Key: "name", Requirement: "equapple"},
 		{Key: "age", Requirement: "min2"},
@@ -31,7 +31,7 @@ func TestWrappedValidateWithValidation(t *testing.T) {
 }
 
 func TestWrappedValidateAndUpdate(t *testing.T) {
-	jsonInput := model.JsonMap{"name": "apple", "age": 2}
+	jsonInput := map[string]any{"name": "apple", "age": 2}
 	var s testStruct
 
 	err := ValidateAndUpdate(jsonInput, &s)
@@ -41,8 +41,8 @@ func TestWrappedValidateAndUpdate(t *testing.T) {
 }
 
 func TestWrappedValidateAndUpdateWithValidation(t *testing.T) {
-	jsonInput := model.JsonMap{"name": "apple", "age": 2}
-	mapToUpdate := model.JsonMap{}
+	jsonInput := map[string]any{"name": "apple", "age": 2}
+	mapToUpdate := map[string]any{}
 	validations := []model.Validation{
 		{Key: "name", Requirement: "equapple"},
 		{Key: "age", Requirement: "min2"},
@@ -145,7 +145,7 @@ func TestWrappedUnmapOrUnmarshalValidateAndUpdateWithValidation(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/", bytes.NewBufferString(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	mapToUpdate := model.JsonMap{}
+	mapToUpdate := map[string]any{}
 	validations := []model.Validation{
 		{Key: "name", Requirement: "equapple"},
 		{Key: "age", Requirement: "min2"},
@@ -161,7 +161,7 @@ func TestWrappedUnmapValidateAndUpdateWithValidation(t *testing.T) {
 	values := url.Values{}
 	values.Set("name", "apple")
 	values.Set("age", "2")
-	mapToUpdate := model.JsonMap{}
+	mapToUpdate := map[string]any{}
 	validations := []model.Validation{
 		{Key: "name", Requirement: "equapple"},
 		{Key: "age", Requirement: "min2"},
@@ -178,7 +178,7 @@ func TestWrappedUnmapValidateAndUpdateWithValidation(t *testing.T) {
 
 func TestWrappedUnmarshalValidateAndUpdateWithValidation(t *testing.T) {
 	data := []byte(`{"name":"apple","age":2}`)
-	mapToUpdate := model.JsonMap{}
+	mapToUpdate := map[string]any{}
 	validations := []model.Validation{
 		{Key: "name", Requirement: "equapple"},
 		{Key: "age", Requirement: "min2"},
