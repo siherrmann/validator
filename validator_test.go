@@ -458,7 +458,7 @@ func TestValidateWithValidation(t *testing.T) {
 			args: args{
 				jsonMap: map[string]any{
 					"fruit": "apple",
-					"nested": map[string]int{
+					"nested": map[string]any{
 						"fruit": 1,
 					},
 				},

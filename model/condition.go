@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 )
 
@@ -51,7 +50,7 @@ func LookupConditionType(conType ConditionType) error {
 // If the string is not valid, an error is returned.
 func GetConditionType(s string) (ConditionType, error) {
 	var conditionType ConditionType
-	if len(s) > 2 {
+	if len(s) > 3 {
 		conditionType = ConditionType(s[:3])
 	} else {
 		conditionType = ConditionType(s)
@@ -75,28 +74,4 @@ func GetConditionByType(conditionFull string, conditionType ConditionType) (stri
 		return "", fmt.Errorf("empty %s value", conditionType)
 	}
 	return condition, nil
-}
-
-// GetArrayFromCondition splits a condition string by commas and returns a slice of strings.
-// If the condition string is empty, an error is returned.
-func GetArrayFromCondition(condition string) ([]string, error) {
-	conditionList := strings.Split(condition, ",")
-	if len(conditionList) == 0 {
-		return []string{}, fmt.Errorf("empty condition list %s value", condition)
-	}
-	return conditionList, nil
-}
-
-// GetConditionsAndOrFromString splits a condition string by spaces and returns a slice of strings.
-// It also checks if the string contains the "OR" operator and returns a boolean indicating its presence.
-func GetConditionsAndOrFromString(in string) ([]string, bool) {
-	or := false
-	conditions := strings.Split(in, " ")
-	if slices.Contains(conditions, string(OR)) {
-		conditions = slices.DeleteFunc(conditions, func(v string) bool {
-			return v == string(OR)
-		})
-		or = true
-	}
-	return conditions, or
 }
