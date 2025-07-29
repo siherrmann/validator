@@ -10,6 +10,11 @@ func IsString(in any) bool {
 	return reflect.TypeOf(in).Kind() == reflect.String
 }
 
+// Checks if the given value is a struct.
+func IsStruct(in any) bool {
+	return reflect.TypeOf(in).Kind() == reflect.Struct
+}
+
 // Checks if the given value is an array or slice.
 func IsArray(in any) bool {
 	return reflect.TypeOf(in).Kind() == reflect.Array || reflect.TypeOf(in).Kind() == reflect.Slice

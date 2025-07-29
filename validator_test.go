@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/siherrmann/validator/helper"
 	"github.com/siherrmann/validator/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -76,59 +75,94 @@ func TestValidate(t *testing.T) {
 }
 
 func TestValidateAndUpdate(t *testing.T) {
-	type TestStruct struct {
-		Fruit string `json:"fruit" vld:"equapple"`
-	}
-	type args struct {
-		v       map[string]any
-		tagType string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "Valid struct validation",
-			args: args{
-				v:       map[string]any{"fruit": "apple"},
-				tagType: model.VLD,
-			},
-			wantErr: false,
-		},
-		{
-			name: "Invalid struct validation",
-			args: args{
-				v:       map[string]any{"fruit": "banana"},
-				tagType: model.VLD,
-			},
-			wantErr: true,
-		},
-	}
+	r := NewValidator()
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			testStruct := &TestStruct{}
-			r := NewValidator()
-			err := r.ValidateAndUpdate(test.args.v, testStruct, test.args.tagType)
-			if test.wantErr {
-				assert.Error(t, err, "Expected an error but got none")
-			} else {
-				assert.NoError(t, err, "Expected no error but got one")
-				mapOut := &map[string]any{}
-				err := helper.UnmapStructToJsonMap(testStruct, mapOut)
-				assert.NoError(t, err, "Expected no error but got one")
-				assert.Equal(t, test.args.v, *mapOut, "Expected output to match input")
-			}
-		})
-	}
+	t.Run("Valid struct", func(t *testing.T) {
+		testStruct := &struct {
+			Fruit string `json:"fruit" vld:"equapple"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"fruit": "apple"}, testStruct, model.VLD)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, "apple", testStruct.Fruit, "Expected output to match input")
+	})
+
+	t.Run("Invalid struct", func(t *testing.T) {
+		testStruct := &struct {
+			Fruit string `json:"fruit" vld:"equapple"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"fruit": "banana"}, testStruct, model.VLD)
+		assert.Error(t, err, "Expected an error with invalid input")
+		assert.Equal(t, "", testStruct.Fruit, "Expected output to be unchanged")
+	})
+
+	t.Run("Valid struct with inner struct", func(t *testing.T) {
+		testStruct := &struct {
+			Fruit struct {
+				Name string `json:"name" vld:"equapple"`
+			} `json:"fruit" vld:"-"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"fruit": map[string]any{"name": "apple"}}, testStruct, model.VLD)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, "apple", testStruct.Fruit.Name, "Expected output to match input")
+	})
+
+	t.Run("Invalid struct with inner struct", func(t *testing.T) {
+		testStruct := &struct {
+			Fruit struct {
+				Name string `json:"name" vld:"equapple"`
+			} `json:"fruit" vld:"-"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"fruit": map[string]any{"name": "banana"}}, testStruct, model.VLD)
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Equal(t, "", testStruct.Fruit.Name, "Expected output to be unchanged")
+	})
+
+	t.Run("Valid struct with array of structs", func(t *testing.T) {
+		testStruct := &struct {
+			Fruits []struct {
+				Name string `json:"name" vld:"equapple"`
+			} `json:"fruits" vld:"min1"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"fruits": []any{map[string]any{"name": "apple"}}}, testStruct, model.VLD)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, "apple", testStruct.Fruits[0].Name, "Expected output to match input")
+	})
+
+	t.Run("Invalid struct with array of structs", func(t *testing.T) {
+		testStruct := &struct {
+			Fruits []struct {
+				Name string `json:"name" vld:"equapple"`
+			} `json:"fruits" vld:"min1"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"fruits": []any{map[string]any{"name": "banana"}}}, testStruct, model.VLD)
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Empty(t, testStruct.Fruits, "Expected output to be unchanged")
+	})
+
+	t.Run("Valid struct with complex condition", func(t *testing.T) {
+		testStruct := &struct {
+			Fruits []struct {
+				Name string `json:"name" vld:"(equapple || min1) && neqbanana"`
+			} `json:"fruits" vld:"min1"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"fruits": []any{map[string]any{"name": "apple"}}}, testStruct, model.VLD)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, "apple", testStruct.Fruits[0].Name, "Expected output to match input")
+
+		err = r.ValidateAndUpdate(map[string]any{"fruits": []any{map[string]any{"name": "a"}}}, testStruct, model.VLD)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, "a", testStruct.Fruits[0].Name, "Expected output to match input")
+
+		err = r.ValidateAndUpdate(map[string]any{"fruits": []any{map[string]any{"name": "banana"}}}, testStruct, model.VLD)
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Equal(t, "a", testStruct.Fruits[0].Name, "Expected output to match input")
+	})
 
 	t.Run("Invalid struct pointer", func(t *testing.T) {
 		type TestStructInvalid struct {
 			Fruit string `json:"fruit" vld:"equapple, gp1min1"`
 		}
 		testStruct := TestStructInvalid{}
-		r := NewValidator()
 		err := r.ValidateAndUpdate(map[string]any{"fruit": "apple"}, testStruct)
 		require.Error(t, err, "Expected an error for invalid validation")
 		assert.Contains(t, err.Error(), "value has to be of kind pointer", "Expected error to contain 'value has to be of kind pointer'")
