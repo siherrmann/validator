@@ -58,7 +58,7 @@ func TestValidateGroups(t *testing.T) {
 			},
 			groupSize:     map[string]int{"gr1": 3},
 			groupErrors:   map[string][]error{"gr1": {}},
-			expectedError: "greater then 2 in group gr1 without error, all errors: []",
+			expectedError: "more then 2 in group gr1 without error, all errors: []",
 		},
 		{
 			name: "Invalid group with invalid max condition",
