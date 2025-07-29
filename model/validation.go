@@ -79,14 +79,12 @@ func GetValidationFromStructField(tagType string, fieldValue reflect.Value, fiel
 	}
 
 	if helper.IsArrayOfStruct(fieldValue.Interface()) {
-		for i := 0; i < fieldValue.Len(); i++ {
-			innerStruct := fieldValue.Index(i).Addr().Interface()
-			innerValidation, err := GetValidationsFromStruct(innerStruct, string(tagType))
-			if err != nil {
-				return Validation{}, fmt.Errorf("error getting inner validation: %v", err)
-			}
-			validation.InnerValidation = append(validation.InnerValidation, innerValidation...)
+		innerStruct := reflect.New(fieldValue.Type().Elem()).Interface()
+		innerValidation, err := GetValidationsFromStruct(innerStruct, string(tagType))
+		if err != nil {
+			return Validation{}, fmt.Errorf("error getting inner validation: %v", err)
 		}
+		validation.InnerValidation = append(validation.InnerValidation, innerValidation...)
 	}
 
 	return validation, nil

@@ -24,10 +24,12 @@ func GetGroups(s string) ([]*Group, error) {
 	groupsString := strings.Split(s, " ")
 	for _, g := range groupsString {
 		group := &Group{}
-		if len(g) > 2 {
+		var groupCondition string
+		if len(g) > 3 {
 			group.Name = g[:3]
+			groupCondition = g[3:]
 		} else {
-			group.Name = g
+			return nil, fmt.Errorf("group too short: %s", group.Name)
 		}
 
 		if !strings.HasPrefix(group.Name, "gr") {
@@ -35,12 +37,6 @@ func GetGroups(s string) ([]*Group, error) {
 		}
 
 		var err error
-		var groupCondition string
-		if len(g[3:]) > 0 {
-			groupCondition = g[3:]
-		} else {
-			groupCondition = ""
-		}
 		group.ConditionType, err = GetConditionType(groupCondition)
 		if err != nil {
 			return nil, err
