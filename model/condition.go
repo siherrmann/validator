@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 )
 
@@ -15,12 +14,13 @@ const (
 	EQUAL        ConditionType = "equ"
 	NOT_EQUAL    ConditionType = "neq"
 	MIN_VALUE    ConditionType = "min"
-	MAX_VLAUE    ConditionType = "max"
+	MAX_VALUE    ConditionType = "max"
 	CONTAINS     ConditionType = "con"
 	NOT_CONTAINS ConditionType = "nco"
 	FROM         ConditionType = "frm"
 	NOT_FROM     ConditionType = "nfr"
 	REGX         ConditionType = "rex"
+	FUNC         ConditionType = "fun"
 )
 
 var ValidConditionTypes = map[ConditionType]int{
@@ -28,7 +28,7 @@ var ValidConditionTypes = map[ConditionType]int{
 	EQUAL:        1,
 	NOT_EQUAL:    2,
 	MIN_VALUE:    3,
-	MAX_VLAUE:    4,
+	MAX_VALUE:    4,
 	CONTAINS:     5,
 	NOT_CONTAINS: 6,
 	FROM:         7,
@@ -45,9 +45,12 @@ func LookupConditionType(conType ConditionType) error {
 	return fmt.Errorf("expected a valid condition type, found: %s", conType)
 }
 
+// GetConditionType returns the condition type from a string.
+// It checks if the string starts with a valid condition type prefix.
+// If the string is not valid, an error is returned.
 func GetConditionType(s string) (ConditionType, error) {
 	var conditionType ConditionType
-	if len(s) > 2 {
+	if len(s) > 3 {
 		conditionType = ConditionType(s[:3])
 	} else {
 		conditionType = ConditionType(s)
@@ -59,6 +62,9 @@ func GetConditionType(s string) (ConditionType, error) {
 	return conditionType, nil
 }
 
+// GetConditionByType extracts the condition value from a string based on the condition type.
+// It trims the prefix of the condition type from the string and returns the remaining part.
+// If the condition type is not valid or the value is empty, an error is returned.
 func GetConditionByType(conditionFull string, conditionType ConditionType) (string, error) {
 	if len(conditionType) != 3 {
 		return "", fmt.Errorf("length of conditionType has to be 3: %s", conditionType)
@@ -68,24 +74,4 @@ func GetConditionByType(conditionFull string, conditionType ConditionType) (stri
 		return "", fmt.Errorf("empty %s value", conditionType)
 	}
 	return condition, nil
-}
-
-func GetArrayFromCondition(condition string) ([]string, error) {
-	conditionList := strings.Split(condition, ",")
-	if len(conditionList) == 0 {
-		return []string{}, fmt.Errorf("empty condition list %s value", condition)
-	}
-	return conditionList, nil
-}
-
-func GetConditionsAndOrFromString(in string) ([]string, bool) {
-	or := false
-	conditions := strings.Split(in, " ")
-	if slices.Contains(conditions, string(OR)) {
-		conditions = slices.DeleteFunc(conditions, func(v string) bool {
-			return v == string(OR)
-		})
-		or = true
-	}
-	return conditions, or
 }

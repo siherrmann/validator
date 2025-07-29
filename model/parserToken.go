@@ -1,5 +1,9 @@
 package model
 
+// Token represents a token in the parser.
+// It contains the type of the token, its literal value, and its position in the requirement.
+// The position is defined by the line number, start index, and end index.
+// This structure is used to tokenize the input for parsing and validation.
 type Token struct {
 	Type    TokenType
 	Literal string
@@ -8,6 +12,7 @@ type Token struct {
 	End     int
 }
 
+// TokenType represents the type of a token in the parser.
 type TokenType string
 
 const (

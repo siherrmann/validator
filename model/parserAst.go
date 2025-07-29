@@ -22,6 +22,7 @@ type AstValue struct {
 	End            int
 }
 
+// AstValueType is the type for all available AST value types.
 type AstValueType string
 
 const (
@@ -30,8 +31,14 @@ const (
 	CONDITION AstValueType = "Condition"
 )
 
+// ConditionGroup is a slice of AstValue pointers.
 type ConditionGroup []*AstValue
 
+// AstGroupToString converts the AstValue's ConditionGroup to a string representation.
+// It iterates over each AstValue in the group and formats it based on its type.
+// If the AstValue is a group, it recursively calls itself to get the string representation of the group.
+// If the AstValue is a condition, it formats it as a string with its ConditionType and ConditionValue.
+// The resulting string is a concatenation of all conditions and groups, separated by spaces.
 func (r AstValue) AstGroupToString() string {
 	groupConditions := []string{}
 	groupString := ""
@@ -51,45 +58,16 @@ func (r AstValue) AstGroupToString() string {
 	return groupString
 }
 
+// AstConditionToString converts the AstValue's ConditionType and ConditionValue to a string representation.
+// If the AstValue has an Operator, it includes that in the string.
+// The resulting string is formatted as "<ConditionType>'<ConditionValue>' <Operator>" if the Operator is present,
+// or as "<ConditionType>'<ConditionValue>'" if the Operator is not present.
 func (r AstValue) AstConditionToString() string {
 	if len(r.Operator) > 0 {
 		return fmt.Sprintf("%v'%v' %v", r.ConditionType, r.ConditionValue, r.Operator)
 	} else {
 		return fmt.Sprintf("%v'%v'", r.ConditionType, r.ConditionValue)
 	}
-}
-
-// RunFuncOnConditionGroup runs the function [f] on each condition in the [astValue].
-// If the condition is a group, it recursively calls itself on the group.
-// If the condition is a condition, it calls the function [f] with the input and the condition.
-// If the operator is AND, it returns an error if any condition fails.
-// If the operator is OR, it collects all errors and returns them if all conditions fail.
-func RunFuncOnConditionGroup[T comparable](input T, astValue *AstValue, f func(T, *AstValue) error) error {
-	var errors []error
-	for i, v := range astValue.ConditionGroup {
-		var err error
-		switch v.Type {
-		case EMPTY:
-			return nil
-		case GROUP:
-			err = RunFuncOnConditionGroup(input, v, f)
-		case CONDITION:
-			err = f(input, v)
-		}
-		if err != nil && i == 0 && v.Operator == OR {
-			errors = append(errors, err)
-		} else if err != nil && i == 0 && v.Operator == AND {
-			return err
-		} else if err != nil && i > 0 && astValue.ConditionGroup[i-1].Operator == OR {
-			errors = append(errors, err)
-		} else if err != nil {
-			return err
-		}
-	}
-	if len(astValue.ConditionGroup) > 0 && len(errors) >= len(astValue.ConditionGroup) {
-		return fmt.Errorf("no condition fulfilled, all errors: %v", errors)
-	}
-	return nil
 }
 
 // Operator is the type for all available operators.
@@ -102,6 +80,8 @@ const (
 	OR  Operator = "||"
 )
 
+// validOperator is a map that holds valid operators and their corresponding integer values.
+// This map is used to validate operators in the AST.
 var validOperator = map[Operator]int{
 	AND: 0,
 	OR:  1,
