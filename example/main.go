@@ -8,6 +8,23 @@ import (
 	"github.com/siherrmann/validator"
 )
 
+func main() {
+	router := http.NewServeMux()
+	router.HandleFunc("/error", HandleError)
+
+	server := &http.Server{
+		Addr:              ":1234",
+		Handler:           router,
+		ReadTimeout:       5 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	err := server.ListenAndServe()
+	if err != nil {
+		panic(err)
+	}
+}
+
 type Error struct {
 	ID                  int       `json:"id" del:"min1"`
 	StatusCode          int       `json:"status_code" vld:"min100" upd:"min100, gr1min1"`

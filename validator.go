@@ -118,7 +118,8 @@ func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations
 
 	validateValues := map[string]any{}
 
-	for _, validation := range validations {
+	for validationIndex := range validations {
+		validation := validations[validationIndex]
 		if len(validation.Key) > 0 && slices.Contains(keys, validation.Key) {
 			return map[string]any{}, fmt.Errorf("duplicate validation key: %v", validation.Key)
 		} else {
