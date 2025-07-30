@@ -63,6 +63,23 @@ func TestGetValidationsFromStruct(t *testing.T) {
 			expectedError: false,
 		},
 		{
+			name: "Valid struct with inner struct",
+			args: args{
+				input: &struct {
+					Field1 struct {
+						Name string `json:"name" vld:"equ1"`
+					} `json:"field1" vld:"-"`
+				}{},
+				tagType: VLD,
+			},
+			expected: []Validation{
+				{Key: "field1", Type: Struct, Requirement: "-", InnerValidation: []Validation{
+					{Key: "name", Type: String, Requirement: "equ1"},
+				}},
+			},
+			expectedError: false,
+		},
+		{
 			name: "Valid struct with array of structs",
 			args: args{
 				input: &struct {
@@ -80,19 +97,12 @@ func TestGetValidationsFromStruct(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name: "Empty struct",
-			args: args{
-				input:   &struct{}{},
-				tagType: VLD,
-			},
-			expected:      []Validation{},
-			expectedError: false,
-		},
-		{
-			name: "Invalid struct with invalid group",
+			name: "Valid struct with invalid struct validation",
 			args: args{
 				input: &struct {
-					Field1 string `vld:"equ1, gr"`
+					Field1 []struct {
+						Name string `json:"name" vld:"equ"`
+					} `json:"field1" vld:"min1"`
 				}{},
 				tagType: VLD,
 			},
@@ -106,6 +116,39 @@ func TestGetValidationsFromStruct(t *testing.T) {
 					Field1 []struct {
 						Name string `json:"name" vld:"equ1, gr"`
 					} `json:"field1" vld:"min1"`
+				}{},
+				tagType: VLD,
+			},
+			expected:      []Validation{},
+			expectedError: true,
+		},
+		{
+			name: "Valid struct with invalid inner struct validation",
+			args: args{
+				input: &struct {
+					Field1 struct {
+						Name string `json:"name" vld:"equ"`
+					} `json:"field1" vld:"-"`
+				}{},
+				tagType: VLD,
+			},
+			expected:      []Validation{},
+			expectedError: true,
+		},
+		{
+			name: "Empty struct",
+			args: args{
+				input:   &struct{}{},
+				tagType: VLD,
+			},
+			expected:      []Validation{},
+			expectedError: false,
+		},
+		{
+			name: "Invalid struct with invalid group",
+			args: args{
+				input: &struct {
+					Field1 string `vld:"equ1, gr"`
 				}{},
 				tagType: VLD,
 			},
