@@ -17,7 +17,7 @@ const (
 	Struct ValidatorType = "struct"
 )
 
-func (v ValidatorType) ToReflectReflectType() reflect.Type {
+func (v ValidatorType) ToReflectType() reflect.Type {
 	switch v {
 	case String:
 		return reflect.TypeOf("")

@@ -25,7 +25,7 @@ func TestValidatorTypeToReflectKind(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			result := test.input.ToReflectReflectType()
+			result := test.input.ToReflectType()
 			assert.Equal(t, test.expected, result, "Expected %v for %v, got %v", test.expected, test.input, result)
 		})
 	}
