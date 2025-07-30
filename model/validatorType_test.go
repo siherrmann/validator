@@ -11,21 +11,21 @@ func TestValidatorTypeToReflectKind(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    ValidatorType
-		expected reflect.Kind
+		expected reflect.Type
 	}{
-		{"String", String, reflect.String},
-		{"Int", Int, reflect.Int},
-		{"Float", Float, reflect.Float64},
-		{"Bool", Bool, reflect.Bool},
-		{"Array", Array, reflect.Array},
-		{"Map", Map, reflect.Map},
-		{"Struct", Struct, reflect.Struct},
-		{"Unknown", "unknown", reflect.Struct},
+		{"String", String, reflect.TypeOf("")},
+		{"Int", Int, reflect.TypeOf(int(0))},
+		{"Float", Float, reflect.TypeOf(float64(0))},
+		{"Bool", Bool, reflect.TypeOf(false)},
+		{"Array", Array, reflect.TypeOf([]string{})},
+		{"Map", Map, reflect.TypeOf(map[string]string{})},
+		{"Struct", Struct, reflect.TypeOf(struct{}{})},
+		{"Unknown", "unknown", reflect.TypeOf(struct{}{})},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			result := test.input.ToReflectKind()
+			result := test.input.ToReflectReflectType()
 			assert.Equal(t, test.expected, result, "Expected %v for %v, got %v", test.expected, test.input, result)
 		})
 	}

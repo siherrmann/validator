@@ -17,24 +17,24 @@ const (
 	Struct ValidatorType = "struct"
 )
 
-func (v ValidatorType) ToReflectKind() reflect.Kind {
+func (v ValidatorType) ToReflectReflectType() reflect.Type {
 	switch v {
 	case String:
-		return reflect.String
+		return reflect.TypeOf("")
 	case Int:
-		return reflect.Int
+		return reflect.TypeOf(int(0))
 	case Float:
-		return reflect.Float64
+		return reflect.TypeOf(float64(0))
 	case Bool:
-		return reflect.Bool
+		return reflect.TypeOf(false)
 	case Array:
-		return reflect.Array
+		return reflect.TypeOf([]string{})
 	case Map:
-		return reflect.Map
+		return reflect.TypeOf(map[string]string{})
 	case Struct:
-		return reflect.Struct
+		return reflect.TypeOf(struct{}{})
 	default:
-		return reflect.Struct
+		return reflect.TypeOf(struct{}{})
 	}
 }
 
