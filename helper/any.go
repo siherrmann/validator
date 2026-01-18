@@ -107,6 +107,11 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		}
 	}()
 
+	// Early return if the input is already of the expected type
+	if reflect.TypeOf(in) == expected {
+		return in, nil
+	}
+
 	// Handle pointer types by recursively converting to the element type,
 	// then returning a pointer to the result
 	if expected.Kind() == reflect.Ptr {
