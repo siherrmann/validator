@@ -107,6 +107,25 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		}
 	}()
 
+	// Handle pointer types by recursively converting to the element type,
+	// then returning a pointer to the result
+	if expected.Kind() == reflect.Ptr {
+		if in == nil {
+			return reflect.Zero(expected).Interface(), nil
+		}
+
+		elemType := expected.Elem()
+		elemValue, err := AnyToType(in, elemType)
+		if err != nil {
+			return nil, err
+		}
+
+		// Create a pointer to the converted value
+		ptrValue := reflect.New(elemType)
+		ptrValue.Elem().Set(reflect.ValueOf(elemValue))
+		return ptrValue.Interface(), nil
+	}
+
 	switch expected.Kind() {
 	case reflect.String:
 		if v, ok := in.(string); ok {

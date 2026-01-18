@@ -920,6 +920,230 @@ func TestAnyToType(t *testing.T) {
 			},
 			expectedError: true,
 		},
+		// Pointer types
+		{
+			name: "Valid string to *string",
+			args: args{
+				v:        "apple",
+				expected: reflect.TypeOf((*string)(nil)),
+			},
+			expected:      func() any { s := "apple"; return &s }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid int to *int",
+			args: args{
+				v:        42,
+				expected: reflect.TypeOf((*int)(nil)),
+			},
+			expected:      func() any { i := 42; return &i }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid float to *int",
+			args: args{
+				v:        float64(42),
+				expected: reflect.TypeOf((*int)(nil)),
+			},
+			expected:      func() any { i := 42; return &i }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid string to *int",
+			args: args{
+				v:        "42",
+				expected: reflect.TypeOf((*int)(nil)),
+			},
+			expected:      func() any { i := 42; return &i }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid bool to *bool",
+			args: args{
+				v:        true,
+				expected: reflect.TypeOf((*bool)(nil)),
+			},
+			expected:      func() any { b := true; return &b }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid string to *bool",
+			args: args{
+				v:        "true",
+				expected: reflect.TypeOf((*bool)(nil)),
+			},
+			expected:      func() any { b := true; return &b }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid float64 to *float64",
+			args: args{
+				v:        3.14,
+				expected: reflect.TypeOf((*float64)(nil)),
+			},
+			expected:      func() any { f := 3.14; return &f }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid string to *float64",
+			args: args{
+				v:        "3.14",
+				expected: reflect.TypeOf((*float64)(nil)),
+			},
+			expected:      func() any { f := 3.14; return &f }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid float32 to *float32",
+			args: args{
+				v:        float32(3.14),
+				expected: reflect.TypeOf((*float32)(nil)),
+			},
+			expected:      func() any { f := float32(3.14); return &f }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid int8 to *int8",
+			args: args{
+				v:        int8(42),
+				expected: reflect.TypeOf((*int8)(nil)),
+			},
+			expected:      func() any { i := int8(42); return &i }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid int16 to *int16",
+			args: args{
+				v:        int16(42),
+				expected: reflect.TypeOf((*int16)(nil)),
+			},
+			expected:      func() any { i := int16(42); return &i }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid int32 to *int32",
+			args: args{
+				v:        int32(42),
+				expected: reflect.TypeOf((*int32)(nil)),
+			},
+			expected:      func() any { i := int32(42); return &i }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid int64 to *int64",
+			args: args{
+				v:        int64(42),
+				expected: reflect.TypeOf((*int64)(nil)),
+			},
+			expected:      func() any { i := int64(42); return &i }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid uint to *uint",
+			args: args{
+				v:        uint(42),
+				expected: reflect.TypeOf((*uint)(nil)),
+			},
+			expected:      func() any { u := uint(42); return &u }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid uint8 to *uint8",
+			args: args{
+				v:        uint8(42),
+				expected: reflect.TypeOf((*uint8)(nil)),
+			},
+			expected:      func() any { u := uint8(42); return &u }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid uint16 to *uint16",
+			args: args{
+				v:        uint16(42),
+				expected: reflect.TypeOf((*uint16)(nil)),
+			},
+			expected:      func() any { u := uint16(42); return &u }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid uint32 to *uint32",
+			args: args{
+				v:        uint32(42),
+				expected: reflect.TypeOf((*uint32)(nil)),
+			},
+			expected:      func() any { u := uint32(42); return &u }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid uint64 to *uint64",
+			args: args{
+				v:        uint64(42),
+				expected: reflect.TypeOf((*uint64)(nil)),
+			},
+			expected:      func() any { u := uint64(42); return &u }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid time.Time to *time.Time",
+			args: args{
+				v:        time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC),
+				expected: reflect.TypeOf((*time.Time)(nil)),
+			},
+			expected:      func() any { t := time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC); return &t }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid string to *time.Time",
+			args: args{
+				v:        `2025-01-02T00:00:00.000Z`,
+				expected: reflect.TypeOf((*time.Time)(nil)),
+			},
+			expected:      func() any { t := time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC); return &t }(),
+			expectedError: false,
+		},
+		{
+			name: "Valid struct to *struct",
+			args: args{
+				v:        `{"fruit": "apple"}`,
+				expected: reflect.TypeOf((*testStruct)(nil)),
+			},
+			expected:      func() any { s := testStruct{Fruit: "apple"}; return &s }(),
+			expectedError: false,
+		},
+		{
+			name: "Nil to *string",
+			args: args{
+				v:        nil,
+				expected: reflect.TypeOf((*string)(nil)),
+			},
+			expected:      (*string)(nil),
+			expectedError: false,
+		},
+		{
+			name: "Nil to *int",
+			args: args{
+				v:        nil,
+				expected: reflect.TypeOf((*int)(nil)),
+			},
+			expected:      (*int)(nil),
+			expectedError: false,
+		},
+		{
+			name: "Invalid string to *int",
+			args: args{
+				v:        "apple",
+				expected: reflect.TypeOf((*int)(nil)),
+			},
+			expectedError: true,
+		},
+		{
+			name: "Invalid string to *bool",
+			args: args{
+				v:        "invalid",
+				expected: reflect.TypeOf((*bool)(nil)),
+			},
+			expectedError: true,
+		},
 	}
 
 	for _, test := range tests {
