@@ -385,40 +385,40 @@ func TestSetStructValueByJson(t *testing.T) {
 	})
 }
 
-func TestMapJsonMapToStructWithUUID(t *testing.T) {
-	t.Run("Convert string to UUID", func(t *testing.T) {
-		type TestStruct struct {
-			ID uuid.UUID `json:"id"`
-		}
-		result := &TestStruct{}
-		input := map[string]any{
-			"id": "550e8400-e29b-41d4-a716-446655440000",
-		}
+func TestMapJsonMapToStruct(t *testing.T) {
+	t.Run("UUID conversion", func(t *testing.T) {
+		t.Run("String to UUID", func(t *testing.T) {
+			type TestStruct struct {
+				ID uuid.UUID `json:"id"`
+			}
+			result := &TestStruct{}
+			input := map[string]any{
+				"id": "550e8400-e29b-41d4-a716-446655440000",
+			}
 
-		err := MapJsonMapToStruct(input, result)
-		assert.NoError(t, err)
-		expectedUUID, _ := uuid.Parse("550e8400-e29b-41d4-a716-446655440000")
-		assert.Equal(t, expectedUUID, result.ID)
+			err := MapJsonMapToStruct(input, result)
+			assert.NoError(t, err)
+			expectedUUID, _ := uuid.Parse("550e8400-e29b-41d4-a716-446655440000")
+			assert.Equal(t, expectedUUID, result.ID)
+		})
+
+		t.Run("Hex string to UUID", func(t *testing.T) {
+			type TestStruct struct {
+				ID uuid.UUID `json:"id"`
+			}
+			result := &TestStruct{}
+			input := map[string]any{
+				"id": "550e8400e29b41d4a716446655440000",
+			}
+
+			err := MapJsonMapToStruct(input, result)
+			assert.NoError(t, err)
+			expectedUUID, _ := uuid.Parse("550e8400-e29b-41d4-a716-446655440000")
+			assert.Equal(t, expectedUUID, result.ID)
+		})
 	})
 
-	t.Run("Convert hex string to UUID", func(t *testing.T) {
-		type TestStruct struct {
-			ID uuid.UUID `json:"id"`
-		}
-		result := &TestStruct{}
-		input := map[string]any{
-			"id": "550e8400e29b41d4a716446655440000",
-		}
-
-		err := MapJsonMapToStruct(input, result)
-		assert.NoError(t, err)
-		expectedUUID, _ := uuid.Parse("550e8400-e29b-41d4-a716-446655440000")
-		assert.Equal(t, expectedUUID, result.ID)
-	})
-}
-
-func TestMapJsonMapToStructWithOmitEmpty(t *testing.T) {
-	t.Run("Map field with omitempty tag", func(t *testing.T) {
+	t.Run("Omitempty tag handling", func(t *testing.T) {
 		type TestStruct struct {
 			Name   string         `json:"name"`
 			Config map[string]any `json:"config,omitempty"`
@@ -449,7 +449,168 @@ func TestMapJsonMapToStructWithOmitEmpty(t *testing.T) {
 		assert.NotNil(t, result.Config)
 		assert.Len(t, result.Config, 2)
 		assert.Equal(t, "value1", result.Config["key1"])
-		// JSON unmarshals numbers as float64
 		assert.Equal(t, float64(42), result.Config["key2"])
+	})
+
+	t.Run("Map fields", func(t *testing.T) {
+		t.Run("Missing map field initialized as empty", func(t *testing.T) {
+			type TestStruct struct {
+				Name   string         `json:"name"`
+				Config map[string]any `json:"config,omitempty"`
+			}
+
+			inputMap := map[string]any{"name": "test"}
+
+			var result TestStruct
+			err := MapJsonMapToStruct(inputMap, &result)
+			assert.NoError(t, err)
+
+			assert.Equal(t, "test", result.Name)
+			assert.NotNil(t, result.Config)
+			assert.NotPanics(t, func() {
+				result.Config["key"] = "value"
+			})
+			assert.Equal(t, "value", result.Config["key"])
+		})
+
+		t.Run("Null map field initialized as empty", func(t *testing.T) {
+			type TestStruct struct {
+				Name   string            `json:"name"`
+				Config map[string]string `json:"config"`
+			}
+
+			inputMap := map[string]any{
+				"name":   "test",
+				"config": nil,
+			}
+
+			var result TestStruct
+			err := MapJsonMapToStruct(inputMap, &result)
+			assert.NoError(t, err)
+
+			assert.Equal(t, "test", result.Name)
+			assert.NotNil(t, result.Config)
+			assert.NotPanics(t, func() {
+				result.Config["key"] = "value"
+			})
+			assert.Equal(t, "value", result.Config["key"])
+		})
+
+		t.Run("Empty map remains empty but not nil", func(t *testing.T) {
+			type TestStruct struct {
+				Name   string         `json:"name"`
+				Config map[string]int `json:"config"`
+			}
+
+			inputMap := map[string]any{
+				"name":   "test",
+				"config": map[string]any{},
+			}
+
+			var result TestStruct
+			err := MapJsonMapToStruct(inputMap, &result)
+			assert.NoError(t, err)
+
+			assert.Equal(t, "test", result.Name)
+			assert.NotNil(t, result.Config)
+			assert.Len(t, result.Config, 0)
+			assert.NotPanics(t, func() {
+				result.Config["key"] = 42
+			})
+			assert.Equal(t, 42, result.Config["key"])
+		})
+	})
+
+	t.Run("Slice fields", func(t *testing.T) {
+		t.Run("Missing slice field initialized as empty", func(t *testing.T) {
+			type TestStruct struct {
+				Name  string   `json:"name"`
+				Items []string `json:"items,omitempty"`
+			}
+
+			inputMap := map[string]any{"name": "test"}
+
+			var result TestStruct
+			err := MapJsonMapToStruct(inputMap, &result)
+			assert.NoError(t, err)
+
+			assert.Equal(t, "test", result.Name)
+			assert.NotNil(t, result.Items)
+			assert.Len(t, result.Items, 0)
+			result.Items = append(result.Items, "value")
+			assert.Equal(t, "value", result.Items[0])
+		})
+
+		t.Run("Null slice field initialized as empty", func(t *testing.T) {
+			type TestStruct struct {
+				Name  string `json:"name"`
+				Items []int  `json:"items"`
+			}
+
+			inputMap := map[string]any{
+				"name":  "test",
+				"items": nil,
+			}
+
+			var result TestStruct
+			err := MapJsonMapToStruct(inputMap, &result)
+			assert.NoError(t, err)
+
+			assert.Equal(t, "test", result.Name)
+			assert.NotNil(t, result.Items)
+			assert.Len(t, result.Items, 0)
+		})
+	})
+
+	t.Run("Pointer fields", func(t *testing.T) {
+		t.Run("Pointer to slice remains nil when not set", func(t *testing.T) {
+			type TestStruct struct {
+				Name  string    `json:"name"`
+				Items *[]string `json:"items,omitempty"`
+			}
+
+			inputMap := map[string]any{"name": "test"}
+
+			var result TestStruct
+			err := MapJsonMapToStruct(inputMap, &result)
+			assert.NoError(t, err)
+
+			assert.Equal(t, "test", result.Name)
+			assert.Nil(t, result.Items)
+		})
+
+		t.Run("Pointer to map remains nil when not set", func(t *testing.T) {
+			type TestStruct struct {
+				Name   string             `json:"name"`
+				Config *map[string]string `json:"config,omitempty"`
+			}
+
+			inputMap := map[string]any{"name": "test"}
+
+			var result TestStruct
+			err := MapJsonMapToStruct(inputMap, &result)
+			assert.NoError(t, err)
+
+			assert.Equal(t, "test", result.Name)
+			assert.Nil(t, result.Config)
+		})
+
+		t.Run("Direct vs pointer behavior differs", func(t *testing.T) {
+			type TestStruct struct {
+				Name         string    `json:"name"`
+				DirectSlice  []string  `json:"directSlice,omitempty"`
+				PointerSlice *[]string `json:"pointerSlice,omitempty"`
+			}
+
+			inputMap := map[string]any{"name": "test"}
+
+			var result TestStruct
+			err := MapJsonMapToStruct(inputMap, &result)
+			assert.NoError(t, err)
+
+			assert.NotNil(t, result.DirectSlice)
+			assert.Len(t, result.DirectSlice, 0)
+			assert.Nil(t, result.PointerSlice)
+		})
 	})
 }

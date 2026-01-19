@@ -79,6 +79,15 @@ func MapJsonMapToStruct(jsonMapInput map[string]any, structToUpdate any) error {
 			if err != nil {
 				return fmt.Errorf("could not set field %v (json key: %v) of %v: %v", fieldType.Name, jsonKey, reflect.TypeOf(structToUpdate), err.Error())
 			}
+		} else {
+			// Initialize nil map and slice fields with empty collections to prevent panics
+			if field.CanSet() {
+				if field.Kind() == reflect.Map && field.IsNil() {
+					field.Set(reflect.MakeMap(field.Type()))
+				} else if field.Kind() == reflect.Slice && field.IsNil() {
+					field.Set(reflect.MakeSlice(field.Type(), 0, 0))
+				}
+			}
 		}
 	}
 	return nil

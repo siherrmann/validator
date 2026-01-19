@@ -111,6 +111,13 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 
 	// Nil input
 	if in == nil {
+		// For maps and slices, return empty collections instead of nil to prevent panics
+		if expected.Kind() == reflect.Map {
+			return reflect.MakeMap(expected).Interface(), nil
+		}
+		if expected.Kind() == reflect.Slice {
+			return reflect.MakeSlice(expected, 0, 0).Interface(), nil
+		}
 		return reflect.Zero(expected).Interface(), nil
 	}
 
