@@ -24,32 +24,27 @@ func UnixStringToTime(in string) (time.Time, error) {
 }
 
 // ISO8601StringToTime converts an ISO8601 date string to a time.Time object.
-// It checks the format of the string and parses it accordingly.
-// It supports various formats including local time, UTC time, with and without microseconds.
+// It supports RFC3339 format timestamps including timezone offsets,
+// as well as database formats without timezone information.
 func ISO8601StringToTime(in string) (time.Time, error) {
+	// RFC3339Nano handles all formats with timezone (Z or +/-HH:MM) including nanoseconds
+	// Examples: 2026-01-19T14:37:45.673212+01:00, 2026-01-19T14:37:45.123Z, 2026-01-19T14:37:45Z
+	if date, err := time.Parse(time.RFC3339Nano, in); err == nil {
+		return date, nil
+	}
+	if date, err := time.Parse(time.RFC3339, in); err == nil {
+		return date, nil
+	}
+
+	// Database formats without timezone - local time only
 	layout := ""
-	// Iso8601 date string in local time (yyyy-MM-ddTHH:mm:ss.mmmuuu)
-	match, _ := regexp.MatchString("^[-:.T0-9]{26}$", in)
-	if match {
+	switch len(in) {
+	case 26: // yyyy-MM-ddTHH:mm:ss.mmmuuu (microseconds)
 		layout = "2006-01-02T15:04:05.000000"
-	}
-
-	// Iso8601 date string in UTC time (yyyy-MM-ddTHH:mm:ss.mmmuuuZ)
-	match, _ = regexp.MatchString("^[-:.T0-9]{26}Z$", in)
-	if match {
-		layout = "2006-01-02T15:04:05.000000Z"
-	}
-
-	// Iso8601 date string in local time without microseconds (yyyy-MM-ddTHH:mm:ss.mmm)
-	match, _ = regexp.MatchString("^[-:.T0-9]{23}$", in)
-	if match {
+	case 23: // yyyy-MM-ddTHH:mm:ss.mmm (milliseconds)
 		layout = "2006-01-02T15:04:05.000"
-	}
-
-	// Iso8601 date string in UTC time without microseconds (yyyy-MM-ddTHH:mm:ss.mmmZ)
-	match, _ = regexp.MatchString("^[-:.T0-9]{23}Z$", in)
-	if match {
-		layout = "2006-01-02T15:04:05.000Z"
+	default:
+		return time.Time{}, fmt.Errorf("error parsing iso8601 string to time: unsupported format")
 	}
 
 	date, err := time.Parse(layout, in)
