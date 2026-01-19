@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -380,5 +381,37 @@ func TestSetStructValueByJson(t *testing.T) {
 			assert.Error(t, err, "Expected error setting struct value by json map with invalid json")
 			assert.Equal(t, []InnerStruct{{Name: "apple"}, {Name: "banana"}}, resultWithArray.Array, "Expected Array of structs to remain unchanged")
 		})
+	})
+}
+
+func TestMapJsonMapToStructWithUUID(t *testing.T) {
+	t.Run("Convert string to UUID", func(t *testing.T) {
+		type TestStruct struct {
+			ID uuid.UUID `json:"id"`
+		}
+		result := &TestStruct{}
+		input := map[string]any{
+			"id": "550e8400-e29b-41d4-a716-446655440000",
+		}
+
+		err := MapJsonMapToStruct(input, result)
+		assert.NoError(t, err)
+		expectedUUID, _ := uuid.Parse("550e8400-e29b-41d4-a716-446655440000")
+		assert.Equal(t, expectedUUID, result.ID)
+	})
+
+	t.Run("Convert hex string to UUID", func(t *testing.T) {
+		type TestStruct struct {
+			ID uuid.UUID `json:"id"`
+		}
+		result := &TestStruct{}
+		input := map[string]any{
+			"id": "550e8400e29b41d4a716446655440000",
+		}
+
+		err := MapJsonMapToStruct(input, result)
+		assert.NoError(t, err)
+		expectedUUID, _ := uuid.Parse("550e8400-e29b-41d4-a716-446655440000")
+		assert.Equal(t, expectedUUID, result.ID)
 	})
 }

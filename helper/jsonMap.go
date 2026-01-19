@@ -164,15 +164,11 @@ func SetStructValueByJson(fv reflect.Value, jsonValue any) (err error) {
 				return fmt.Errorf("json map %T is not convertible to type %v", jsonValue, fv.Type())
 			}
 		case reflect.Array, reflect.Slice:
-			if v, ok := jsonValue.([]any); ok {
-				typedArray, err := ArrayToArrayOfType(v, fv.Type().Elem())
-				if err != nil {
-					return err
-				}
-				fv.Set(typedArray)
-			} else {
-				fv.Set(reflect.ValueOf(jsonValue))
+			converted, err := AnyToType(jsonValue, fv.Type())
+			if err != nil {
+				return err
 			}
+			fv.Set(reflect.ValueOf(converted))
 		default:
 			return fmt.Errorf("invalid field type: %v", reflect.TypeOf(jsonValue).Elem().Kind())
 		}
