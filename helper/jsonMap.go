@@ -87,91 +87,11 @@ func SetStructValueByJson(fv reflect.Value, jsonValue any) (err error) {
 	}()
 
 	if fv.IsValid() && fv.CanSet() {
-		switch fv.Kind() {
-		case reflect.String:
-			var newString string = ""
-			b, err := AnyToType(jsonValue, reflect.TypeOf(newString))
-			if err != nil {
-				return fmt.Errorf("error converting value to string: %v", err)
-			}
-			newString = b.(string)
-			fv.SetString(newString)
-		case reflect.Bool:
-			var newBool bool = true
-			b, err := AnyToType(jsonValue, reflect.TypeOf(newBool))
-			if err != nil {
-				return fmt.Errorf("error converting value to bool: %v", err)
-			}
-			newBool = b.(bool)
-			fv.SetBool(newBool)
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			var newInt int64 = 0
-			i, err := AnyToType(jsonValue, reflect.TypeOf(newInt))
-			if err != nil {
-				return fmt.Errorf("error converting value to int: %v", err)
-			}
-			newInt = i.(int64)
-
-			if fv.OverflowInt(newInt) {
-				return fmt.Errorf("cannot set overflowing int")
-			}
-			fv.SetInt(newInt)
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			var newUint uint64 = 0
-			i, err := AnyToType(jsonValue, reflect.TypeOf(newUint))
-			if err != nil {
-				return fmt.Errorf("error converting value to uint: %v", err)
-			}
-			newUint = i.(uint64)
-
-			if fv.OverflowUint(newUint) {
-				return fmt.Errorf("cannot set overflowing uint")
-			}
-			fv.SetUint(newUint)
-		case reflect.Float32, reflect.Float64:
-			var newFloat float64 = 0
-			i, err := AnyToType(jsonValue, reflect.TypeOf(newFloat))
-			if err != nil {
-				return fmt.Errorf("error converting value to float: %v", err)
-			}
-			newFloat = i.(float64)
-
-			if fv.OverflowFloat(newFloat) {
-				return fmt.Errorf("cannot set overflowing float")
-			}
-			fv.SetFloat(newFloat)
-		case reflect.Struct, reflect.Ptr:
-			converted, err := AnyToType(jsonValue, fv.Type())
-			if err != nil {
-				return err
-			}
-			fv.Set(reflect.ValueOf(converted))
-		case reflect.Map:
-			var mapReflect reflect.Value
-			if v, ok := jsonValue.(map[string]any); ok {
-				mapReflect, err = JsonMapToMapKV(v, fv.Type().Key(), fv.Type().Elem())
-				if err != nil {
-					return fmt.Errorf("error converting json map to mapKV: %v", err)
-				}
-			} else {
-				mapReflect = reflect.ValueOf(jsonValue)
-			}
-
-			if mapReflect.Type().ConvertibleTo(fv.Type()) {
-				fv.Set(mapReflect.Convert(fv.Type()))
-				return nil
-			} else {
-				return fmt.Errorf("json map %T is not convertible to type %v", jsonValue, fv.Type())
-			}
-		case reflect.Array, reflect.Slice:
-			converted, err := AnyToType(jsonValue, fv.Type())
-			if err != nil {
-				return err
-			}
-			fv.Set(reflect.ValueOf(converted))
-		default:
-			return fmt.Errorf("invalid field type: %v", reflect.TypeOf(jsonValue).Elem().Kind())
+		converted, err := AnyToType(jsonValue, fv.Type())
+		if err != nil {
+			return err
 		}
+		fv.Set(reflect.ValueOf(converted))
 	}
 	return nil
 }

@@ -109,18 +109,23 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		}
 	}()
 
-	// Early return if the input is already of the expected type
-	if reflect.TypeOf(in) == expected {
+	// Nil input
+	if in == nil {
+		return reflect.Zero(expected).Interface(), nil
+	}
+
+	// Direct type match or assignable
+	inType := reflect.TypeOf(in)
+	if inType == expected {
+		return in, nil
+	}
+	if inType.AssignableTo(expected) {
 		return in, nil
 	}
 
 	// Handle pointer types by recursively converting to the element type,
 	// then returning a pointer to the result
 	if expected.Kind() == reflect.Ptr {
-		if in == nil {
-			return reflect.Zero(expected).Interface(), nil
-		}
-
 		elemType := expected.Elem()
 		elemValue, err := AnyToType(in, elemType)
 		if err != nil {
@@ -136,10 +141,18 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 	switch expKind := expected.Kind(); expKind {
 	case reflect.String:
 		if v, ok := in.(string); ok {
+			// Check if we need to convert to a custom string type
+			if reflect.TypeOf(in).ConvertibleTo(expected) {
+				return reflect.ValueOf(in).Convert(expected).Interface(), nil
+			}
 			return v, nil
 		}
 	case reflect.Bool:
 		if v, ok := in.(bool); ok {
+			// Check if we need to convert to a custom bool type
+			if reflect.TypeOf(in).ConvertibleTo(expected) {
+				return reflect.ValueOf(in).Convert(expected).Interface(), nil
+			}
 			return v, nil
 		} else if v, ok := in.(string); ok {
 			switch v {
@@ -351,6 +364,16 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 				return nil, fmt.Errorf("error parsing map to struct: %v", err)
 			}
 			return reflect.ValueOf(structTemp).Elem().Interface(), nil
+		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
+			return reflect.ValueOf(in).Convert(expected).Interface(), nil
+		}
+	case reflect.Map:
+		if v, ok := in.(map[string]any); ok {
+			mapValue, err := JsonMapToMapKV(v, expected.Key(), expected.Elem())
+			if err != nil {
+				return nil, err
+			}
+			return mapValue.Interface(), nil
 		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
 			return reflect.ValueOf(in).Convert(expected).Interface(), nil
 		}

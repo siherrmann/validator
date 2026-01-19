@@ -1,8 +1,10 @@
 package model
 
 import (
+	"encoding/json"
 	"testing"
 
+	"github.com/siherrmann/validator/helper"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -177,4 +179,133 @@ func TestGetValidationsFromStruct(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidationJSONMarshaling(t *testing.T) {
+	t.Run("Marshal and unmarshal Validation with nil Groups", func(t *testing.T) {
+		v := Validation{
+			Key:         "TestField",
+			Type:        String,
+			Requirement: "min5",
+			Groups:      nil,
+			Default:     "",
+		}
+
+		// Marshal to JSON
+		jsonBytes, err := json.Marshal(v)
+		assert.NoError(t, err, "Expected no error marshaling")
+
+		// Unmarshal back
+		var result Validation
+		err = json.Unmarshal(jsonBytes, &result)
+		assert.NoError(t, err, "Expected no error unmarshaling")
+		assert.Equal(t, v, result, "Expected validation to match after round-trip")
+	})
+
+	t.Run("Marshal and unmarshal Validation with Groups", func(t *testing.T) {
+		v := Validation{
+			Key:         "TestField",
+			Type:        String,
+			Requirement: "min5",
+			Groups:      []*Group{{Name: "gr1", ConditionType: "min", ConditionValue: "1"}},
+			Default:     "",
+		}
+
+		// Marshal to JSON
+		jsonBytes, err := json.Marshal(v)
+		assert.NoError(t, err, "Expected no error marshaling")
+
+		// Unmarshal back
+		var result Validation
+		err = json.Unmarshal(jsonBytes, &result)
+		assert.NoError(t, err, "Expected no error unmarshaling")
+		assert.Equal(t, v, result, "Expected validation to match after round-trip")
+	})
+
+	t.Run("Unmarshal Validation from map[string]any", func(t *testing.T) {
+		jsonMap := map[string]any{
+			"Key":         "TestField",
+			"Type":        String,
+			"Requirement": "min5",
+			"Groups":      nil,
+			"Default":     "",
+		}
+
+		var result Validation
+		err := helper.MapJsonMapToStruct(jsonMap, &result)
+		assert.NoError(t, err, "Expected no error mapping to struct")
+		assert.Equal(t, "TestField", result.Key)
+		assert.Equal(t, String, result.Type)
+		assert.Equal(t, "min5", result.Requirement)
+		assert.Nil(t, result.Groups)
+	})
+
+	t.Run("Unmarshal Validation with Groups from map[string]any", func(t *testing.T) {
+		jsonMap := map[string]any{
+			"Key":         "TestField",
+			"Type":        String,
+			"Requirement": "min5",
+			"Groups": []any{
+				map[string]any{"Name": "gr1", "ConditionType": "min", "ConditionValue": "1"},
+			},
+			"Default": "",
+		}
+
+		var result Validation
+		err := helper.MapJsonMapToStruct(jsonMap, &result)
+		assert.NoError(t, err, "Expected no error mapping to struct")
+		assert.Equal(t, "TestField", result.Key)
+		assert.Equal(t, String, result.Type)
+		assert.Equal(t, "min5", result.Requirement)
+		assert.NotNil(t, result.Groups)
+		assert.Len(t, result.Groups, 1)
+		assert.Equal(t, "gr1", result.Groups[0].Name)
+	})
+
+	t.Run("Unmarshal Validation with empty Groups from map[string]any", func(t *testing.T) {
+		jsonMap := map[string]any{
+			"Key":         "TestField",
+			"Type":        String,
+			"Requirement": "min5",
+			"Groups":      []any{},
+			"Default":     "",
+		}
+
+		var result Validation
+		err := helper.MapJsonMapToStruct(jsonMap, &result)
+		assert.NoError(t, err, "Expected no error mapping to struct with empty Groups")
+		assert.Equal(t, "TestField", result.Key)
+		assert.NotNil(t, result.Groups)
+		assert.Len(t, result.Groups, 0, "Expected Groups to be empty slice")
+	})
+
+	t.Run("Unmarshal Validation with InnerValidation", func(t *testing.T) {
+		jsonMap := map[string]any{
+			"Key":         "TestField",
+			"Type":        Struct,
+			"Requirement": "-",
+			"Groups":      nil,
+			"Default":     "",
+			"InnerValidation": []any{
+				map[string]any{
+					"Key":         "InnerField",
+					"Type":        String,
+					"Requirement": "min3",
+					"Groups":      nil,
+					"Default":     "",
+				},
+			},
+		}
+
+		var result Validation
+		err := helper.MapJsonMapToStruct(jsonMap, &result)
+		assert.NoError(t, err, "Expected no error mapping to struct with InnerValidation")
+		assert.Equal(t, "TestField", result.Key)
+		assert.Equal(t, Struct, result.Type)
+		assert.NotNil(t, result.InnerValidation)
+		assert.Len(t, result.InnerValidation, 1)
+		assert.Equal(t, "InnerField", result.InnerValidation[0].Key)
+		assert.Equal(t, String, result.InnerValidation[0].Type)
+		assert.Equal(t, "min3", result.InnerValidation[0].Requirement)
+	})
 }
