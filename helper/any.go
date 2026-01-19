@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strconv"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func AnyToFloat(v any) (float64, error) {
@@ -365,6 +367,12 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 				if expected.Kind() == reflect.Slice {
 					return []byte(strValue), nil
 				} else if expected.Kind() == reflect.Array {
+					// First try to parse as UUID as most common use case for [16]byte
+					parsedUUID, err := uuid.Parse(strValue)
+					if err == nil {
+						return parsedUUID, nil
+					}
+
 					byteSlice := []byte(strValue)
 					arrayValue := reflect.New(expected).Elem()
 					for i := 0; i < expected.Len() && i < len(byteSlice); i++ {

@@ -11,7 +11,7 @@ func TestMapKeysToArrayOfAny(t *testing.T) {
 		value := map[int]string{1: "apple", 2: "banana"}
 		mapKeys, err := MapKeysToArrayOfAny(value)
 		assert.NoError(t, err, "Expected no error on map key extraction")
-		assert.Equal(t, []any{1, 2}, mapKeys, "Expected array to contain map keys")
+		assert.ElementsMatch(t, []any{1, 2}, mapKeys, "Expected array to contain map keys")
 	})
 
 	t.Run("Invalid type for map key extraction", func(t *testing.T) {

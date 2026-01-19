@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -1238,6 +1239,24 @@ func TestAnyToType(t *testing.T) {
 				expected: reflect.TypeOf([3]byte{}),
 			},
 			expected:      any([3]byte{'h', 'e', 'l'}),
+			expectedError: false,
+		},
+		{
+			name: "Valid 16-byte string to uuid.UUID",
+			args: args{
+				v:        "0123456789abcdef",
+				expected: reflect.TypeOf(uuid.UUID{}),
+			},
+			expected:      uuid.UUID{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'},
+			expectedError: false,
+		},
+		{
+			name: "Valid UUID format string to uuid.UUID",
+			args: args{
+				v:        "550e8400-e29b-41d4-a716-446655440001",
+				expected: reflect.TypeOf(uuid.UUID{}),
+			},
+			expected:      func() any { u, _ := uuid.Parse("550e8400-e29b-41d4-a716-446655440001"); return u }(),
 			expectedError: false,
 		},
 		// Array/Slice from []any
