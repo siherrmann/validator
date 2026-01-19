@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -413,5 +414,42 @@ func TestMapJsonMapToStructWithUUID(t *testing.T) {
 		assert.NoError(t, err)
 		expectedUUID, _ := uuid.Parse("550e8400-e29b-41d4-a716-446655440000")
 		assert.Equal(t, expectedUUID, result.ID)
+	})
+}
+
+func TestMapJsonMapToStructWithOmitEmpty(t *testing.T) {
+	t.Run("Map field with omitempty tag", func(t *testing.T) {
+		type TestStruct struct {
+			Name   string         `json:"name"`
+			Config map[string]any `json:"config,omitempty"`
+		}
+
+		original := TestStruct{
+			Name: "test",
+			Config: map[string]any{
+				"key1": "value1",
+				"key2": 42,
+			},
+		}
+
+		// Marshal and unmarshal through JSON
+		jsonBytes, err := json.Marshal(original)
+		assert.NoError(t, err)
+
+		var jsonMap map[string]any
+		err = json.Unmarshal(jsonBytes, &jsonMap)
+		assert.NoError(t, err)
+
+		// Convert using MapJsonMapToStruct
+		var result TestStruct
+		err = MapJsonMapToStruct(jsonMap, &result)
+		assert.NoError(t, err)
+
+		assert.Equal(t, "test", result.Name)
+		assert.NotNil(t, result.Config)
+		assert.Len(t, result.Config, 2)
+		assert.Equal(t, "value1", result.Config["key1"])
+		// JSON unmarshals numbers as float64
+		assert.Equal(t, float64(42), result.Config["key2"])
 	})
 }

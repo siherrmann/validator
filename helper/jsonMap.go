@@ -3,6 +3,7 @@ package helper
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 func GetValidMap(in any) (map[string]any, error) {
@@ -66,7 +67,11 @@ func MapJsonMapToStruct(jsonMapInput map[string]any, structToUpdate any) error {
 		fieldKey := fieldType.Name
 		jsonKey := fieldType.Tag.Get("json")
 		if len(jsonKey) > 0 {
-			fieldKey = jsonKey
+			// Split on comma to handle omitempty and other options
+			jsonKey = strings.Split(jsonKey, ",")[0]
+			if jsonKey != "-" {
+				fieldKey = jsonKey
+			}
 		}
 
 		if jsonValue, ok := jsonMapInput[fieldKey]; ok {
