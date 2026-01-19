@@ -1212,6 +1212,97 @@ func TestAnyToType(t *testing.T) {
 			},
 			expectedError: true,
 		},
+		// Array and Slice types
+		{
+			name: "Valid string to []byte",
+			args: args{
+				v:        "hello",
+				expected: reflect.TypeOf([]byte{}),
+			},
+			expected:      any([]byte("hello")),
+			expectedError: false,
+		},
+		{
+			name: "Valid string to [5]byte",
+			args: args{
+				v:        "hello",
+				expected: reflect.TypeOf([5]byte{}),
+			},
+			expected:      any([5]byte{'h', 'e', 'l', 'l', 'o'}),
+			expectedError: false,
+		},
+		{
+			name: "Valid string to [3]byte (truncated)",
+			args: args{
+				v:        "hello",
+				expected: reflect.TypeOf([3]byte{}),
+			},
+			expected:      any([3]byte{'h', 'e', 'l'}),
+			expectedError: false,
+		},
+		// Array/Slice from []any
+		{
+			name: "Valid []any to []int",
+			args: args{
+				v:        []any{1.0, 2.0, 3.0},
+				expected: reflect.TypeOf([]int{}),
+			},
+			expected:      any([]int{1, 2, 3}),
+			expectedError: false,
+		},
+		{
+			name: "Valid []any to []string",
+			args: args{
+				v:        []any{"hello", "world"},
+				expected: reflect.TypeOf([]string{}),
+			},
+			expected:      any([]string{"hello", "world"}),
+			expectedError: false,
+		},
+		{
+			name: "Valid []any with mixed convertible types to []int",
+			args: args{
+				v:        []any{"42", 100.0, int64(50)},
+				expected: reflect.TypeOf([]int{}),
+			},
+			expected:      any([]int{42, 100, 50}),
+			expectedError: false,
+		},
+		{
+			name: "Valid []any to []float64",
+			args: args{
+				v:        []any{1.5, "2.5", int(3)},
+				expected: reflect.TypeOf([]float64{}),
+			},
+			expected:      any([]float64{1.5, 2.5, 3.0}),
+			expectedError: false,
+		},
+		{
+			name: "Valid []any to []bool",
+			args: args{
+				v:        []any{true, "false", "on"},
+				expected: reflect.TypeOf([]bool{}),
+			},
+			expected:      any([]bool{true, false, true}),
+			expectedError: false,
+		},
+		{
+			name: "Invalid []any to []int (contains non-convertible)",
+			args: args{
+				v:        []any{"hello", "world"},
+				expected: reflect.TypeOf([]int{}),
+			},
+			expectedError: true,
+		},
+		{
+			name: "Valid empty []any to []string",
+			args: args{
+				v:        []any{},
+				expected: reflect.TypeOf([]string{}),
+			},
+			expected:      any([]string{}),
+			expectedError: false,
+		},
 	}
 
 	for _, test := range tests {

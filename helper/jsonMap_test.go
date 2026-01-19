@@ -7,6 +7,149 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestGetValidMap(t *testing.T) {
+	t.Run("Valid map[string]any", func(t *testing.T) {
+		input := map[string]any{"key": "value", "number": 42}
+		result, err := GetValidMap(input)
+		assert.NoError(t, err, "Expected no error getting valid map")
+		assert.Equal(t, input, result, "Expected result to equal input map")
+	})
+
+	t.Run("Empty map[string]any", func(t *testing.T) {
+		input := map[string]any{}
+		result, err := GetValidMap(input)
+		assert.NoError(t, err, "Expected no error getting valid empty map")
+		assert.Equal(t, input, result, "Expected result to equal empty input map")
+	})
+
+	t.Run("Invalid type - string", func(t *testing.T) {
+		input := "not a map"
+		result, err := GetValidMap(input)
+		assert.Error(t, err, "Expected error when input is not a map")
+		assert.Nil(t, result, "Expected nil result for invalid input")
+	})
+
+	t.Run("Invalid type - int", func(t *testing.T) {
+		input := 42
+		result, err := GetValidMap(input)
+		assert.Error(t, err, "Expected error when input is not a map")
+		assert.Nil(t, result, "Expected nil result for invalid input")
+	})
+
+	t.Run("Invalid type - []string", func(t *testing.T) {
+		input := []string{"not", "a", "map"}
+		result, err := GetValidMap(input)
+		assert.Error(t, err, "Expected error when input is not a map")
+		assert.Nil(t, result, "Expected nil result for invalid input")
+	})
+}
+
+func TestUnmapStructToJsonMap(t *testing.T) {
+	t.Run("Valid struct with simple fields", func(t *testing.T) {
+		type TestStruct struct {
+			Name   string `json:"name"`
+			Age    int    `json:"age"`
+			Active bool   `json:"active"`
+		}
+		input := &TestStruct{Name: "John", Age: 30, Active: true}
+		result := map[string]any{}
+
+		err := UnmapStructToJsonMap(input, &result)
+		assert.NoError(t, err, "Expected no error unmapping struct to json map")
+		assert.Equal(t, "John", result["name"], "Expected name field to be mapped")
+		assert.Equal(t, 30, result["age"], "Expected age field to be mapped")
+		assert.Equal(t, true, result["active"], "Expected active field to be mapped")
+	})
+
+	t.Run("Valid struct without json tags", func(t *testing.T) {
+		type TestStruct struct {
+			Name string
+			Age  int
+		}
+		input := &TestStruct{Name: "Jane", Age: 25}
+		result := map[string]any{}
+
+		err := UnmapStructToJsonMap(input, &result)
+		assert.NoError(t, err, "Expected no error unmapping struct to json map")
+		assert.Equal(t, "Jane", result["Name"], "Expected Name field to be mapped with field name")
+		assert.Equal(t, 25, result["Age"], "Expected Age field to be mapped with field name")
+	})
+
+	t.Run("Valid struct with mixed tags", func(t *testing.T) {
+		type TestStruct struct {
+			FirstName string `json:"first_name"`
+			LastName  string
+			Age       int `json:"age"`
+		}
+		input := &TestStruct{FirstName: "Alice", LastName: "Smith", Age: 28}
+		result := map[string]any{}
+
+		err := UnmapStructToJsonMap(input, &result)
+		assert.NoError(t, err, "Expected no error unmapping struct to json map")
+		assert.Equal(t, "Alice", result["first_name"], "Expected first_name to use json tag")
+		assert.Equal(t, "Smith", result["LastName"], "Expected LastName to use field name")
+		assert.Equal(t, 28, result["age"], "Expected age to use json tag")
+	})
+
+	t.Run("Valid empty struct", func(t *testing.T) {
+		type TestStruct struct{}
+		input := &TestStruct{}
+		result := map[string]any{}
+
+		err := UnmapStructToJsonMap(input, &result)
+		assert.NoError(t, err, "Expected no error unmapping empty struct")
+		assert.Equal(t, 0, len(result), "Expected result map to be empty")
+	})
+
+	t.Run("Valid struct with nested types", func(t *testing.T) {
+		type TestStruct struct {
+			Name   string         `json:"name"`
+			Tags   []string       `json:"tags"`
+			Config map[string]any `json:"config"`
+		}
+		input := &TestStruct{
+			Name:   "Test",
+			Tags:   []string{"tag1", "tag2"},
+			Config: map[string]any{"key": "value"},
+		}
+		result := map[string]any{}
+
+		err := UnmapStructToJsonMap(input, &result)
+		assert.NoError(t, err, "Expected no error unmapping struct with nested types")
+		assert.Equal(t, "Test", result["name"], "Expected name to be mapped")
+		assert.Equal(t, []string{"tag1", "tag2"}, result["tags"], "Expected tags to be mapped")
+		assert.Equal(t, map[string]any{"key": "value"}, result["config"], "Expected config to be mapped")
+	})
+
+	t.Run("Invalid input - not a pointer", func(t *testing.T) {
+		type TestStruct struct {
+			Name string
+		}
+		input := TestStruct{Name: "John"}
+		result := map[string]any{}
+
+		err := UnmapStructToJsonMap(input, &result)
+		assert.Error(t, err, "Expected error when input is not a pointer")
+	})
+
+	t.Run("Invalid input - nil pointer", func(t *testing.T) {
+		var input *struct{ Name string }
+		result := map[string]any{}
+
+		err := UnmapStructToJsonMap(input, &result)
+		assert.Error(t, err, "Expected error when input is nil pointer")
+	})
+
+	t.Run("Invalid input - pointer to non-struct", func(t *testing.T) {
+		input := new(string)
+		*input = "not a struct"
+		result := map[string]any{}
+
+		err := UnmapStructToJsonMap(input, &result)
+		assert.Error(t, err, "Expected error when input is pointer to non-struct")
+	})
+}
+
 func TestSetStructValueByJson(t *testing.T) {
 	t.Run("Set string", func(t *testing.T) {
 		type TestStruct struct {

@@ -164,41 +164,14 @@ func SetStructValueByJson(fv reflect.Value, jsonValue any) (err error) {
 				return fmt.Errorf("json map %T is not convertible to type %v", jsonValue, fv.Type())
 			}
 		case reflect.Array, reflect.Slice:
-			if !IsArray(jsonValue) {
-				return fmt.Errorf("input value has to be of type %v or %v, was %v", reflect.Array, reflect.Slice, reflect.ValueOf(jsonValue).Kind())
-			}
-
-			switch t := reflect.TypeOf(fv.Interface()).Elem().Kind(); t {
-			case reflect.Struct:
-				if a, ok := jsonValue.([]any); ok {
-					underlying := fv.Type().Elem()
-					typedArray := reflect.New(reflect.SliceOf(underlying)).Elem()
-					for _, v := range a {
-						if m, ok := v.(map[string]any); ok {
-							structTempt := reflect.New(underlying).Interface()
-							err := MapJsonMapToStruct(m, structTempt)
-							if err != nil {
-								return err
-							}
-							typedArray = reflect.Append(typedArray, reflect.ValueOf(structTempt).Elem())
-						} else {
-							return fmt.Errorf("input value inside array has to be of type map[string]any, was %v", reflect.TypeOf(v))
-						}
-					}
-					fv.Set(typedArray)
-				} else {
-					return fmt.Errorf("input value has to be of type []any, was %v", reflect.TypeOf(jsonValue))
+			if v, ok := jsonValue.([]any); ok {
+				typedArray, err := ArrayToArrayOfType(v, fv.Type().Elem())
+				if err != nil {
+					return err
 				}
-			default:
-				if v, ok := jsonValue.([]any); ok {
-					typedArray, err := ArrayToArrayOfType(v, fv.Type().Elem())
-					if err != nil {
-						return err
-					}
-					fv.Set(typedArray)
-				} else {
-					fv.Set(reflect.ValueOf(jsonValue))
-				}
+				fv.Set(typedArray)
+			} else {
+				fv.Set(reflect.ValueOf(jsonValue))
 			}
 		default:
 			return fmt.Errorf("invalid field type: %v", reflect.TypeOf(jsonValue).Elem().Kind())

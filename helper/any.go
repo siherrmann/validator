@@ -131,7 +131,7 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		return ptrValue.Interface(), nil
 	}
 
-	switch expected.Kind() {
+	switch expKind := expected.Kind(); expKind {
 	case reflect.String:
 		if v, ok := in.(string); ok {
 			return v, nil
@@ -350,6 +350,33 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 			}
 			return reflect.ValueOf(structTemp).Elem().Interface(), nil
 		} else if reflect.TypeOf(in).ConvertibleTo(expected) {
+			return reflect.ValueOf(in).Convert(expected).Interface(), nil
+		}
+	case reflect.Array, reflect.Slice:
+		if inArray, ok := in.([]any); ok {
+			typedArray, err := ArrayToArrayOfType(inArray, expected.Elem())
+			if err != nil {
+				return nil, err
+			}
+			return typedArray.Interface(), nil
+		} else if strValue, ok := in.(string); ok {
+			// Special case: if expected is []byte or [N]byte, convert string to byte array/slice
+			if expected.Elem().Kind() == reflect.Uint8 {
+				if expected.Kind() == reflect.Slice {
+					return []byte(strValue), nil
+				} else if expected.Kind() == reflect.Array {
+					byteSlice := []byte(strValue)
+					arrayValue := reflect.New(expected).Elem()
+					for i := 0; i < expected.Len() && i < len(byteSlice); i++ {
+						arrayValue.Index(i).SetUint(uint64(byteSlice[i]))
+					}
+					return arrayValue.Interface(), nil
+				}
+			}
+		}
+
+		// Handle array/slice of other types
+		if reflect.TypeOf(in).ConvertibleTo(expected) {
 			return reflect.ValueOf(in).Convert(expected).Interface(), nil
 		}
 	case reflect.Interface:

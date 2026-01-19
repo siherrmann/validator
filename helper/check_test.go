@@ -14,6 +14,27 @@ func TestIsString(t *testing.T) {
 	assert.False(t, testInt, "expected false for int, got true")
 }
 
+func TestIsStruct(t *testing.T) {
+	type TestStruct struct {
+		Field string
+	}
+
+	testStruct := IsStruct(TestStruct{Field: "value"})
+	assert.True(t, testStruct, "expected true for struct, got false")
+
+	testInt := IsStruct(123)
+	assert.False(t, testInt, "expected false for int, got true")
+
+	testString := IsStruct("not a struct")
+	assert.False(t, testString, "expected false for string, got true")
+
+	testPointer := IsStruct(&TestStruct{Field: "value"})
+	assert.False(t, testPointer, "expected false for pointer to struct, got true")
+
+	testSlice := IsStruct([]TestStruct{{Field: "value"}})
+	assert.False(t, testSlice, "expected false for slice of structs, got true")
+}
+
 func TestIsArray(t *testing.T) {
 	testArray := IsArray([]int{1, 2, 3})
 	assert.True(t, testArray, "expected true for array, got false")
