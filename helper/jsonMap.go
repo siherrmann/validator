@@ -140,12 +140,12 @@ func SetStructValueByJson(fv reflect.Value, jsonValue any) (err error) {
 				return fmt.Errorf("cannot set overflowing float")
 			}
 			fv.SetFloat(newFloat)
-		case reflect.Struct:
-			date, err := AnyToType(jsonValue, fv.Type())
+		case reflect.Struct, reflect.Ptr:
+			converted, err := AnyToType(jsonValue, fv.Type())
 			if err != nil {
 				return err
 			}
-			fv.Set(reflect.ValueOf(date))
+			fv.Set(reflect.ValueOf(converted))
 		case reflect.Map:
 			var mapReflect reflect.Value
 			if v, ok := jsonValue.(map[string]any); ok {

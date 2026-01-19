@@ -271,6 +271,15 @@ func TestAnyToType(t *testing.T) {
 	type testStruct struct {
 		Fruit string `json:"fruit"`
 	}
+	type nestedStruct struct {
+		Name  string `json:"name"`
+		Count int    `json:"count"`
+	}
+	type structWithNestedStruct struct {
+		Title         string        `json:"title"`
+		Nested        nestedStruct  `json:"nested"`
+		NestedPointer *nestedStruct `json:"nested_pointer"`
+	}
 	type args struct {
 		v        any
 		expected reflect.Type
@@ -910,6 +919,65 @@ func TestAnyToType(t *testing.T) {
 				expected: reflect.TypeOf(testStruct{}),
 			},
 			expected:      any(testStruct{Fruit: "apple"}),
+			expectedError: false,
+		},
+		{
+			name: "Valid map to nested struct",
+			args: args{
+				v: map[string]any{
+					"title": "Main Title",
+					"nested": map[string]any{
+						"name":  "Nested Name",
+						"count": float64(42),
+					},
+				},
+				expected: reflect.TypeOf(structWithNestedStruct{}),
+			},
+			expected:      any(structWithNestedStruct{Title: "Main Title", Nested: nestedStruct{Name: "Nested Name", Count: 42}}),
+			expectedError: false,
+		},
+		{
+			name: "Valid string JSON to nested struct",
+			args: args{
+				v:        `{"title": "Main Title", "nested": {"name": "Nested Name", "count": 42}}`,
+				expected: reflect.TypeOf(structWithNestedStruct{}),
+			},
+			expected:      any(structWithNestedStruct{Title: "Main Title", Nested: nestedStruct{Name: "Nested Name", Count: 42}}),
+			expectedError: false,
+		},
+		{
+			name: "Valid map to struct with nested pointer",
+			args: args{
+				v: map[string]any{
+					"title": "Main Title",
+					"nested_pointer": map[string]any{
+						"name":  "Nested Name",
+						"count": float64(42),
+					},
+				},
+				expected: reflect.TypeOf(structWithNestedStruct{}),
+			},
+			expected:      any(structWithNestedStruct{Title: "Main Title", NestedPointer: &nestedStruct{Name: "Nested Name", Count: 42}}),
+			expectedError: false,
+		},
+		{
+			name: "Valid string JSON to struct with nested pointer",
+			args: args{
+				v:        `{"title": "Main Title", "nested_pointer": {"name": "Nested Name", "count": 42}}`,
+				expected: reflect.TypeOf(structWithNestedStruct{}),
+			},
+			expected:      any(structWithNestedStruct{Title: "Main Title", NestedPointer: &nestedStruct{Name: "Nested Name", Count: 42}}),
+			expectedError: false,
+		},
+		{
+			name: "Valid map to struct with nested pointer (nested_pointer is nil)",
+			args: args{
+				v: map[string]any{
+					"title": "Main Title",
+				},
+				expected: reflect.TypeOf(structWithNestedStruct{}),
+			},
+			expected:      any(structWithNestedStruct{Title: "Main Title", NestedPointer: nil}),
 			expectedError: false,
 		},
 		{
