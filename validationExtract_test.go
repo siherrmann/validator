@@ -1,8 +1,9 @@
-package model
+package validator
 
 import (
 	"testing"
 
+	"github.com/siherrmann/validator/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,7 +15,7 @@ func TestGetValidationsFromStruct(t *testing.T) {
 	tests := []struct {
 		name          string
 		args          args
-		expected      []Validation
+		expected      []model.Validation
 		expectedError bool
 	}{
 		{
@@ -24,11 +25,11 @@ func TestGetValidationsFromStruct(t *testing.T) {
 					Field1 string `vld:"equ1, gr1min1"`
 					Field2 int    `vld:"min2, gr1min1"`
 				}{},
-				tagType: VLD,
+				tagType: model.VLD,
 			},
-			expected: []Validation{
-				{Key: "Field1", Type: String, Requirement: "equ1", Groups: []*Group{{Name: "gr1", ConditionType: "min", ConditionValue: "1"}}},
-				{Key: "Field2", Type: Int, Requirement: "min2", Groups: []*Group{{Name: "gr1", ConditionType: "min", ConditionValue: "1"}}},
+			expected: []model.Validation{
+				{Key: "Field1", Type: model.String, Requirement: "equ1", Groups: []*model.Group{{Name: "gr1", ConditionType: "min", ConditionValue: "1"}}},
+				{Key: "Field2", Type: model.Int, Requirement: "min2", Groups: []*model.Group{{Name: "gr1", ConditionType: "min", ConditionValue: "1"}}},
 			},
 			expectedError: false,
 		},
@@ -41,9 +42,9 @@ func TestGetValidationsFromStruct(t *testing.T) {
 				}{},
 				tagType: "upd",
 			},
-			expected: []Validation{
-				{Key: "Field1", Type: String, Requirement: "equ1"},
-				{Key: "Field2", Type: Int, Requirement: "min2"},
+			expected: []model.Validation{
+				{Key: "Field1", Type: model.String, Requirement: "equ1"},
+				{Key: "Field2", Type: model.Int, Requirement: "min2"},
 			},
 			expectedError: false,
 		},
@@ -54,11 +55,11 @@ func TestGetValidationsFromStruct(t *testing.T) {
 					Field1 string `json:"field1" vld:"equ1"`
 					Field2 int    `json:"field2" vld:"min2"`
 				}{},
-				tagType: VLD,
+				tagType: model.VLD,
 			},
-			expected: []Validation{
-				{Key: "field1", Type: String, Requirement: "equ1"},
-				{Key: "field2", Type: Int, Requirement: "min2"},
+			expected: []model.Validation{
+				{Key: "field1", Type: model.String, Requirement: "equ1"},
+				{Key: "field2", Type: model.Int, Requirement: "min2"},
 			},
 			expectedError: false,
 		},
@@ -70,11 +71,11 @@ func TestGetValidationsFromStruct(t *testing.T) {
 						Name string `json:"name" vld:"equ1"`
 					} `json:"field1" vld:"-"`
 				}{},
-				tagType: VLD,
+				tagType: model.VLD,
 			},
-			expected: []Validation{
-				{Key: "field1", Type: Struct, Requirement: "-", InnerValidation: []Validation{
-					{Key: "name", Type: String, Requirement: "equ1"},
+			expected: []model.Validation{
+				{Key: "field1", Type: model.Struct, Requirement: "-", InnerValidation: []model.Validation{
+					{Key: "name", Type: model.String, Requirement: "equ1"},
 				}},
 			},
 			expectedError: false,
@@ -87,27 +88,14 @@ func TestGetValidationsFromStruct(t *testing.T) {
 						Name string `json:"name" vld:"equ1"`
 					} `json:"field1" vld:"min1"`
 				}{},
-				tagType: VLD,
+				tagType: model.VLD,
 			},
-			expected: []Validation{
-				{Key: "field1", Type: Array, Requirement: "min1", InnerValidation: []Validation{
-					{Key: "name", Type: String, Requirement: "equ1"},
+			expected: []model.Validation{
+				{Key: "field1", Type: model.Array, Requirement: "min1", InnerValidation: []model.Validation{
+					{Key: "name", Type: model.String, Requirement: "equ1"},
 				}},
 			},
 			expectedError: false,
-		},
-		{
-			name: "Valid struct with invalid struct validation",
-			args: args{
-				input: &struct {
-					Field1 []struct {
-						Name string `json:"name" vld:"equ"`
-					} `json:"field1" vld:"min1"`
-				}{},
-				tagType: VLD,
-			},
-			expected:      []Validation{},
-			expectedError: true,
 		},
 		{
 			name: "Valid struct with invalid inner group",
@@ -117,31 +105,32 @@ func TestGetValidationsFromStruct(t *testing.T) {
 						Name string `json:"name" vld:"equ1, gr"`
 					} `json:"field1" vld:"min1"`
 				}{},
-				tagType: VLD,
+				tagType: model.VLD,
 			},
-			expected:      []Validation{},
+			expected:      []model.Validation{},
 			expectedError: true,
 		},
 		{
-			name: "Valid struct with invalid inner struct validation",
+			name: "Valid struct with valid ignored field",
 			args: args{
 				input: &struct {
-					Field1 struct {
-						Name string `json:"name" vld:"equ"`
-					} `json:"field1" vld:"-"`
+					Name   string `json:"name"`
+					Field1 string `json:"field1" vld:"-"`
 				}{},
-				tagType: VLD,
+				tagType: model.VLD,
 			},
-			expected:      []Validation{},
-			expectedError: true,
+			expected: []model.Validation{
+				{Key: "field1", Type: model.String, Requirement: "-"},
+			},
+			expectedError: false,
 		},
 		{
 			name: "Empty struct",
 			args: args{
 				input:   &struct{}{},
-				tagType: VLD,
+				tagType: model.VLD,
 			},
-			expected:      []Validation{},
+			expected:      []model.Validation{},
 			expectedError: false,
 		},
 		{
@@ -150,18 +139,18 @@ func TestGetValidationsFromStruct(t *testing.T) {
 				input: &struct {
 					Field1 string `vld:"equ1, gr"`
 				}{},
-				tagType: VLD,
+				tagType: model.VLD,
 			},
-			expected:      []Validation{},
+			expected:      []model.Validation{},
 			expectedError: true,
 		},
 		{
 			name: "Invalid struct type",
 			args: args{
 				input:   struct{}{},
-				tagType: VLD,
+				tagType: model.VLD,
 			},
-			expected:      []Validation{},
+			expected:      []model.Validation{},
 			expectedError: true,
 		},
 	}

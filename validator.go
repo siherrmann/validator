@@ -46,7 +46,7 @@ func (r *Validator) Validate(v any, tagType ...string) error {
 		return fmt.Errorf("error unmapping struct to json map: %v", err)
 	}
 
-	validations, err := model.GetValidationsFromStruct(v, tagTypeSet)
+	validations, err := GetValidationsFromStruct(v, tagTypeSet)
 	if err != nil {
 		return fmt.Errorf("error getting validations from struct: %v", err)
 	}
@@ -68,7 +68,7 @@ func (r *Validator) ValidateAndUpdate(jsonInput map[string]any, structToUpdate a
 		tagTypeSet = tagType[0]
 	}
 
-	validations, err := model.GetValidationsFromStruct(structToUpdate, tagTypeSet)
+	validations, err := GetValidationsFromStruct(structToUpdate, tagTypeSet)
 	if err != nil {
 		return fmt.Errorf("error getting validations from struct: %v", err)
 	}
