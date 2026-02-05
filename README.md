@@ -68,6 +68,7 @@ if err != nil {
 ```
 
 In these examples:
+
 - `vld:"min3"`: Ensures the string field Name has a minimum length of 3 characters.
 - `vld:"rex^[^@]+@[^@]+\\.[^@]+$"`: Validates Email against a regular expression pattern.
 - `vld:"min18"`: Checks that the integer field Age has a minimum value of 18.
@@ -89,7 +90,7 @@ If you want to use the `User` struct for multiple handlers like `CreateUser`, `U
 
 ```go
 type User struct {
-    ID    int    `delete:"min1"`
+    ID    int    `delete:"min1" get:"min1"`
     Name  string `create:"min3" update:"min3, gr1min1"`
     Email string `create:"rex^[^@]+@[^@]+\\.[^@]+$" update:"rex^[^@]+@[^@]+\\.[^@]+$, gr1min1"`
     Age   int    `create:"min18" update:"min18, gr1min1"`
@@ -99,7 +100,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
     user := &User{}
     err := v.UnmapOrUnmarshalValidateAndUpdate(r, user, "create")
     if err != nil {
-        fmt.Println("Validation failed for new user:", err)
+        fmt.Println("Validation failed for creating user:", err)
     }
     ...
 }
@@ -108,7 +109,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
     user := &User{}
     err := v.UnmapOrUnmarshalValidateAndUpdate(r, user, "update")
     if err != nil {
-        fmt.Println("Validation failed for new user:", err)
+        fmt.Println("Validation failed for updating user:", err)
     }
     ...
 }
@@ -117,7 +118,16 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
     user := &User{}
     err := v.UnmapOrUnmarshalValidateAndUpdate(r, user, "delete")
     if err != nil {
-        fmt.Println("Validation failed for new user:", err)
+        fmt.Println("Validation failed for deleting user:", err)
+    }
+    ...
+}
+
+func GetUser(w http.ResponseWriter, r *http.Request) {
+    user := &User{}
+    err := v.UnmapOrUnmarshalValidateAndUpdate(r, user, "ger")
+    if err != nil {
+        fmt.Println("Validation failed for getting user:", err)
     }
     ...
 }
@@ -148,6 +158,7 @@ You can do for example `vld:"max0 || ((min10 && max30) || equTest)"` for a strin
 ### Condition types
 
 Conditions have different usages per variable type:
+
 - `-` - Not validating/update without validating.
 - `equ` - `int/float/string == condition`, `len(array) == condition`
 - `neq` - `int/float/string != condition`, `len(array) != condition`
@@ -179,13 +190,37 @@ type Error struct {
     StatusCode          int       `json:"status_code" vld:"min100" upd:"min100, gr1min1"`
     Message             string    `json:"message" vld:"min1" upd:"min1, gr1min1"`
     UnderlyingException string    `json:"underlying_exception" vld:"min1, gr1min1" upd:"min1, gr1min1"`
-    CreatedAt           time.Time `json:"created_at" vld:"-"`
+    CreatedAt           time.Time `json:"created_at"`
 }
 ```
 
 `ID` and `CreatedAt` in this example are not getting validated, because you would probably not insert these but create these on database level.
 `StatusCode` is necessary on creation and on update it is in a group with `Message` and `UnderlyingException` where one of them must be given.
 One of `Message` and `UnderlyingException` is required on creation.
+
+---
+
+# 🔒 Security
+
+The validator provides built-in security through tag-based field filtering. **Only fields with the specified validation tag will be updated**, protecting sensitive fields from unauthorized modification. This tag filtering also works recursively for nested structs and arrays of structs.
+
+## Tag Behavior
+
+When using `ValidateAndUpdate` or similar functions with a custom tag (e.g., `"upd"`), fields are handled as follows:
+
+```go
+type User struct {
+    ID        int    `json:"id"`                    // No tag: NEVER updated
+    Password  string `json:"password"`              // No tag: NEVER updated
+    Name      string `json:"name" upd:"-"`          // Ignore tag: Updated WITHOUT validation
+    Email     string `json:"email" upd:"rex^[^@]+@[^@]+\\.[^@]+$"` // Full tag: Validated AND updated
+    Role      string `json:"role"`                  // No tag: NEVER updated
+}
+
+// In your update handler:
+user := &User{}
+err := v.ValidateAndUpdate(jsonInput, user, "upd")
+```
 
 ---
 

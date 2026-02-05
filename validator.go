@@ -164,17 +164,20 @@ func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations
 					return map[string]any{}, fmt.Errorf("field %v must be of type array, was %T", validation.Key, jsonValue)
 				}
 
+				validatedArray := []any{}
 				for _, jsonValueInner := range jsonArray {
 					jsonValueInnerMap, err := helper.GetValidMap(jsonValueInner)
 					if err != nil {
 						return map[string]any{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
 					}
 
-					_, err = r.ValidateWithValidation(jsonValueInnerMap, validation.InnerValidation)
+					validatedInnerMap, err := r.ValidateWithValidation(jsonValueInnerMap, validation.InnerValidation)
 					if err != nil {
 						return map[string]any{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
 					}
+					validatedArray = append(validatedArray, validatedInnerMap)
 				}
+				jsonValue = validatedArray
 			} else if helper.IsArray(jsonValue) {
 				err = r.ValidateValueWithParser(jsonValue, &validation)
 			} else if helper.IsString(jsonValue) {

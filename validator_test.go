@@ -178,6 +178,22 @@ func TestValidateAndUpdate(t *testing.T) {
 		require.Error(t, err, "Expected an error for invalid validation")
 		assert.Contains(t, err.Error(), "invalid group name: gp1", "Expected error to contain 'invalid group name: gp1'")
 	})
+
+	t.Run("Tag filtering in arrays of structs with custom tag", func(t *testing.T) {
+		testStruct := &struct {
+			Items []struct {
+				ID   string `json:"id"`
+				Name string `json:"name" upd:"-"`
+				Age  int    `json:"age" upd:"min18"`
+			} `json:"items" upd:"-"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"items": []any{map[string]any{"id": "123", "name": "test", "age": 19}}}, testStruct, "upd")
+		assert.NoError(t, err, "Expected no error")
+		assert.Len(t, testStruct.Items, 1, "Items should be updated")
+		assert.Equal(t, "", testStruct.Items[0].ID, "ID should not be updated (no upd tag)")
+		assert.Equal(t, "test", testStruct.Items[0].Name, "Name should not be updated (has ignore upd tag)")
+		assert.Equal(t, 19, testStruct.Items[0].Age, "Age should be updated (has full upd tag)")
+	})
 }
 
 func TestValidateAndUpdateWithValidation(t *testing.T) {

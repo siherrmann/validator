@@ -45,7 +45,12 @@ func GetValidationFromStructField(tagType string, fieldValue reflect.Value, fiel
 	validation := &model.Validation{}
 	validation.Key = fieldType.Name
 	if len(fieldType.Tag.Get("json")) > 0 {
-		validation.Key = fieldType.Tag.Get("json")
+		jsonKey := fieldType.Tag.Get("json")
+		// Split on comma to handle omitempty and other options
+		jsonKey = strings.Split(jsonKey, ",")[0]
+		if jsonKey != "-" {
+			validation.Key = jsonKey
+		}
 	}
 	validation.Type = model.ReflectKindToValidatorType(fieldValue.Type().Kind())
 	validation.Requirement = "-"
