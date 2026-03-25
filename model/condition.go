@@ -21,6 +21,7 @@ const (
 	NOT_FROM     ConditionType = "nfr"
 	REGX         ConditionType = "rex"
 	FUNC         ConditionType = "fun"
+	DEF          ConditionType = "def"
 )
 
 var ValidConditionTypes = map[ConditionType]int{
@@ -34,6 +35,7 @@ var ValidConditionTypes = map[ConditionType]int{
 	FROM:         7,
 	NOT_FROM:     8,
 	REGX:         9,
+	DEF:          10,
 }
 
 // LookupConditionType checks our validConditionType map for the scanned condition type.

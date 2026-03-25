@@ -10,6 +10,14 @@ type RootNode struct {
 	RootValue *AstValue
 }
 
+// ExtractDefault searches the AST for a 'DEF' condition and returns its value.
+func (r *RootNode) ExtractDefault() string {
+	if r.RootValue == nil {
+		return ""
+	}
+	return r.RootValue.ExtractDefault()
+}
+
 // AstValue (=abstract syntax tree value) holds a Type ("Condition" or "Group") as well as a `ConditionType` and `ConditionValue`.
 // The ConditionType is a [model.ConditionType] and the ConditionValue is any string (numbers are also represented as string).
 type AstValue struct {
@@ -20,6 +28,21 @@ type AstValue struct {
 	Operator       Operator
 	Start          int
 	End            int
+}
+
+// ExtractDefault recursively searches the AST value for a 'DEF' condition and returns its value.
+func (r *AstValue) ExtractDefault() string {
+	for _, v := range r.ConditionGroup {
+		if v.Type == CONDITION && v.ConditionType == DEF {
+			return v.ConditionValue
+		}
+		if v.Type == GROUP {
+			if def := v.ExtractDefault(); def != "" {
+				return def
+			}
+		}
+	}
+	return ""
 }
 
 // AstValueType is the type for all available AST value types.

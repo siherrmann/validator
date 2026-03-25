@@ -162,6 +162,17 @@ func TestGetValidationsFromStruct(t *testing.T) {
 				assert.Error(t, err, "Expected error when getting validations")
 			} else {
 				assert.NoError(t, err, "Expected no error when getting validations")
+
+				// Helper to clear ASTs for equality testing
+				var clearASTs func(vs []model.Validation)
+				clearASTs = func(vs []model.Validation) {
+					for i := range vs {
+						vs[i].RequirementAST = nil
+						clearASTs(vs[i].InnerValidation)
+					}
+				}
+				clearASTs(validations)
+
 				assert.Equal(t, test.expected, validations, "Expected validations to match")
 			}
 		})

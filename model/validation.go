@@ -12,6 +12,8 @@ type Validation struct {
 	Default     string
 	// Inner Struct validation
 	InnerValidation []Validation
+	// Parsed AST representation of the requirement to avoid redundant parsing
+	RequirementAST *AstValue
 }
 
 // ValidatorMap is a map of validation keys to Validation objects.

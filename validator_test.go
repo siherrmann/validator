@@ -194,6 +194,46 @@ func TestValidateAndUpdate(t *testing.T) {
 		assert.Equal(t, "test", testStruct.Items[0].Name, "Name should not be updated (has ignore upd tag)")
 		assert.Equal(t, 19, testStruct.Items[0].Age, "Age should be updated (has full upd tag)")
 	})
+	t.Run("Valid struct with missing field having def tag", func(t *testing.T) {
+		testStruct := &struct {
+			Fruit string `json:"fruit" vld:"equapple defunasigned"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{}, testStruct, model.VLD)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, "unasigned", testStruct.Fruit, "Expected output to match default")
+	})
+
+	t.Run("Valid struct with invalid field having def tag", func(t *testing.T) {
+		testStruct := &struct {
+			Fruit string `json:"fruit" vld:"equapple defunasigned"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"fruit": "banana"}, testStruct, model.VLD)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, "unasigned", testStruct.Fruit, "Expected output to match default")
+	})
+
+	t.Run("Valid struct with valid field having def tag", func(t *testing.T) {
+		testStruct := &struct {
+			Fruit string `json:"fruit" vld:"equapple defunasigned"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"fruit": "apple"}, testStruct, model.VLD)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, "apple", testStruct.Fruit, "Expected output to match input")
+	})
+
+	t.Run("Valid struct with def tag for int", func(t *testing.T) {
+		testStruct := &struct {
+			Count int `json:"count" vld:"min1 def10"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{}, testStruct, model.VLD)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, 10, testStruct.Count, "Expected output to match default")
+
+		testStruct.Count = 0
+		err = r.ValidateAndUpdate(map[string]any{"count": 0}, testStruct, model.VLD)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, 10, testStruct.Count, "Expected output to match default")
+	})
 }
 
 func TestValidateAndUpdateWithValidation(t *testing.T) {

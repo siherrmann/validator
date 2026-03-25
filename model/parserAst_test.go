@@ -7,6 +7,51 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestExtractDefault(t *testing.T) {
+	tests := []struct {
+		name     string
+		astValue AstValue
+		expected string
+	}{
+		{
+			name: "No default",
+			astValue: AstValue{
+				ConditionGroup: ConditionGroup{
+					&AstValue{Type: CONDITION, ConditionType: EQUAL, ConditionValue: "1"},
+				},
+			},
+			expected: "",
+		},
+		{
+			name: "With default",
+			astValue: AstValue{
+				ConditionGroup: ConditionGroup{
+					&AstValue{Type: CONDITION, ConditionType: DEF, ConditionValue: "test"},
+				},
+			},
+			expected: "test",
+		},
+		{
+			name: "With default in group",
+			astValue: AstValue{
+				ConditionGroup: ConditionGroup{
+					&AstValue{Type: GROUP, ConditionGroup: ConditionGroup{
+						&AstValue{Type: CONDITION, ConditionType: DEF, ConditionValue: "nested"},
+					}},
+				},
+			},
+			expected: "nested",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := test.astValue.ExtractDefault()
+			assert.Equal(t, test.expected, result, "Expected default string to match")
+		})
+	}
+}
+
 func TestAstGroupToString(t *testing.T) {
 	tests := []struct {
 		name     string

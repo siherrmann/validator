@@ -7,6 +7,7 @@ import (
 
 	"github.com/siherrmann/validator/helper"
 	"github.com/siherrmann/validator/model"
+	"github.com/siherrmann/validator/parser"
 )
 
 // GetValidationsFromStruct extracts validation rules from a struct based on the provided tag type.
@@ -65,6 +66,15 @@ func GetValidationFromStructField(tagType string, fieldValue reflect.Value, fiel
 		}
 		validation.Requirement = tagSplit[tagIndex]
 		tagIndex++
+
+		// Extract default value & cache AST
+		p := parser.NewParser()
+		root, err := p.ParseValidation(validation.Requirement)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing validation: %v", err)
+		}
+		validation.Default = root.ExtractDefault()
+		validation.RequirementAST = root.RootValue
 	}
 
 	if len(tagSplit) > tagIndex {

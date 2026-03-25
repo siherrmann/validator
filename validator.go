@@ -134,7 +134,10 @@ func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations
 		var ok bool
 		var jsonValue any
 		if jsonValue, ok = jsonInput[validation.Key]; !ok {
-			if strings.TrimSpace(validation.Requirement) == string(model.NONE) {
+			if validation.Default != "" {
+				jsonValue = validation.Default
+				ok = true
+			} else if strings.TrimSpace(validation.Requirement) == string(model.NONE) {
 				continue
 			} else if len(validation.Groups) == 0 {
 				return map[string]any{}, fmt.Errorf("json %v key not in map", validation.Key)
@@ -189,13 +192,18 @@ func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations
 			err = r.ValidateValueWithParser(jsonValue, &validation)
 		}
 
-		if err != nil && len(validation.Groups) == 0 {
-			return map[string]any{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
-		} else if err != nil {
-			for _, group := range validation.Groups {
-				groupErrors[group.Name] = append(groupErrors[group.Name], fmt.Errorf("field %v invalid: %v", validation.Key, err.Error()))
+		if err != nil {
+			if validation.Default != "" {
+				jsonValue = validation.Default
+				err = nil
+			} else if len(validation.Groups) == 0 {
+				return map[string]any{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
+			} else {
+				for _, group := range validation.Groups {
+					groupErrors[group.Name] = append(groupErrors[group.Name], fmt.Errorf("field %v invalid: %v", validation.Key, err.Error()))
+				}
+				continue
 			}
-			continue
 		}
 
 		validateValues[validation.Key] = jsonValue
@@ -214,13 +222,20 @@ func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations
 //
 // It returns an error if the validation fails.
 func (r *Validator) ValidateValueWithParser(input any, validation *model.Validation) error {
-	p := parser.NewParser()
-	v, err := p.ParseValidation(validation.Requirement)
-	if err != nil {
-		return err
+	var astValue *model.AstValue
+
+	if validation.RequirementAST != nil {
+		astValue = validation.RequirementAST
+	} else {
+		p := parser.NewParser()
+		v, err := p.ParseValidation(validation.Requirement)
+		if err != nil {
+			return err
+		}
+		astValue = v.RootValue
 	}
 
-	err = r.RunValidatorsOnConditionGroup(input, v.RootValue)
+	err := r.RunValidatorsOnConditionGroup(input, astValue)
 	if err != nil {
 		return err
 	}
@@ -244,7 +259,7 @@ func (r *Validator) RunValidatorsOnConditionGroup(input any, astValue *model.Ast
 			err = r.RunValidatorsOnConditionGroup(input, v)
 		case model.CONDITION:
 			switch v.ConditionType {
-			case model.NONE:
+			case model.NONE, model.DEF:
 				continue
 			case model.EQUAL:
 				err = validators.ValidateEqual(input, v)
