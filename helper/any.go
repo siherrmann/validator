@@ -133,6 +133,10 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 	// Handle pointer types by recursively converting to the element type,
 	// then returning a pointer to the result
 	if expected.Kind() == reflect.Ptr {
+		if s, ok := in.(string); ok && s == "" {
+			return reflect.Zero(expected).Interface(), nil
+		}
+
 		elemType := expected.Elem()
 		elemValue, err := AnyToType(in, elemType)
 		if err != nil {
@@ -182,6 +186,9 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		} else if v, ok := in.(float64); ok {
 			return any(int(v)), nil
 		} else if v, ok := in.(string); ok {
+			if v == "" {
+				return any(int(0)), nil
+			}
 			i, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing string to int64: %v", err)
@@ -196,6 +203,9 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		} else if v, ok := in.(float64); ok {
 			return any(int8(v)), nil
 		} else if v, ok := in.(string); ok {
+			if v == "" {
+				return any(int8(0)), nil
+			}
 			i, err := strconv.ParseInt(v, 10, 8)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing string to int8: %v", err)
@@ -210,6 +220,9 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		} else if v, ok := in.(float64); ok {
 			return any(int16(v)), nil
 		} else if v, ok := in.(string); ok {
+			if v == "" {
+				return any(int16(0)), nil
+			}
 			i, err := strconv.ParseInt(v, 10, 16)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing string to int16: %v", err)
@@ -224,6 +237,9 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		} else if v, ok := in.(float64); ok {
 			return any(int32(v)), nil
 		} else if v, ok := in.(string); ok {
+			if v == "" {
+				return any(int32(0)), nil
+			}
 			i, err := strconv.ParseInt(v, 10, 32)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing string to int32: %v", err)
@@ -238,6 +254,9 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		} else if v, ok := in.(float64); ok {
 			return any(int64(v)), nil
 		} else if v, ok := in.(string); ok {
+			if v == "" {
+				return any(int64(0)), nil
+			}
 			i, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing string to int64: %v", err)
@@ -252,6 +271,9 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		} else if v, ok := in.(float64); ok {
 			return any(uint(v)), nil
 		} else if v, ok := in.(string); ok {
+			if v == "" {
+				return any(uint(0)), nil
+			}
 			u, err := strconv.ParseUint(v, 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing string to uint64: %v", err)
@@ -266,6 +288,9 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		} else if v, ok := in.(float64); ok {
 			return any(uint8(v)), nil
 		} else if v, ok := in.(string); ok {
+			if v == "" {
+				return any(uint8(0)), nil
+			}
 			u, err := strconv.ParseUint(v, 10, 8)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing string to uint8: %v", err)
@@ -280,6 +305,9 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		} else if v, ok := in.(float64); ok {
 			return any(uint16(v)), nil
 		} else if v, ok := in.(string); ok {
+			if v == "" {
+				return any(uint16(0)), nil
+			}
 			u, err := strconv.ParseUint(v, 10, 16)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing string to uint16: %v", err)
@@ -294,6 +322,9 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		} else if v, ok := in.(float64); ok {
 			return any(uint32(v)), nil
 		} else if v, ok := in.(string); ok {
+			if v == "" {
+				return any(uint32(0)), nil
+			}
 			u, err := strconv.ParseUint(v, 10, 32)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing string to uint32: %v", err)
@@ -308,6 +339,9 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		} else if v, ok := in.(float64); ok {
 			return any(uint64(v)), nil
 		} else if v, ok := in.(string); ok {
+			if v == "" {
+				return any(uint64(0)), nil
+			}
 			u, err := strconv.ParseUint(v, 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing string to uint64: %v", err)
@@ -322,6 +356,9 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		} else if v, ok := in.(float64); ok {
 			return any(float32(v)), nil
 		} else if v, ok := in.(string); ok {
+			if v == "" {
+				return any(float32(0)), nil
+			}
 			f, err := strconv.ParseFloat(v, 32)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing string to float32: %v", err)
@@ -334,6 +371,9 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		if v, ok := in.(float64); ok {
 			return v, nil
 		} else if v, ok := in.(string); ok {
+			if v == "" {
+				return any(float64(0)), nil
+			}
 			f, err := strconv.ParseFloat(v, 64)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing string to float64: %v", err)

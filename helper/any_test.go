@@ -1322,6 +1322,42 @@ func TestAnyToType(t *testing.T) {
 			expected:      any([]string{}),
 			expectedError: false,
 		},
+		{
+			name: "Valid empty string to *int (typed nil pointer)",
+			args: args{
+				v:        "",
+				expected: reflect.TypeOf((*int)(nil)),
+			},
+			expected:      (*int)(nil),
+			expectedError: false,
+		},
+		{
+			name: "Valid empty string to int (zero value)",
+			args: args{
+				v:        "",
+				expected: reflect.TypeOf(int(0)),
+			},
+			expected:      any(int(0)),
+			expectedError: false,
+		},
+		{
+			name: "Valid empty string to uint (zero value)",
+			args: args{
+				v:        "",
+				expected: reflect.TypeOf(uint(0)),
+			},
+			expected:      any(uint(0)),
+			expectedError: false,
+		},
+		{
+			name: "Valid empty string to float64 (zero value)",
+			args: args{
+				v:        "",
+				expected: reflect.TypeOf(float64(0)),
+			},
+			expected:      any(float64(0)),
+			expectedError: false,
+		},
 	}
 
 	for _, test := range tests {
