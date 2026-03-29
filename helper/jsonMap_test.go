@@ -613,4 +613,20 @@ func TestMapJsonMapToStruct(t *testing.T) {
 			assert.Nil(t, result.PointerSlice)
 		})
 	})
+
+	t.Run("Inline struct fields", func(t *testing.T) {
+		type InnerStruct struct {
+			Kind string `json:"kind"`
+		}
+		type TestStruct struct {
+			Inner InnerStruct `json:",inline"`
+		}
+
+		inputMap := map[string]any{"kind": "testKind"}
+		var result TestStruct
+		err := MapJsonMapToStruct(inputMap, &result)
+		assert.NoError(t, err)
+
+		assert.Equal(t, "testKind", result.Inner.Kind)
+	})
 }

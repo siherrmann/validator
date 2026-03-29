@@ -32,8 +32,22 @@ func GetValidationsFromStruct(in any, tagType string) ([]model.Validation, error
 			continue
 		}
 
-		if len(validation.Requirement) > 0 {
-			validations = append(validations, *validation)
+		isInline := false
+		if len(fieldType.Tag.Get("json")) > 0 {
+			parts := strings.Split(fieldType.Tag.Get("json"), ",")
+			for _, part := range parts[1:] {
+				if part == "inline" {
+					isInline = true
+				}
+			}
+		}
+
+		if isInline {
+			validations = append(validations, validation.InnerValidation...)
+		} else {
+			if len(validation.Requirement) > 0 || len(validation.InnerValidation) > 0 {
+				validations = append(validations, *validation)
+			}
 		}
 	}
 	return validations, nil
@@ -46,11 +60,16 @@ func GetValidationFromStructField(tagType string, fieldValue reflect.Value, fiel
 	validation := &model.Validation{}
 	validation.Key = fieldType.Name
 	if len(fieldType.Tag.Get("json")) > 0 {
-		jsonKey := fieldType.Tag.Get("json")
-		// Split on comma to handle omitempty and other options
-		jsonKey = strings.Split(jsonKey, ",")[0]
-		if jsonKey != "-" {
-			validation.Key = jsonKey
+		jsonKeyFull := fieldType.Tag.Get("json")
+		jsonKeyParts := strings.Split(jsonKeyFull, ",")
+		jsonKeyPrefix := jsonKeyParts[0]
+		if jsonKeyPrefix != "-" && jsonKeyPrefix != "" {
+			validation.Key = jsonKeyPrefix
+		}
+		for _, part := range jsonKeyParts[1:] {
+			if part == "omitempty" {
+				validation.OmitEmpty = true
+			}
 		}
 	}
 	validation.Type = model.ReflectKindToValidatorType(fieldValue.Type().Kind())
@@ -92,8 +111,12 @@ func GetValidationFromStructField(tagType string, fieldValue reflect.Value, fiel
 			return nil, fmt.Errorf("error getting inner validation from array: %v", err)
 		}
 		validation.InnerValidation = append(validation.InnerValidation, innerValidation...)
-	} else if helper.IsStruct(fieldValue.Interface()) {
-		innerStruct := reflect.New(fieldValue.Type()).Interface()
+	} else if helper.IsStruct(fieldValue.Interface()) || (fieldValue.Type().Kind() == reflect.Ptr && fieldValue.Type().Elem().Kind() == reflect.Struct) {
+		fieldTypeElem := fieldValue.Type()
+		if fieldTypeElem.Kind() == reflect.Ptr {
+			fieldTypeElem = fieldTypeElem.Elem()
+		}
+		innerStruct := reflect.New(fieldTypeElem).Interface()
 		innerValidation, err := GetValidationsFromStruct(innerStruct, string(tagType))
 		if err != nil {
 			return nil, fmt.Errorf("error getting inner validation from struct: %v", err)

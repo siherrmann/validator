@@ -64,6 +64,23 @@ func TestGetValidationsFromStruct(t *testing.T) {
 			expectedError: false,
 		},
 		{
+			name: "Valid struct with omitempty and inline tags",
+			args: args{
+				input: &struct {
+					Inner struct {
+						Kind string `json:"kind" vld:"equ1"`
+					} `json:",inline" vld:"-"`
+					Field1 string `json:"field1,omitempty" vld:"equ1"`
+				}{},
+				tagType: model.VLD,
+			},
+			expected: []model.Validation{
+				{Key: "kind", Type: model.String, Requirement: "equ1"},
+				{Key: "field1", Type: model.String, Requirement: "equ1", OmitEmpty: true},
+			},
+			expectedError: false,
+		},
+		{
 			name: "Valid struct with inner struct",
 			args: args{
 				input: &struct {

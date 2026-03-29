@@ -10,6 +10,7 @@ type Validation struct {
 	Requirement string
 	Groups      []*Group
 	Default     string
+	OmitEmpty   bool
 	// Inner Struct validation
 	InnerValidation []Validation
 	// Parsed AST representation of the requirement to avoid redundant parsing

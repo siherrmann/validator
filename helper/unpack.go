@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 func UnmarshalRequestToJsonMap(request *http.Request) (map[string]any, error) {
@@ -58,17 +59,48 @@ func UnmapUrlValuesToJsonMap(values url.Values) (map[string]any, error) {
 					arrayOut = append(arrayOut, v)
 				}
 			}
-			mapOut[k] = arrayOut
+			if strings.Contains(k, ".") {
+				setNestedDotValue(mapOut, strings.Split(k, "."), arrayOut)
+			} else {
+				mapOut[k] = arrayOut
+			}
 		} else {
 			value := values.Get(k)
 			var unmarshalled any
+			var valToSet any
 			err := json.Unmarshal([]byte(value), &unmarshalled)
 			if err == nil {
-				mapOut[k] = unmarshalled
+				valToSet = unmarshalled
 			} else {
-				mapOut[k] = value
+				valToSet = value
+			}
+			
+			if strings.Contains(k, ".") {
+				setNestedDotValue(mapOut, strings.Split(k, "."), valToSet)
+			} else {
+				mapOut[k] = valToSet
 			}
 		}
 	}
 	return mapOut, nil
+}
+
+func setNestedDotValue(m map[string]any, keys []string, value any) {
+	if len(keys) == 0 {
+		return
+	}
+	if len(keys) == 1 {
+		m[keys[0]] = value
+		return
+	}
+	key := keys[0]
+	if existing, ok := m[key]; ok {
+		if nestedMap, ok := existing.(map[string]any); ok {
+			setNestedDotValue(nestedMap, keys[1:], value)
+			return
+		}
+	}
+	nestedMap := make(map[string]any)
+	m[key] = nestedMap
+	setNestedDotValue(nestedMap, keys[1:], value)
 }

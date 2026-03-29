@@ -88,6 +88,19 @@ func TestUnmapUrlValuesToJsonMap(t *testing.T) {
 		assert.Equal(t, map[string]any{"food": "banana", "fruit": "apple"}, mapOut["map"], "Expected map to match")
 	})
 
+	t.Run("Valid URL with dot-notation keys", func(t *testing.T) {
+		values := url.Values{}
+		values.Set("autoscaling.minReplicas", "3")
+		values.Set("autoscaling.featureFlag", "true")
+
+		mapOut, err := UnmapUrlValuesToJsonMap(values)
+		assert.NoError(t, err, "Expected no error unmapping URL values to JsonMap")
+		assert.IsType(t, map[string]any{}, mapOut["autoscaling"], "Expected autoscaling to be a nested map")
+		autoscalingMap := mapOut["autoscaling"].(map[string]any)
+		assert.Equal(t, float64(3), autoscalingMap["minReplicas"], "Expected minReplicas to be 3")
+		assert.Equal(t, true, autoscalingMap["featureFlag"], "Expected featureFlag to be true")
+	})
+
 	t.Run("Empty URL values", func(t *testing.T) {
 		values := url.Values{}
 

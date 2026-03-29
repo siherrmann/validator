@@ -313,6 +313,40 @@ func TestValidateWithValidation(t *testing.T) {
 		wantErr  bool
 	}{
 		{
+			name: "Valid omitempty logic with empty string",
+			args: args{
+				jsonMap: map[string]any{
+					"fruit": "",
+				},
+				validations: []model.Validation{
+					{
+						Key:         "fruit",
+						Type:        model.String,
+						Requirement: "equapple",
+						OmitEmpty:   true,
+					},
+				},
+			},
+			expected: map[string]any{},
+			wantErr:  false,
+		},
+		{
+			name: "Valid defFalse logic for missing boolean",
+			args: args{
+				jsonMap: map[string]any{},
+				validations: []model.Validation{
+					{
+						Key:         "isActive",
+						Type:        model.Bool,
+						Requirement: "deffalse",
+						Default:     "false",
+					},
+				},
+			},
+			expected: map[string]any{"isActive": "false"},
+			wantErr:  false,
+		},
+		{
 			name: "Valid validation string",
 			args: args{
 				jsonMap: map[string]any{

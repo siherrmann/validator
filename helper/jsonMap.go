@@ -66,15 +66,71 @@ func MapJsonMapToStruct(jsonMapInput map[string]any, structToUpdate any) error {
 
 		fieldKey := fieldType.Name
 		jsonKey := fieldType.Tag.Get("json")
+		isInline := false
 		if len(jsonKey) > 0 {
 			// Split on comma to handle omitempty and other options
-			jsonKey = strings.Split(jsonKey, ",")[0]
-			if jsonKey != "-" {
-				fieldKey = jsonKey
+			parts := strings.Split(jsonKey, ",")
+			jsonKeyPrefix := parts[0]
+			for _, p := range parts[1:] {
+				if p == "inline" {
+					isInline = true
+				}
+			}
+			if jsonKeyPrefix != "-" && jsonKeyPrefix != "" {
+				fieldKey = jsonKeyPrefix
 			}
 		}
 
+		if isInline {
+			target := field
+			if field.Kind() == reflect.Ptr {
+				if field.IsNil() {
+					if field.CanSet() {
+						field.Set(reflect.New(field.Type().Elem()))
+					}
+				}
+				target = field.Elem()
+			}
+			if target.CanAddr() {
+				err := MapJsonMapToStruct(jsonMapInput, target.Addr().Interface())
+				if err != nil {
+					return fmt.Errorf("error mapping inline struct %v: %v", fieldType.Name, err.Error())
+				}
+			} else if field.Kind() == reflect.Ptr {
+				err := MapJsonMapToStruct(jsonMapInput, field.Interface())
+				if err != nil {
+					return fmt.Errorf("error mapping inline struct %v: %v", fieldType.Name, err.Error())
+				}
+			}
+			continue
+		}
+
 		if jsonValue, ok := jsonMapInput[fieldKey]; ok {
+			if jsonValueMap, isMap := jsonValue.(map[string]any); isMap && (field.Kind() == reflect.Struct || (field.Kind() == reflect.Ptr && field.Elem().Kind() == reflect.Struct)) {
+				target := field
+				if field.Kind() == reflect.Ptr {
+					if field.IsNil() {
+						if field.CanSet() {
+							field.Set(reflect.New(field.Type().Elem()))
+						}
+					}
+					target = field.Elem()
+				}
+				if target.CanAddr() {
+					err := MapJsonMapToStruct(jsonValueMap, target.Addr().Interface())
+					if err != nil {
+						return fmt.Errorf("error mapping nested struct %v: %v", fieldType.Name, err.Error())
+					}
+					continue
+				} else if field.Kind() == reflect.Ptr {
+					err := MapJsonMapToStruct(jsonValueMap, field.Interface())
+					if err != nil {
+						return fmt.Errorf("error mapping nested struct %v: %v", fieldType.Name, err.Error())
+					}
+					continue
+				}
+			}
+
 			err := SetStructValueByJson(field, jsonValue)
 			if err != nil {
 				return fmt.Errorf("could not set field %v (json key: %v) of %v: %v", fieldType.Name, jsonKey, reflect.TypeOf(structToUpdate), err.Error())

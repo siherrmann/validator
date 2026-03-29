@@ -149,6 +149,10 @@ func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations
 			}
 		}
 
+		if validation.OmitEmpty && jsonValue == "" {
+			continue
+		}
+
 		var err error
 		switch validation.Type {
 		case model.Struct:
