@@ -158,6 +158,14 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 			}
 			return v, nil
 		}
+		// If it's another basic value, we can safely convert to string
+		strVal, err := AnyToString(in)
+		if err == nil {
+			if reflect.TypeOf(strVal).ConvertibleTo(expected) {
+				return reflect.ValueOf(strVal).Convert(expected).Interface(), nil
+			}
+			return strVal, nil
+		}
 	case reflect.Bool:
 		if v, ok := in.(bool); ok {
 			// Check if we need to convert to a custom bool type

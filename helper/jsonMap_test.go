@@ -166,10 +166,10 @@ func TestSetStructValueByJson(t *testing.T) {
 			assert.Equal(t, "apple", result.String, "Expected String to be set correctly")
 		})
 
-		t.Run("Set invalid string", func(t *testing.T) {
+		t.Run("Set valid string from int", func(t *testing.T) {
 			err := SetStructValueByJson(fv, 1)
-			assert.Error(t, err, "Expected error setting struct value by json map with invalid type")
-			assert.Equal(t, "apple", result.String, "Expected String to remain unchanged")
+			assert.NoError(t, err, "Expected no error setting struct value by json map with valid type converted to string")
+			assert.Equal(t, "1", result.String, "Expected String to be converted correctly")
 		})
 	})
 
@@ -295,10 +295,10 @@ func TestSetStructValueByJson(t *testing.T) {
 			assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2"}, result.Map, "Expected Map to remain unchanged")
 		})
 
-		t.Run("Set invalid map value type", func(t *testing.T) {
+		t.Run("Set valid map value from bools", func(t *testing.T) {
 			err := SetStructValueByJson(fv, map[string]any{"key1": true, "key2": false})
-			assert.Error(t, err, "Expected error setting struct value by json map with invalid type")
-			assert.Equal(t, map[string]string{"key1": "value1", "key2": "value2"}, result.Map, "Expected Map to remain unchanged")
+			assert.NoError(t, err, "Expected no error setting struct value by json map with valid bools")
+			assert.Equal(t, map[string]string{"key1": "true", "key2": "false"}, result.Map, "Expected Map to update")
 		})
 	})
 
@@ -333,10 +333,11 @@ func TestSetStructValueByJson(t *testing.T) {
 			assert.Equal(t, []string{"apple", "banana"}, result.Array, "Expected Array to remain unchanged")
 		})
 
-		t.Run("Set invalid json array", func(t *testing.T) {
+		t.Run("Set valid json array from bools", func(t *testing.T) {
 			err := SetStructValueByJson(fv, []any{true, true})
-			assert.Error(t, err, "Expected error setting struct value by json map with invalid type")
-			assert.Equal(t, []string{"apple", "banana"}, result.Array, "Expected Array to remain unchanged")
+			assert.NoError(t, err, "Expected no error setting struct value by json map with valid bools converted to string")
+			assert.Equal(t, []string{"true", "true"}, result.Array, "Expected Array to update")
+			result.Array = []string{"apple", "banana"}
 		})
 	})
 
@@ -359,13 +360,14 @@ func TestSetStructValueByJson(t *testing.T) {
 			assert.Equal(t, []InnerStruct{{Name: "apple"}, {Name: "banana"}}, resultWithArray.Array, "Expected Array of structs to be set correctly")
 		})
 
-		t.Run("Set invalid array of struct", func(t *testing.T) {
+		t.Run("Set valid array of struct with bools", func(t *testing.T) {
 			err := SetStructValueByJson(fvWithArray, []any{
 				map[string]any{"name": true},
 				map[string]any{"name": true},
 			})
-			assert.Error(t, err, "Expected error setting struct value by json map with invalid type")
-			assert.Equal(t, []InnerStruct{{Name: "apple"}, {Name: "banana"}}, resultWithArray.Array, "Expected Array of structs to remain unchanged")
+			assert.NoError(t, err, "Expected no error setting struct value by json map with bools converted to string")
+			assert.Equal(t, []InnerStruct{{Name: "true"}, {Name: "true"}}, resultWithArray.Array, "Expected Array of structs to update")
+			resultWithArray.Array = []InnerStruct{{Name: "apple"}, {Name: "banana"}}
 		})
 
 		t.Run("Set invalid json for array of struct", func(t *testing.T) {
@@ -374,13 +376,14 @@ func TestSetStructValueByJson(t *testing.T) {
 			assert.Equal(t, []InnerStruct{{Name: "apple"}, {Name: "banana"}}, resultWithArray.Array, "Expected Array of structs to remain unchanged")
 		})
 
-		t.Run("Set invalid json array for array of struct", func(t *testing.T) {
+		t.Run("Set valid array of struct with ints", func(t *testing.T) {
 			err := SetStructValueByJson(fvWithArray, []any{
-				map[string]int{"name": 1},
-				map[string]int{"name": 2},
+				map[string]any{"name": 1},
+				map[string]any{"name": 2},
 			})
-			assert.Error(t, err, "Expected error setting struct value by json map with invalid json")
-			assert.Equal(t, []InnerStruct{{Name: "apple"}, {Name: "banana"}}, resultWithArray.Array, "Expected Array of structs to remain unchanged")
+			assert.NoError(t, err, "Expected no error setting struct value by json map with valid json")
+			assert.Equal(t, []InnerStruct{{Name: "1"}, {Name: "2"}}, resultWithArray.Array, "Expected Array of structs to update")
+			resultWithArray.Array = []InnerStruct{{Name: "apple"}, {Name: "banana"}}
 		})
 	})
 }
