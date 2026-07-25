@@ -63,7 +63,7 @@ func AnyToString(v any) (string, error) {
 		uint, uint8, uint16, uint32, uint64:
 		return fmt.Sprintf("%d", v), nil
 	case float32, float64:
-		return fmt.Sprintf("%f", v), nil
+		return fmt.Sprintf("%v", v), nil
 	default:
 		return "", fmt.Errorf("unsupported type for value: %T", v)
 	}

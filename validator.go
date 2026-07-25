@@ -148,9 +148,18 @@ func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations
 				continue
 			}
 		}
-
 		if validation.OmitEmpty && jsonValue == "" {
 			continue
+		}
+
+		if jsonValue != nil {
+			switch validation.Type {
+			case model.String, model.Int, model.Float, model.Bool:
+				coerced, coerceErr := helper.AnyToType(jsonValue, validation.Type.ToReflectType())
+				if coerceErr == nil {
+					jsonValue = coerced
+				}
+			}
 		}
 
 		var err error
