@@ -380,7 +380,7 @@ func TestValidateWithValidation(t *testing.T) {
 					},
 				},
 			},
-			expected: map[string]any{"isActive": "false"},
+			expected: map[string]any{"isActive": false},
 			wantErr:  false,
 		},
 		{
