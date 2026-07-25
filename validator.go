@@ -283,6 +283,8 @@ func (r *Validator) RunValidatorsOnConditionGroup(input any, astValue *model.Ast
 				err = validators.ValidateNotFrom(input, v)
 			case model.REGX:
 				err = validators.ValidateRegex(input, v)
+			case model.IS_TYPE:
+				err = validators.ValidateIsType(input, v)
 			case model.FUNC:
 				fun, ok := r.ValidationFuncs[v.ConditionValue]
 				if !ok {

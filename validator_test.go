@@ -22,6 +22,43 @@ func TestValidate(t *testing.T) {
 		assert.NoError(t, err, "Expected no error but got one")
 	})
 
+	t.Run("Valid struct with istuuid", func(t *testing.T) {
+		type TestStruct struct {
+			ID string `json:"id" vld:"istuuid"`
+		}
+		testStruct := &TestStruct{
+			ID: "123e4567-e89b-12d3-a456-426614174000",
+		}
+		r := NewValidator()
+		err := r.Validate(testStruct)
+		assert.NoError(t, err, "Expected no error but got one")
+	})
+
+	t.Run("Invalid struct with istuuid", func(t *testing.T) {
+		type TestStruct struct {
+			ID string `json:"id" vld:"istuuid"`
+		}
+		testStruct := &TestStruct{
+			ID: "invalid-uuid",
+		}
+		r := NewValidator()
+		err := r.Validate(testStruct)
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Contains(t, err.Error(), "field id invalid: value is not a valid uuid", "Expected error to contain 'value is not a valid uuid'")
+	})
+
+	t.Run("Valid struct with istpassword", func(t *testing.T) {
+		type TestStruct struct {
+			Password string `json:"password" vld:"istpassword"`
+		}
+		testStruct := &TestStruct{
+			Password: "StrongPassword1!",
+		}
+		r := NewValidator()
+		err := r.Validate(testStruct)
+		assert.NoError(t, err, "Expected no error but got one")
+	})
+
 	t.Run("Invalid struct", func(t *testing.T) {
 		type TestStruct struct {
 			Fruit string `json:"fruit" vld:"equapple"`
