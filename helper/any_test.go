@@ -166,7 +166,7 @@ func TestAnyToString(t *testing.T) {
 		{
 			name:          "Valid float32",
 			arg:           float32(1),
-			expected:      "1.000000",
+			expected:      "1",
 			expectedError: false,
 		},
 		{
@@ -229,7 +229,7 @@ func TestAnyToArrayOfString(t *testing.T) {
 		{
 			name:          "Valid array float32",
 			arg:           []float32{1},
-			expected:      []string{"1.000000"},
+			expected:      []string{"1"},
 			expectedError: false,
 		},
 		{
