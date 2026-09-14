@@ -34,6 +34,10 @@ func (r *Validator) AddValidationFunc(fn ValidationFunc, name string) {
 // Validate validates a given struct by the given tagType.
 // It checks if the keys are in the struct and validates the values.
 // It returns an error if the validation fails.
+//
+// Extraction is cached per (type, tagType) after the first call for that combination
+// — see getCachedValidationsFromStruct. Use GetValidationsFromStruct directly if a
+// fresh, uncached extraction is required.
 func (r *Validator) Validate(v any, tagType ...string) error {
 	tagTypeSet := model.VLD
 	if len(tagType) > 0 {
@@ -46,7 +50,7 @@ func (r *Validator) Validate(v any, tagType ...string) error {
 		return fmt.Errorf("error unmapping struct to json map: %v", err)
 	}
 
-	validations, err := GetValidationsFromStruct(v, tagTypeSet)
+	validations, err := getCachedValidationsFromStruct(v, tagTypeSet)
 	if err != nil {
 		return fmt.Errorf("error getting validations from struct: %v", err)
 	}
@@ -62,13 +66,15 @@ func (r *Validator) Validate(v any, tagType ...string) error {
 // ValidateAndUpdate validates a given JsonMap by the given validations and updates the struct.
 // It checks if the keys are in the map, validates the values and updates the struct if the validation passes.
 // It returns an error if the validation fails or if the struct cannot be updated.
+//
+// Extraction is cached per (type, tagType), same as Validate.
 func (r *Validator) ValidateAndUpdate(jsonInput map[string]any, structToUpdate any, tagType ...string) error {
 	tagTypeSet := model.VLD
 	if len(tagType) > 0 {
 		tagTypeSet = tagType[0]
 	}
 
-	validations, err := GetValidationsFromStruct(structToUpdate, tagTypeSet)
+	validations, err := getCachedValidationsFromStruct(structToUpdate, tagTypeSet)
 	if err != nil {
 		return fmt.Errorf("error getting validations from struct: %v", err)
 	}

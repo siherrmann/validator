@@ -27,7 +27,9 @@ func NewParser() *Parser {
 // It creates a new Lexer for reset lexer state and initializes the parser's tokens.
 // It returns an error if the parsing fails.
 func (p *Parser) ParseValidation(validation string) (model.RootNode, error) {
-	p.errors = []string{}
+	// nil rather than []string{}: append handles a nil slice fine, and a successful
+	// parse (the common case) never appends, so it never pays for this allocation.
+	p.errors = nil
 	p.lexer = NewLexer(validation)
 
 	// Read two tokens, so currentToken and peekToken are both set.
@@ -62,7 +64,11 @@ func (p *Parser) currentTokenTypeIs(t model.TokenType) bool {
 
 // parseGroup is called when an open left brace `(` token is found or a requirement starts without a '('.
 func (p *Parser) parseGroup(root bool) *model.AstValue {
-	group := &model.AstValue{Type: model.GROUP}
+	// Most tags hold only a handful of conditions/sub-groups; sizing the slice up
+	// front avoids the repeated grow-and-copy an append-from-nil would do. A group
+	// that turns out to be EMPTY or errors before appending anything just leaves this
+	// capacity unused, which is cheaper than the reallocations it saves in the common case.
+	group := &model.AstValue{Type: model.GROUP, ConditionGroup: make(model.ConditionGroup, 0, 4)}
 	grpState := model.GrpStart
 
 	for !p.currentTokenTypeIs(model.LexerEOF) && grpState != model.GrpEnd {

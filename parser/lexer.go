@@ -8,8 +8,13 @@ import (
 
 // Lexer performs lexical analysis/scanning of the JSON
 type Lexer struct {
-	Input         []rune
-	char          rune            // current char under examination
+	// Input is kept as a string, not []byte or []rune: every delimiter the lexer
+	// switches on below ('(', ')', '|', '&', '\'', whitespace, and isLetter's a-z) is
+	// ASCII, and no ASCII byte can appear inside a multi-byte UTF-8 sequence. That
+	// means byte indexing is always safe here, and slicing a string (l.Input[a:b])
+	// shares the original backing array instead of allocating, unlike string(runes).
+	Input         string
+	char          byte            // current char under examination
 	lastTokenType model.TokenType // last TokenType for splitting condition type from value.
 	position      int             // current position in input (points to current char)
 	nextPosition  int             // current reading position in input (after current char)
@@ -18,7 +23,7 @@ type Lexer struct {
 
 // NewLexer creates and returns a pointer to the Lexer
 func NewLexer(input string) *Lexer {
-	l := &Lexer{Input: []rune(input)}
+	l := &Lexer{Input: input}
 	l.readChar()
 	return l
 }
@@ -45,11 +50,11 @@ func (l *Lexer) NextToken() model.Token {
 
 	switch l.char {
 	case '-':
-		t = newToken(model.LexerEmptyRequirement, l.line, l.position, l.position+1, l.char)
+		t = newToken(model.LexerEmptyRequirement, l.line, l.position, l.position+1, l.Input[l.position:l.position+1])
 	case '(':
-		t = newToken(model.LexerLeftBrace, l.line, l.position, l.position+1, l.char)
+		t = newToken(model.LexerLeftBrace, l.line, l.position, l.position+1, l.Input[l.position:l.position+1])
 	case ')':
-		t = newToken(model.LexerRightBrace, l.line, l.position, l.position+1, l.char)
+		t = newToken(model.LexerRightBrace, l.line, l.position, l.position+1, l.Input[l.position:l.position+1])
 	case '|', '&':
 		t.Literal = l.readOperator()
 
@@ -97,7 +102,7 @@ func (l *Lexer) NextToken() model.Token {
 			l.lastTokenType = model.LexerConditionType
 			return t
 		}
-		t = newToken(model.LexerIllegal, l.line, l.position, l.position, l.char)
+		t = newToken(model.LexerIllegal, l.line, l.position, l.position, l.Input[l.position:l.position+1])
 	}
 
 	l.readChar()
@@ -114,21 +119,25 @@ func (l *Lexer) skipWhitespace() {
 	}
 }
 
-func newToken(tokenType model.TokenType, line, start, end int, char ...rune) model.Token {
+// newToken builds a single-character token. literal is sliced by the caller from
+// l.Input rather than built with string(char) — a substring of an existing string
+// shares its backing array and costs no allocation, while converting a rune (or byte)
+// to a string always allocates a new one.
+func newToken(tokenType model.TokenType, line, start, end int, literal string) model.Token {
 	return model.Token{
 		Type:    tokenType,
-		Literal: string(char),
+		Literal: literal,
 		Line:    line,
 		Start:   start,
 		End:     end,
 	}
 }
 
-func isLetter(char rune) bool {
+func isLetter(char byte) bool {
 	return 'a' <= char && char <= 'z'
 }
 
-func isOperator(char rune) bool {
+func isOperator(char byte) bool {
 	return char == '|' || char == '&'
 }
 
@@ -138,7 +147,7 @@ func (l *Lexer) readOperator() string {
 	for isOperator(l.char) && l.position < position+2 {
 		l.readChar()
 	}
-	return string(l.Input[position:l.position])
+	return l.Input[position:l.position]
 }
 
 // readString sets a start position and reads through characters
@@ -155,8 +164,13 @@ func (l *Lexer) readString() string {
 			break
 		}
 	}
-	// remove custom escaped `'`
-	return strings.ReplaceAll(string(l.Input[position:l.position]), "/'", "'")
+	s := l.Input[position:l.position]
+	// ReplaceAll allocates even when there is nothing to replace, so only pay for it
+	// when the value actually contains an escaped quote.
+	if strings.Contains(s, "/'") {
+		s = strings.ReplaceAll(s, "/'", "'")
+	}
+	return s
 }
 
 // readConditionType sets a start position and reads through 3 characters
@@ -166,7 +180,7 @@ func (l *Lexer) readConditionType() string {
 	for isLetter(l.char) && l.position < position+3 {
 		l.readChar()
 	}
-	return string(l.Input[position:l.position])
+	return l.Input[position:l.position]
 }
 
 // readConditionValue sets a start position and reads through characters
@@ -176,5 +190,5 @@ func (l *Lexer) readConditionValue() string {
 	for l.char != ' ' && l.char != '\t' && l.char != '\n' && l.char != '\r' && l.char != ')' && l.char != 0 {
 		l.readChar()
 	}
-	return string(l.Input[position:l.position])
+	return l.Input[position:l.position]
 }
