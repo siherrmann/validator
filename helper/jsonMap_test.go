@@ -2,6 +2,7 @@ package helper
 
 import (
 	"encoding/json"
+	"net/url"
 	"reflect"
 	"testing"
 
@@ -322,15 +323,23 @@ func TestSetStructValueByJson(t *testing.T) {
 		})
 
 		t.Run("Set invalid array", func(t *testing.T) {
-			err := SetStructValueByJson(fv, []int{1, 2})
+			err := SetStructValueByJson(fv, []any{map[string]any{"name": "apple"}})
 			assert.Error(t, err, "Expected error setting struct value by json map with invalid type")
 			assert.Equal(t, []string{"apple", "banana"}, result.Array, "Expected Array to remain unchanged")
 		})
 
-		t.Run("Set invalid json", func(t *testing.T) {
+		t.Run("Set typed array converted per element", func(t *testing.T) {
+			err := SetStructValueByJson(fv, []int{1, 2})
+			assert.NoError(t, err, "Expected no error setting struct value by json map with ints converted to string")
+			assert.Equal(t, []string{"1", "2"}, result.Array, "Expected Array to update")
+			result.Array = []string{"apple", "banana"}
+		})
+
+		t.Run("Set lone value as one-element array", func(t *testing.T) {
 			err := SetStructValueByJson(fv, "not an array")
-			assert.Error(t, err, "Expected error setting struct value by json map with invalid type")
-			assert.Equal(t, []string{"apple", "banana"}, result.Array, "Expected Array to remain unchanged")
+			assert.NoError(t, err, "Expected no error setting struct value by json map with lone value")
+			assert.Equal(t, []string{"not an array"}, result.Array, "Expected Array to hold the lone value")
+			result.Array = []string{"apple", "banana"}
 		})
 
 		t.Run("Set valid json array from bools", func(t *testing.T) {
@@ -562,6 +571,53 @@ func TestMapJsonMapToStruct(t *testing.T) {
 			assert.Equal(t, "test", result.Name)
 			assert.NotNil(t, result.Items)
 			assert.Len(t, result.Items, 0)
+		})
+
+		t.Run("Lone value mapped by field type", func(t *testing.T) {
+			type TestStruct struct {
+				Tool  string   `json:"tool"`
+				Tools []string `json:"tools"`
+				IDs   []int    `json:"ids"`
+			}
+
+			inputMap := map[string]any{"tool": "miner", "tools": "miner", "ids": 7.0}
+
+			var result TestStruct
+			err := MapJsonMapToStruct(inputMap, &result)
+			assert.NoError(t, err)
+
+			assert.Equal(t, "miner", result.Tool)
+			assert.Equal(t, []string{"miner"}, result.Tools)
+			assert.Equal(t, []int{7}, result.IDs)
+		})
+
+		t.Run("Non-convertible lone value returns error", func(t *testing.T) {
+			type TestStruct struct {
+				IDs []int `json:"ids"`
+			}
+
+			var result TestStruct
+			err := MapJsonMapToStruct(map[string]any{"ids": "abc"}, &result)
+			assert.Error(t, err)
+		})
+
+		t.Run("Url values with one or two values give same slice shape", func(t *testing.T) {
+			type TestStruct struct {
+				Tool  string   `json:"tool"`
+				Tools []string `json:"tools"`
+			}
+
+			for _, tools := range [][]string{{"miner"}, {"miner", "run"}} {
+				inputMap, err := UnmapUrlValuesToJsonMap(url.Values{"tool": {"miner"}, "tools": tools})
+				assert.NoError(t, err)
+
+				var result TestStruct
+				err = MapJsonMapToStruct(inputMap, &result)
+				assert.NoError(t, err)
+
+				assert.Equal(t, "miner", result.Tool)
+				assert.Equal(t, tools, result.Tools)
+			}
 		})
 	})
 

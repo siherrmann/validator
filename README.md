@@ -146,6 +146,21 @@ Conditions and operators in a requirement are seperated by a space (eg. `max0 ||
 All fields that you want to validate in the struct need a `vld` tag (or custom tag if specified).
 If you don't want to validate the field you can add `vld:"-"`. If you then use an update function it does update it without validating.
 
+## Form values and slices
+
+When url values (form values) are unpacked, a key with several values (eg. `tools=miner&tools=run`) becomes a list and a key with a single value (eg. `tools=miner`) becomes a lone value.
+The struct field type decides the result: a `string` field gets the lone value, while a slice or array field (eg. `[]string`, `[]int`, `[2]string`) accepts either a list or a lone value, which is treated as a one-element list.
+Validations on a slice field (eg. `min1`, `max3`, `con`, `frm`) also see a lone value as a list with one item.
+
+```go
+type Request struct {
+    Tool  string   `json:"tool" vld:"min1"`
+    Tools []string `json:"tools" vld:"min1"`
+}
+// tool=miner&tools=miner          -> Tool: "miner", Tools: []string{"miner"}
+// tool=miner&tools=miner&tools=run -> Tool: "miner", Tools: []string{"miner", "run"}
+```
+
 ## Requirement
 
 You can build complex requirements by building a query of conditions, operators (`&&` (=AND) and `||` (=OR)) and groups (with `(` and `)`).
