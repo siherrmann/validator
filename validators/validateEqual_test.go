@@ -57,6 +57,14 @@ func TestValidateEqual(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "Invalid null equal",
+			args: args{
+				v:   nil,
+				ast: &model.AstValue{ConditionValue: "apple"},
+			},
+			wantErr: true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -111,6 +119,14 @@ func TestValidateNotEqual(t *testing.T) {
 				ast: &model.AstValue{ConditionValue: "banana"},
 			},
 			wantErr: true,
+		},
+		{
+			name: "Valid null not equal",
+			args: args{
+				v:   nil,
+				ast: &model.AstValue{ConditionValue: "apple"},
+			},
+			wantErr: false,
 		},
 	}
 	for _, test := range tests {

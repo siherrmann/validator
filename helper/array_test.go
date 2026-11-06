@@ -21,6 +21,12 @@ func TestArrayToArrayOfAny(t *testing.T) {
 		assert.Error(t, err, "Expected error on map key extraction")
 		assert.Equal(t, []interface{}(nil), mapKeys, "Expected array to contain map keys")
 	})
+
+	t.Run("Invalid nil value for array value extraction", func(t *testing.T) {
+		mapKeys, err := ArrayToArrayOfAny(nil)
+		assert.Error(t, err, "Expected error on nil value")
+		assert.Equal(t, []interface{}(nil), mapKeys, "Expected nil result")
+	})
 }
 
 func TestArrayToArrayOfType(t *testing.T) {

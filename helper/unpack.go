@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"go.yaml.in/yaml/v3"
 )
 
 func UnmarshalRequestToJsonMap(request *http.Request) (map[string]any, error) {
@@ -43,6 +45,50 @@ func UnmarshalJsonToJsonMap(jsonInput []byte) (map[string]any, error) {
 		return nil, fmt.Errorf("error unmarshaling: %v", err)
 	}
 	return mapOut, nil
+}
+
+// UnmarshalYamlToJsonMap unmarshals yaml into a JsonMap.
+// Nested maps with non-string keys are converted to map[string]any, so the result
+// has the same shape as an unmarshaled json object. An empty document results in an empty map.
+func UnmarshalYamlToJsonMap(yamlInput []byte) (map[string]any, error) {
+	var out any
+	err := yaml.Unmarshal(yamlInput, &out)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshaling yaml: %v", err)
+	}
+	if out == nil {
+		return map[string]any{}, nil
+	}
+
+	mapOut, ok := normalizeYamlValue(out).(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("error unmarshaling yaml: top level has to be a mapping, was %T", out)
+	}
+	return mapOut, nil
+}
+
+// normalizeYamlValue recursively converts map[any]any (yaml mappings with non-string keys) to map[string]any.
+func normalizeYamlValue(in any) any {
+	switch v := in.(type) {
+	case map[string]any:
+		for key, value := range v {
+			v[key] = normalizeYamlValue(value)
+		}
+		return v
+	case map[any]any:
+		mapOut := make(map[string]any, len(v))
+		for key, value := range v {
+			mapOut[fmt.Sprint(key)] = normalizeYamlValue(value)
+		}
+		return mapOut
+	case []any:
+		for i, value := range v {
+			v[i] = normalizeYamlValue(value)
+		}
+		return v
+	default:
+		return in
+	}
 }
 
 func UnmapUrlValuesToJsonMap(values url.Values) (map[string]any, error) {

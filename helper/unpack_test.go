@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -69,6 +70,46 @@ func TestUnmarshalJsonToJsonMap(t *testing.T) {
 		_, err := UnmarshalJsonToJsonMap(jsonData)
 		assert.Error(t, err, "Expected error when unmarshaling invalid JSON")
 		assert.Contains(t, err.Error(), "error unmarshaling:", "Expected error to contain JSON parsing error")
+	})
+}
+
+func TestUnmarshalYamlToJsonMap(t *testing.T) {
+	t.Run("Valid flat and nested yaml", func(t *testing.T) {
+		input := []byte("name: apple\ncount: 2\nprice: 1.5\ncreated: 2025-01-02T00:00:00Z\nnested:\n  key: value\nlist:\n  - a: 1\n  - b\n")
+		result, err := UnmarshalYamlToJsonMap(input)
+		assert.NoError(t, err, "Expected no error unmarshaling yaml")
+		assert.Equal(t, "apple", result["name"], "Expected string value")
+		assert.Equal(t, 2, result["count"], "Expected int value")
+		assert.Equal(t, 1.5, result["price"], "Expected float value")
+		assert.Equal(t, time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC), result["created"], "Expected time value")
+		assert.Equal(t, map[string]any{"key": "value"}, result["nested"], "Expected nested map")
+		assert.Equal(t, []any{map[string]any{"a": 1}, "b"}, result["list"], "Expected list with nested map")
+	})
+
+	t.Run("Non-string keys are converted", func(t *testing.T) {
+		input := []byte("nested:\n  1: one\n  true: yes\nlist:\n  - 2: two\n")
+		result, err := UnmarshalYamlToJsonMap(input)
+		assert.NoError(t, err, "Expected no error unmarshaling yaml")
+		assert.Equal(t, map[string]any{"1": "one", "true": "yes"}, result["nested"], "Expected keys to be strings")
+		assert.Equal(t, []any{map[string]any{"2": "two"}}, result["list"], "Expected keys in list to be strings")
+	})
+
+	t.Run("Empty document", func(t *testing.T) {
+		result, err := UnmarshalYamlToJsonMap([]byte(""))
+		assert.NoError(t, err, "Expected no error unmarshaling empty yaml")
+		assert.Equal(t, map[string]any{}, result, "Expected empty map")
+	})
+
+	t.Run("Invalid top level", func(t *testing.T) {
+		result, err := UnmarshalYamlToJsonMap([]byte("- a\n- b\n"))
+		assert.Error(t, err, "Expected error for list at top level")
+		assert.Nil(t, result, "Expected nil result")
+	})
+
+	t.Run("Invalid yaml", func(t *testing.T) {
+		result, err := UnmarshalYamlToJsonMap([]byte("name: [unclosed\n"))
+		assert.Error(t, err, "Expected error for invalid yaml")
+		assert.Nil(t, result, "Expected nil result")
 	})
 }
 

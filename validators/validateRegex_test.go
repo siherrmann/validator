@@ -73,6 +73,14 @@ func TestValidateRegex(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "Invalid null regex",
+			args: args{
+				v:   nil,
+				ast: &model.AstValue{ConditionValue: "^.*$"},
+			},
+			wantErr: true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

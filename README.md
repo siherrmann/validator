@@ -133,6 +133,26 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
+You can also validate yaml (for example a config file) and update a struct with `UnmarshalYamlValidateAndUpdate`. To update a map by an array of `Validation` instead use `UnmarshalYamlValidateAndUpdateWithValidation`.
+
+```go
+type Config struct {
+    Name string `yaml:"name" vld:"min3"`
+    Port int    `yaml:"port" vld:"min1 && max65535"`
+}
+
+yamlInput, err := os.ReadFile("config.yaml")
+if err != nil {
+    ...
+}
+
+config := &Config{}
+err = v.UnmarshalYamlValidateAndUpdate(yamlInput, config)
+if err != nil {
+    fmt.Println("Validation failed for config:", err)
+}
+```
+
 ---
 
 # Validation
@@ -145,6 +165,10 @@ Conditions and operators in a requirement are seperated by a space (eg. `max0 ||
 
 All fields that you want to validate in the struct need a `vld` tag (or custom tag if specified).
 If you don't want to validate the field you can add `vld:"-"`. If you then use an update function it does update it without validating.
+
+The key of a field is taken from the `json` tag, falls back to the `yaml` tag and then to the field name. The options `omitempty` and `inline` are read from the same tag.
+
+Types that can be unmarshaled from text (they implement `encoding.TextUnmarshaler`, e.g. `uuid.UUID` or `net.IP`) are validated as their string representation, also as pointers. So `istuuid` works on a `uuid.UUID` field and `min`/`max` check the length of the string (36 for a uuid). On update the string is parsed into the field type. Structs like `time.Time` are not affected by this. Keep in mind that the nil uuid (`00000000-0000-0000-0000-000000000000`) is a valid uuid, you can exclude it with `neq00000000-0000-0000-0000-000000000000`.
 
 ## Requirement
 
@@ -169,8 +193,10 @@ Conditions have different usages per variable type:
 - `frm` - Checks if given comma seperated list contains value/every item in array/every key in map.
 - `nfr` - Checks if given comma seperated list does not contain value/every item in array/every key in map.
 - `rex` - `regexp.MatchString(condition, strconv.Itoa(int)/strconv.FormatFloat(float, 'f', 3, 64)/string)`, array ignored
-- `ist` - Checks if string is of a certain format (e.g., `istuuid`, `istemail`, `istpassword`). Supported types: `uuid`, `unixmilli`, `timerfc3339`, `email`, `url`, `alpha`, `alphanum`, `numeric`, `hex`, `base64`, `json`, `jwt`, `ipv4`, `ipv6`, `mac`, `password`.
+- `ist` - Checks if string is of a certain format (e.g., `istuuid`, `istemail`, `istpassword`). Supported types: `uuid`, `unixmilli`, `timerfc3339`, `email`, `url`, `alpha`, `alphanum`, `numeric`, `hex`, `base64`, `json`, `jwt`, `ip`, `ipv4`, `ipv6`, `mac`, `password`.
 - `fun` - Checks the value with a custom function. The function has to be added to the validator, so it does not work with the wrapped functions. It can be used beside other requirements like `min3 && funYourCheckFunction`. This also allows you to check unsupported types by only using `funYourCheckFunction`.
+
+A `null` value (e.g. `{"name": null}` in json or `name:` in yaml) counts as length/value `0` for `min` and `max`, so `max0` passes and `min1` fails. It is not equal to, does not contain, is not part of and does not match any condition, so `equ`, `con`, `frm`, `rex` and `ist` fail and `neq`, `nco` and `nfr` pass.
 
 For con you need to put in a condition that is convertable to the underlying type of the arrary.
 Eg. for an array of int the condition must be convertable to int (bad: `vld:"conA"`, good: `vld:"con1"`).
@@ -237,8 +263,8 @@ To run benchmarks run `go test -bench . -count 100 > bench.txt` (with memory all
 
 # ⭐ Features
 
-- Validate json or form values by struct tag.
-- Validate json or form values by validations.
+- Validate json, yaml or form values by struct tag.
+- Validate json, yaml or form values by validations.
 - Validate and update a struct from `JsonMap`.
 - **Tag-based validation**: Define validation rules directly within struct tags using a concise syntax (e.g. `vld:"(min3 && ncotest) || max0"`). Use multiple custom tags in one struct for multiple validation situations. The dafault tag is `vld`.
 - **Custom validation functions**: Extend the validation capabilities by registering and using your own custom validation logic. Use it beside other requirements like `min3 && funYourCheckFunction`. This also allows you to check unsupported types by only using `funYourCheckFunction`.

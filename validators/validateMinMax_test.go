@@ -49,6 +49,22 @@ func TestValidateMin(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "Valid null min",
+			args: args{
+				v:   nil,
+				ast: &model.AstValue{ConditionValue: "0"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid null min",
+			args: args{
+				v:   nil,
+				ast: &model.AstValue{ConditionValue: "1"},
+			},
+			wantErr: true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -103,6 +119,14 @@ func TestValidateMax(t *testing.T) {
 				ast: &model.AstValue{ConditionValue: "banana"},
 			},
 			wantErr: true,
+		},
+		{
+			name: "Valid null max",
+			args: args{
+				v:   nil,
+				ast: &model.AstValue{ConditionValue: "0"},
+			},
+			wantErr: false,
 		},
 	}
 	for _, test := range tests {

@@ -64,16 +64,27 @@ func TestValidateIsType(t *testing.T) {
 		{"valid jwt", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c", "jwt", false},
 		{"invalid jwt", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ", "jwt", true},
 		
+		// ip
+		{"valid ip v4", "192.168.1.1", "ip", false},
+		{"valid ip v6", "2001:0db8:85a3:0000:0000:8a2e:0370:7334", "ip", false},
+		{"valid ip v6 short", "::1", "ip", false},
+		{"invalid ip", "192.168.1.256", "ip", true},
+		{"invalid ip text", "not-an-ip", "ip", true},
+
 		// ipv4
 		{"valid ipv4", "192.168.1.1", "ipv4", false},
 		{"invalid ipv4", "192.168.1.256", "ipv4", true},
 		{"ipv6 as ipv4", "::1", "ipv4", true},
+		{"ipv4-mapped ipv6 as ipv4", "::ffff:192.168.0.1", "ipv4", true},
+		{"ipv4-mapped ipv6 hex as ipv4", "::ffff:c0a8:1", "ipv4", true},
 		
 		// ipv6
 		{"valid ipv6", "2001:0db8:85a3:0000:0000:8a2e:0370:7334", "ipv6", false},
 		{"valid ipv6 short", "::1", "ipv6", false},
 		{"invalid ipv6", "2001:0db8:85a3::8a2e:0370:7334x", "ipv6", true},
 		{"ipv4 as ipv6", "192.168.1.1", "ipv6", true},
+		{"ipv4-mapped ipv6", "::ffff:192.168.0.1", "ipv6", false},
+		{"ipv4-mapped ipv6 hex", "::ffff:c0a8:1", "ipv6", false},
 		
 		// mac
 		{"valid mac", "00:00:5e:00:53:01", "mac", false},
@@ -92,6 +103,9 @@ func TestValidateIsType(t *testing.T) {
 		
 		// not stringable
 		{"not stringable", struct{}{}, "uuid", true},
+
+		// null
+		{"null value", nil, "uuid", true},
 		
 		// unknown type
 		{"unknown type", "test", "unknown", true},

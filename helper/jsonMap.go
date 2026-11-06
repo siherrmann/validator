@@ -3,7 +3,6 @@ package helper
 import (
 	"fmt"
 	"reflect"
-	"strings"
 )
 
 func GetValidMap(in any) (map[string]any, error) {
@@ -25,12 +24,7 @@ func UnmapStructToJsonMap(structInput any, jsonMapToUpdate *map[string]any) erro
 		field := structFull.Field(i)
 		fieldType := structFull.Type().Field(i)
 
-		fieldKey := fieldType.Name
-		jsonKey := fieldType.Tag.Get("json")
-		if len(jsonKey) > 0 {
-			fieldKey = jsonKey
-		}
-
+		fieldKey, _, _ := FieldKey(fieldType)
 		(*jsonMapToUpdate)[fieldKey] = field.Interface()
 	}
 	return nil
@@ -64,22 +58,7 @@ func MapJsonMapToStruct(jsonMapInput map[string]any, structToUpdate any) error {
 		field := structFull.Field(i)
 		fieldType := structFull.Type().Field(i)
 
-		fieldKey := fieldType.Name
-		jsonKey := fieldType.Tag.Get("json")
-		isInline := false
-		if len(jsonKey) > 0 {
-			// Split on comma to handle omitempty and other options
-			parts := strings.Split(jsonKey, ",")
-			jsonKeyPrefix := parts[0]
-			for _, p := range parts[1:] {
-				if p == "inline" {
-					isInline = true
-				}
-			}
-			if jsonKeyPrefix != "-" && jsonKeyPrefix != "" {
-				fieldKey = jsonKeyPrefix
-			}
-		}
+		fieldKey, _, isInline := FieldKey(fieldType)
 
 		if isInline {
 			target := field
@@ -133,7 +112,7 @@ func MapJsonMapToStruct(jsonMapInput map[string]any, structToUpdate any) error {
 
 			err := SetStructValueByJson(field, jsonValue)
 			if err != nil {
-				return fmt.Errorf("could not set field %v (json key: %v) of %v: %v", fieldType.Name, jsonKey, reflect.TypeOf(structToUpdate), err.Error())
+				return fmt.Errorf("could not set field %v (json key: %v) of %v: %v", fieldType.Name, fieldKey, reflect.TypeOf(structToUpdate), err.Error())
 			}
 		} else {
 			// Initialize nil map and slice fields with empty collections to prevent panics

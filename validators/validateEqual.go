@@ -9,6 +9,11 @@ import (
 )
 
 func ValidateEqual(v any, ast *model.AstValue) error {
+	// A null value is not equal to any condition
+	if v == nil {
+		return fmt.Errorf("null value not equal condition %v", ast.ConditionValue)
+	}
+
 	var check any
 	var compare any
 	var err error
@@ -34,6 +39,11 @@ func ValidateEqual(v any, ast *model.AstValue) error {
 }
 
 func ValidateNotEqual(v any, ast *model.AstValue) error {
+	// A null value is not equal to any condition
+	if v == nil {
+		return nil
+	}
+
 	var check any
 	var compare any
 	var err error

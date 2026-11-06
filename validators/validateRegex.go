@@ -9,6 +9,11 @@ import (
 )
 
 func ValidateRegex(v any, ast *model.AstValue) error {
+	// A null value has nothing to match
+	if v == nil {
+		return fmt.Errorf("null value does not match regex %v", ast.ConditionValue)
+	}
+
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.Array, reflect.Slice, reflect.Map:
 		checks, err := helper.AnyToArrayOfString(v)

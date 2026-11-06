@@ -1,8 +1,11 @@
 package model
 
 import (
+	"encoding"
 	"reflect"
 )
+
+var textUnmarshalerType = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
 
 // ValidatorType is the type for all available validation types.
 type ValidatorType string
@@ -36,6 +39,21 @@ func (v ValidatorType) ToReflectType() reflect.Type {
 	default:
 		return reflect.TypeOf(struct{}{})
 	}
+}
+
+// ReflectTypeToValidatorType determines the ValidatorType based on the reflect.Type of a struct field.
+// Non-struct types that can be unmarshaled from text (e.g. uuid.UUID or net.IP) are validated as String,
+// pointers are dereferenced for that check. Structs like time.Time keep their Struct type.
+// All other types are handled by ReflectKindToValidatorType.
+func ReflectTypeToValidatorType(reflectType reflect.Type) ValidatorType {
+	elemType := reflectType
+	if elemType.Kind() == reflect.Ptr {
+		elemType = elemType.Elem()
+	}
+	if elemType.Kind() != reflect.Struct && reflect.PointerTo(elemType).Implements(textUnmarshalerType) {
+		return String
+	}
+	return ReflectKindToValidatorType(reflectType.Kind())
 }
 
 // TypeFromInterface determines the ValidatorType based on the type of the input interface.

@@ -32,16 +32,7 @@ func GetValidationsFromStruct(in any, tagType string) ([]model.Validation, error
 			continue
 		}
 
-		isInline := false
-		if len(fieldType.Tag.Get("json")) > 0 {
-			parts := strings.Split(fieldType.Tag.Get("json"), ",")
-			for _, part := range parts[1:] {
-				if part == "inline" {
-					isInline = true
-				}
-			}
-		}
-
+		_, _, isInline := helper.FieldKey(fieldType)
 		if isInline {
 			validations = append(validations, validation.InnerValidation...)
 		} else {
@@ -55,24 +46,11 @@ func GetValidationsFromStruct(in any, tagType string) ([]model.Validation, error
 
 // GetValidationFromStructField extracts validation rules from a struct field based on the provided tag type.
 // It checks the field's tag for the specified tag type and constructs a Validation object.
-// If no json tag is found, it uses the field name as the key.
+// The key is taken from the json tag, falls back to the yaml tag and then to the field name.
 func GetValidationFromStructField(tagType string, fieldValue reflect.Value, fieldType reflect.StructField) (*model.Validation, error) {
 	validation := &model.Validation{}
-	validation.Key = fieldType.Name
-	if len(fieldType.Tag.Get("json")) > 0 {
-		jsonKeyFull := fieldType.Tag.Get("json")
-		jsonKeyParts := strings.Split(jsonKeyFull, ",")
-		jsonKeyPrefix := jsonKeyParts[0]
-		if jsonKeyPrefix != "-" && jsonKeyPrefix != "" {
-			validation.Key = jsonKeyPrefix
-		}
-		for _, part := range jsonKeyParts[1:] {
-			if part == "omitempty" {
-				validation.OmitEmpty = true
-			}
-		}
-	}
-	validation.Type = model.ReflectKindToValidatorType(fieldValue.Type().Kind())
+	validation.Key, validation.OmitEmpty, _ = helper.FieldKey(fieldType)
+	validation.Type = model.ReflectTypeToValidatorType(fieldValue.Type())
 	validation.Requirement = "-"
 
 	tagIndex := 0

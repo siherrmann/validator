@@ -2,8 +2,11 @@ package validator
 
 import (
 	"fmt"
+	"net"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/siherrmann/validator/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -108,6 +111,76 @@ func TestValidate(t *testing.T) {
 		err := r.Validate(testStruct, "update")
 		assert.Error(t, err, "Expected an error but got none")
 		assert.Contains(t, err.Error(), "invalid group name: gp1", "Expected error to contain 'invalid group name: gp1'")
+	})
+
+	t.Run("Valid struct with omitempty json tag", func(t *testing.T) {
+		type TestStruct struct {
+			Name string `json:"name,omitempty" vld:"min1"`
+		}
+		r := NewValidator()
+		err := r.Validate(&TestStruct{Name: "apple"})
+		assert.NoError(t, err, "Expected no error but got one")
+	})
+
+	t.Run("Invalid struct with yaml tag only", func(t *testing.T) {
+		type TestStruct struct {
+			Name string `yaml:"name" vld:"min3"`
+		}
+		r := NewValidator()
+		err := r.Validate(&TestStruct{Name: "ap"})
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Contains(t, err.Error(), "field name invalid", "Expected error to use yaml key")
+	})
+
+	t.Run("Valid struct with nil interface value", func(t *testing.T) {
+		type TestStruct struct {
+			Value any `json:"value" vld:"max0"`
+		}
+		r := NewValidator()
+		err := r.Validate(&TestStruct{})
+		assert.NoError(t, err, "Expected no error but got one")
+	})
+
+	t.Run("Valid struct with uuid and istuuid", func(t *testing.T) {
+		type TestStruct struct {
+			ID       uuid.UUID  `json:"id" vld:"istuuid"`
+			Optional *uuid.UUID `json:"optional" vld:"-"`
+		}
+		id := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
+		r := NewValidator()
+		err := r.Validate(&TestStruct{ID: id, Optional: &id})
+		assert.NoError(t, err, "Expected no error but got one")
+
+		err = r.Validate(&TestStruct{ID: id})
+		assert.NoError(t, err, "Expected no error for nil uuid pointer but got one")
+	})
+
+	t.Run("Valid struct with uuid and min max", func(t *testing.T) {
+		type TestStruct struct {
+			ID uuid.UUID `json:"id" vld:"min36 && max36"`
+		}
+		r := NewValidator()
+		err := r.Validate(&TestStruct{ID: uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")})
+		assert.NoError(t, err, "Expected no error but got one")
+	})
+
+	t.Run("Invalid struct with nil uuid", func(t *testing.T) {
+		type TestStruct struct {
+			ID uuid.UUID `json:"id" vld:"neq00000000-0000-0000-0000-000000000000"`
+		}
+		r := NewValidator()
+		err := r.Validate(&TestStruct{})
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Contains(t, err.Error(), "field id invalid", "Expected error for nil uuid")
+	})
+
+	t.Run("Valid struct with net.IP", func(t *testing.T) {
+		type TestStruct struct {
+			IP net.IP `json:"ip" vld:"istipv4"`
+		}
+		r := NewValidator()
+		err := r.Validate(&TestStruct{IP: net.ParseIP("192.168.0.1")})
+		assert.NoError(t, err, "Expected no error but got one")
 	})
 }
 
@@ -270,6 +343,156 @@ func TestValidateAndUpdate(t *testing.T) {
 		err = r.ValidateAndUpdate(map[string]any{"count": 0}, testStruct, model.VLD)
 		assert.NoError(t, err, "Expected no error but got one")
 		assert.Equal(t, 10, testStruct.Count, "Expected output to match default")
+	})
+
+	t.Run("Valid struct with yaml tag only", func(t *testing.T) {
+		testStruct := &struct {
+			Name string `yaml:"name" vld:"min3"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"name": "apple"}, testStruct)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, "apple", testStruct.Name, "Expected name to be updated")
+	})
+
+	t.Run("Valid struct with null values", func(t *testing.T) {
+		type Inner struct {
+			Name string `json:"name" vld:"min3"`
+		}
+		testStruct := &struct {
+			Name     string   `json:"name" vld:"max0 || min3"`
+			Tags     []string `json:"tags" vld:"max0 || min1"`
+			Items    []Inner  `json:"items" vld:"-"`
+			Inner    Inner    `json:"inner" vld:"max0"`
+			Optional *Inner   `json:"optional" vld:"-"`
+		}{Name: "old"}
+		input := map[string]any{"name": nil, "tags": nil, "items": nil, "inner": nil, "optional": nil}
+		err := r.ValidateAndUpdate(input, testStruct)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, "", testStruct.Name, "Expected name to be set to zero value")
+		assert.Empty(t, testStruct.Tags, "Expected tags to be empty")
+		assert.Empty(t, testStruct.Items, "Expected items to be empty")
+		assert.Nil(t, testStruct.Optional, "Expected optional to be nil")
+	})
+
+	t.Run("Invalid struct with null values and min", func(t *testing.T) {
+		type TestStruct struct {
+			Name string   `json:"name" vld:"min1"`
+			Tags []string `json:"tags" vld:"min1"`
+		}
+		for _, key := range []string{"name", "tags"} {
+			input := map[string]any{"name": "apple", "tags": []any{"a"}}
+			input[key] = nil
+			err := r.ValidateAndUpdate(input, &TestStruct{})
+			assert.Error(t, err, "Expected an error but got none")
+			assert.Contains(t, err.Error(), "field "+key+" invalid", "Expected error for null field")
+		}
+	})
+
+	t.Run("Valid struct with null value and def tag", func(t *testing.T) {
+		testStruct := &struct {
+			Name string `json:"name" vld:"min1 defapple"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"name": nil}, testStruct)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, "apple", testStruct.Name, "Expected default to be used")
+	})
+
+	t.Run("Valid struct with uuid strings", func(t *testing.T) {
+		testStruct := &struct {
+			ID       uuid.UUID  `json:"id" vld:"istuuid"`
+			Optional *uuid.UUID `json:"optional,omitempty" vld:"-"`
+		}{}
+		id := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
+		err := r.ValidateAndUpdate(map[string]any{"id": id.String(), "optional": id.String()}, testStruct)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, id, testStruct.ID, "Expected id to be updated")
+		require.NotNil(t, testStruct.Optional, "Expected optional to be set")
+		assert.Equal(t, id, *testStruct.Optional, "Expected optional to be updated")
+	})
+
+	t.Run("Valid struct with uuid value", func(t *testing.T) {
+		testStruct := &struct {
+			ID uuid.UUID `json:"id" vld:"istuuid"`
+		}{}
+		id := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
+		err := r.ValidateAndUpdate(map[string]any{"id": id}, testStruct)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, id, testStruct.ID, "Expected id to be updated")
+	})
+
+	t.Run("Valid struct with missing and empty optional uuid", func(t *testing.T) {
+		type TestStruct struct {
+			ID       uuid.UUID  `json:"id" vld:"istuuid"`
+			Optional *uuid.UUID `json:"optional,omitempty" vld:"-"`
+		}
+		id := "550e8400-e29b-41d4-a716-446655440000"
+		for _, input := range []map[string]any{{"id": id}, {"id": id, "optional": ""}} {
+			testStruct := &TestStruct{}
+			err := r.ValidateAndUpdate(input, testStruct)
+			assert.NoError(t, err, "Expected no error but got one")
+			assert.Nil(t, testStruct.Optional, "Expected optional to stay nil")
+		}
+	})
+
+	t.Run("Valid struct with empty uuid pointer without omitempty", func(t *testing.T) {
+		testStruct := &struct {
+			ID *uuid.UUID `json:"id" vld:"-"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"id": ""}, testStruct)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Nil(t, testStruct.ID, "Expected id to stay nil")
+	})
+
+	t.Run("Invalid struct with uuid and istuuid", func(t *testing.T) {
+		testStruct := &struct {
+			ID uuid.UUID `json:"id" vld:"istuuid"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"id": "not-a-uuid"}, testStruct)
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Contains(t, err.Error(), "value is not a valid uuid", "Expected uuid validation error")
+	})
+
+	t.Run("Invalid struct with uuid without validation", func(t *testing.T) {
+		testStruct := &struct {
+			ID uuid.UUID `json:"id" vld:"-"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"id": "not-a-uuid"}, testStruct)
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Contains(t, err.Error(), "error parsing string to uuid.UUID", "Expected uuid parse error")
+	})
+
+	t.Run("Valid struct with net.IP", func(t *testing.T) {
+		type TestStruct struct {
+			IP net.IP `json:"ip" vld:"istip"`
+		}
+		for _, input := range []string{"192.168.0.1", "2001:db8::1"} {
+			testStruct := &TestStruct{}
+			err := r.ValidateAndUpdate(map[string]any{"ip": input}, testStruct)
+			assert.NoError(t, err, "Expected no error but got one")
+			assert.Equal(t, input, testStruct.IP.String(), "Expected ip to be updated")
+		}
+	})
+
+	t.Run("Invalid struct with net.IP", func(t *testing.T) {
+		testStruct := &struct {
+			IP net.IP `json:"ip" vld:"istip"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"ip": "not-an-ip"}, testStruct)
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Contains(t, err.Error(), "value is not a valid ip address", "Expected ip validation error")
+	})
+
+	t.Run("Valid struct with time.Time", func(t *testing.T) {
+		testStruct := &struct {
+			CreatedAt time.Time `json:"created_at" vld:"-"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"created_at": "2025-01-02T00:00:00Z"}, testStruct)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC), testStruct.CreatedAt.UTC(), "Expected created_at to be updated")
+
+		err = r.ValidateAndUpdate(map[string]any{"created_at": "1735776000"}, testStruct)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, int64(1735776000), testStruct.CreatedAt.Unix(), "Expected created_at to be updated from unix")
 	})
 }
 
@@ -764,6 +987,262 @@ func TestValidateWithValidation(t *testing.T) {
 							Type:        model.Int,
 							Requirement: "equ2",
 						}},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid null value for string with max0",
+			args: args{
+				jsonMap: map[string]any{
+					"value": nil,
+				},
+				validations: []model.Validation{
+					{
+						Key:         "value",
+						Type:        model.String,
+						Requirement: "max0",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid null value for string with min1",
+			args: args{
+				jsonMap: map[string]any{
+					"value": nil,
+				},
+				validations: []model.Validation{
+					{
+						Key:         "value",
+						Type:        model.String,
+						Requirement: "min1",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid null value for int with max0",
+			args: args{
+				jsonMap: map[string]any{
+					"value": nil,
+				},
+				validations: []model.Validation{
+					{
+						Key:         "value",
+						Type:        model.Int,
+						Requirement: "max0",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid null value for int with min1",
+			args: args{
+				jsonMap: map[string]any{
+					"value": nil,
+				},
+				validations: []model.Validation{
+					{
+						Key:         "value",
+						Type:        model.Int,
+						Requirement: "min1",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid null value for float with max0",
+			args: args{
+				jsonMap: map[string]any{
+					"value": nil,
+				},
+				validations: []model.Validation{
+					{
+						Key:         "value",
+						Type:        model.Float,
+						Requirement: "max0",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid null value for float with min1",
+			args: args{
+				jsonMap: map[string]any{
+					"value": nil,
+				},
+				validations: []model.Validation{
+					{
+						Key:         "value",
+						Type:        model.Float,
+						Requirement: "min1",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid null value for bool with max0",
+			args: args{
+				jsonMap: map[string]any{
+					"value": nil,
+				},
+				validations: []model.Validation{
+					{
+						Key:         "value",
+						Type:        model.Bool,
+						Requirement: "max0",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid null value for bool with min1",
+			args: args{
+				jsonMap: map[string]any{
+					"value": nil,
+				},
+				validations: []model.Validation{
+					{
+						Key:         "value",
+						Type:        model.Bool,
+						Requirement: "min1",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid null value for array with max0",
+			args: args{
+				jsonMap: map[string]any{
+					"value": nil,
+				},
+				validations: []model.Validation{
+					{
+						Key:         "value",
+						Type:        model.Array,
+						Requirement: "max0",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid null value for array with min1",
+			args: args{
+				jsonMap: map[string]any{
+					"value": nil,
+				},
+				validations: []model.Validation{
+					{
+						Key:         "value",
+						Type:        model.Array,
+						Requirement: "min1",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid null value for map with max0",
+			args: args{
+				jsonMap: map[string]any{
+					"value": nil,
+				},
+				validations: []model.Validation{
+					{
+						Key:         "value",
+						Type:        model.Map,
+						Requirement: "max0",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid null value for map with min1",
+			args: args{
+				jsonMap: map[string]any{
+					"value": nil,
+				},
+				validations: []model.Validation{
+					{
+						Key:         "value",
+						Type:        model.Map,
+						Requirement: "min1",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid null value for struct with max0",
+			args: args{
+				jsonMap: map[string]any{
+					"value": nil,
+				},
+				validations: []model.Validation{
+					{
+						Key:         "value",
+						Type:        model.Struct,
+						Requirement: "max0",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid null value for struct with min1",
+			args: args{
+				jsonMap: map[string]any{
+					"value": nil,
+				},
+				validations: []model.Validation{
+					{
+						Key:         "value",
+						Type:        model.Struct,
+						Requirement: "min1",
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid null value for untyped with max0",
+			args: args{
+				jsonMap: map[string]any{
+					"value": nil,
+				},
+				validations: []model.Validation{
+					{
+						Key:         "value",
+						Type:        "",
+						Requirement: "max0",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid null value for untyped with min1",
+			args: args{
+				jsonMap: map[string]any{
+					"value": nil,
+				},
+				validations: []model.Validation{
+					{
+						Key:         "value",
+						Type:        "",
+						Requirement: "min1",
 					},
 				},
 			},

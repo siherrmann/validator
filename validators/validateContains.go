@@ -8,6 +8,11 @@ import (
 )
 
 func ValidateContains[T any](v T, ast *model.AstValue) error {
+	// A null value does not contain anything
+	if any(v) == nil {
+		return fmt.Errorf("null value does not contain %v", ast.ConditionValue)
+	}
+
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.String, reflect.Array, reflect.Slice, reflect.Map:
 		contains, err := Contains(v, ast.ConditionValue)
@@ -25,6 +30,11 @@ func ValidateContains[T any](v T, ast *model.AstValue) error {
 }
 
 func ValidateNotContains[T any](v T, ast *model.AstValue) error {
+	// A null value does not contain anything
+	if any(v) == nil {
+		return nil
+	}
+
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.String, reflect.Array, reflect.Slice, reflect.Map:
 		contains, err := Contains(v, ast.ConditionValue)

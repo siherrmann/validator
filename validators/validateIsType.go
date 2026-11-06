@@ -84,14 +84,17 @@ func ValidateIsType(v any, ast *model.AstValue) error {
 		if !jwtRegex.MatchString(s) {
 			return fmt.Errorf("value is not a valid jwt")
 		}
+	case "ip":
+		if net.ParseIP(s) == nil {
+			return fmt.Errorf("value is not a valid ip address")
+		}
 	case "ipv4":
-		ip := net.ParseIP(s)
-		if ip == nil || ip.To4() == nil {
+		// Decided by notation, so ipv4-mapped ipv6 addresses (e.g. ::ffff:192.168.0.1) are not accepted as ipv4
+		if net.ParseIP(s) == nil || strings.Contains(s, ":") {
 			return fmt.Errorf("value is not a valid ipv4 address")
 		}
 	case "ipv6":
-		ip := net.ParseIP(s)
-		if ip == nil || ip.To4() != nil || !strings.Contains(s, ":") {
+		if net.ParseIP(s) == nil || !strings.Contains(s, ":") {
 			return fmt.Errorf("value is not a valid ipv6 address")
 		}
 	case "mac":

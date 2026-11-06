@@ -27,6 +27,9 @@ func Max[T int | float64](v, max T) bool {
 }
 
 func Contains(va any, contain string) (bool, error) {
+	if va == nil {
+		return false, nil
+	}
 	if s, ok := va.(string); ok {
 		return strings.Contains(s, contain), nil
 	}
@@ -67,6 +70,9 @@ func Contains(va any, contain string) (bool, error) {
 
 func From(v any, from string, not bool) (bool, error) {
 	switch v := v.(type) {
+	case nil:
+		// A null value is not part of any list
+		return not, nil
 	case string, bool,
 		int, int8, int16, int32, int64,
 		uint, uint8, uint16, uint32, uint64,

@@ -206,6 +206,8 @@ func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations
 				// Check if the value is a string from a url value.
 				jsonValue = []string{jsonValue.(string)}
 				err = r.ValidateValueWithParser(jsonValue, &validation)
+			} else if jsonValue == nil {
+				err = r.ValidateValueWithParser(jsonValue, &validation)
 			}
 		default:
 			err = r.ValidateValueWithParser(jsonValue, &validation)

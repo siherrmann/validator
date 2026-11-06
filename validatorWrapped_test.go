@@ -192,3 +192,27 @@ func TestWrappedUnmarshalValidateAndUpdateWithValidation(t *testing.T) {
 	assert.Equal(t, "apple", mapToUpdate["name"], "Expected name to be 'apple'")
 	assert.Equal(t, float64(2), mapToUpdate["age"], "Expected age to be 2")
 }
+
+func TestWrappedUnmarshalYamlValidateAndUpdate(t *testing.T) {
+	data := []byte("name: apple\nage: 2\n")
+	var s testStruct
+
+	err := UnmarshalYamlValidateAndUpdate(data, &s)
+	assert.NoError(t, err, "Expected no error on unmarshal yaml validate and update")
+	assert.Equal(t, "apple", s.Name, "Expected name to be 'apple'")
+	assert.Equal(t, 2, s.Age, "Expected age to be 2")
+}
+
+func TestWrappedUnmarshalYamlValidateAndUpdateWithValidation(t *testing.T) {
+	data := []byte("name: apple\nage: 2\n")
+	mapToUpdate := map[string]any{}
+	validations := []model.Validation{
+		{Key: "name", Requirement: "equapple"},
+		{Key: "age", Requirement: "min2"},
+	}
+
+	err := UnmarshalYamlValidateAndUpdateWithValidation(data, &mapToUpdate, validations)
+	assert.NoError(t, err, "Expected no error on unmarshal yaml validate and update with validation")
+	assert.Equal(t, "apple", mapToUpdate["name"], "Expected name to be 'apple'")
+	assert.Equal(t, 2, mapToUpdate["age"], "Expected age to be 2")
+}

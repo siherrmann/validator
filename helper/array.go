@@ -8,6 +8,9 @@ import (
 func ArrayToArrayOfAny(v any) ([]any, error) {
 	aany := []any{}
 	rv := reflect.ValueOf(v)
+	if !rv.IsValid() {
+		return nil, fmt.Errorf("invalid nil value, has to be array or slice")
+	}
 	if rv.Type().Kind() != reflect.Array && rv.Type().Kind() != reflect.Slice {
 		return nil, fmt.Errorf("invalid type %v, has to be array or slice", rv.Type().Kind())
 	}

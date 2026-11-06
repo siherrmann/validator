@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/siherrmann/validator/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -109,6 +110,18 @@ func TestUnmarshalAndValidate(t *testing.T) {
 		err = v.UnmarshalAndValidate(req, ts)
 		assert.Error(t, err, "Expected error on unmarshal and validate with invalid struct type")
 		assert.Contains(t, err.Error(), "value has to be of kind pointer", "Expected error to contain validation error")
+	})
+
+	t.Run("Valid JSON input with uuid", func(t *testing.T) {
+		testStruct := &struct {
+			ID uuid.UUID `json:"id" vld:"istuuid"`
+		}{}
+		req, err := http.NewRequest("POST", "/", bytes.NewBufferString(`{"id":"550e8400-e29b-41d4-a716-446655440000"}`))
+		require.NoError(t, err, "Expected no error creating request")
+
+		err = v.UnmarshalAndValidate(req, testStruct)
+		assert.NoError(t, err, "Expected no error on unmarshal and validate")
+		assert.Equal(t, uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"), testStruct.ID, "Expected id to be updated")
 	})
 }
 
@@ -245,6 +258,22 @@ func TestUnmarshalValidateAndUpdate(t *testing.T) {
 		assert.Error(t, err, "Expected error on unmarshal validate and update with invalid struct type")
 		assert.Contains(t, err.Error(), "value has to be of kind pointer", "Expected error to contain validation error")
 	})
+
+	t.Run("Valid JSON input with uuid", func(t *testing.T) {
+		testStruct := &struct {
+			ID       uuid.UUID  `json:"id" vld:"istuuid"`
+			Optional *uuid.UUID `json:"optional,omitempty" vld:"-"`
+		}{}
+		id := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
+		req, err := http.NewRequest("POST", "/", bytes.NewBufferString(`{"id":"`+id.String()+`","optional":"`+id.String()+`"}`))
+		require.NoError(t, err, "Expected no error creating request")
+
+		err = v.UnmarshalValidateAndUpdate(req, testStruct)
+		assert.NoError(t, err, "Expected no error on unmarshal validate and update")
+		assert.Equal(t, id, testStruct.ID, "Expected id to be updated")
+		require.NotNil(t, testStruct.Optional, "Expected optional to be set")
+		assert.Equal(t, id, *testStruct.Optional, "Expected optional to be updated")
+	})
 }
 
 func TestUnmapValidateAndUpdate(t *testing.T) {
@@ -288,6 +317,19 @@ func TestUnmapValidateAndUpdate(t *testing.T) {
 		err = v.UnmapValidateAndUpdate(req, ts)
 		assert.Error(t, err, "Expected error on unmap validate and update with invalid struct type")
 		assert.Contains(t, err.Error(), "value has to be of kind pointer", "Expected error to contain validation error")
+	})
+
+	t.Run("Valid form values with uuid", func(t *testing.T) {
+		testStruct := &struct {
+			ID uuid.UUID `json:"id" vld:"istuuid"`
+		}{}
+		req, err := http.NewRequest("POST", "/", bytes.NewBuffer(nil))
+		require.NoError(t, err, "Expected no error creating request")
+		req.Form = url.Values{"id": {"550e8400-e29b-41d4-a716-446655440000"}}
+
+		err = v.UnmapValidateAndUpdate(req, testStruct)
+		assert.NoError(t, err, "Expected no error on unmap validate and update")
+		assert.Equal(t, uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"), testStruct.ID, "Expected id to be updated")
 	})
 }
 

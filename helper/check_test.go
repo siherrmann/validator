@@ -12,6 +12,9 @@ func TestIsString(t *testing.T) {
 
 	testInt := IsString(123)
 	assert.False(t, testInt, "expected false for int, got true")
+
+	testNil := IsString(nil)
+	assert.False(t, testNil, "expected false for nil, got true")
 }
 
 func TestIsStruct(t *testing.T) {
@@ -33,6 +36,9 @@ func TestIsStruct(t *testing.T) {
 
 	testSlice := IsStruct([]TestStruct{{Field: "value"}})
 	assert.False(t, testSlice, "expected false for slice of structs, got true")
+
+	testNil := IsStruct(nil)
+	assert.False(t, testNil, "expected false for nil, got true")
 }
 
 func TestIsArray(t *testing.T) {
@@ -44,6 +50,9 @@ func TestIsArray(t *testing.T) {
 
 	testInt := IsArray(123)
 	assert.False(t, testInt, "expected false for int, got true")
+
+	testNil := IsArray(nil)
+	assert.False(t, testNil, "expected false for nil, got true")
 }
 
 func TestIsArrayOfStruct(t *testing.T) {
@@ -58,6 +67,9 @@ func TestIsArrayOfStruct(t *testing.T) {
 
 	testString := IsArrayOfStruct("not an array")
 	assert.False(t, testString, "expected false for string, got true")
+
+	testNil := IsArrayOfStruct(nil)
+	assert.False(t, testNil, "expected false for nil, got true")
 }
 
 func TestIsArrayOfMap(t *testing.T) {
@@ -66,6 +78,9 @@ func TestIsArrayOfMap(t *testing.T) {
 
 	testArrayOfStruct := IsArrayOfMap([]struct{ Key string }{{Key: "value1"}, {Key: "value2"}})
 	assert.False(t, testArrayOfStruct, "expected false for array of structs, got true")
+
+	testNil := IsArrayOfMap(nil)
+	assert.False(t, testNil, "expected false for nil, got true")
 }
 
 func TestCheckValidPointerToStruct(t *testing.T) {

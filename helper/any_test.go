@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"net"
 	"reflect"
 	"testing"
 	"time"
@@ -16,6 +17,12 @@ func TestAnyToFloat(t *testing.T) {
 		expected      float64
 		expectedError bool
 	}{
+		{
+			name:          "Valid nil",
+			arg:           nil,
+			expected:      0.0,
+			expectedError: false,
+		},
 		{
 			name:          "Valid string",
 			arg:           "apple",
@@ -168,6 +175,29 @@ func TestAnyToString(t *testing.T) {
 			arg:           float32(1),
 			expected:      "1",
 			expectedError: false,
+		},
+		{
+			name:          "Valid uuid.UUID",
+			arg:           uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
+			expected:      "550e8400-e29b-41d4-a716-446655440000",
+			expectedError: false,
+		},
+		{
+			name:          "Valid *uuid.UUID",
+			arg:           func() *uuid.UUID { u := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"); return &u }(),
+			expected:      "550e8400-e29b-41d4-a716-446655440000",
+			expectedError: false,
+		},
+		{
+			name:          "Valid net.IP",
+			arg:           net.ParseIP("192.168.0.1"),
+			expected:      "192.168.0.1",
+			expectedError: false,
+		},
+		{
+			name:          "Invalid nil *uuid.UUID",
+			arg:           (*uuid.UUID)(nil),
+			expectedError: true,
 		},
 		{
 			name:          "Invalid type",
@@ -1258,6 +1288,40 @@ func TestAnyToType(t *testing.T) {
 			},
 			expected:      func() any { u, _ := uuid.Parse("550e8400-e29b-41d4-a716-446655440001"); return u }(),
 			expectedError: false,
+		},
+		{
+			name: "Valid UUID format string to *uuid.UUID",
+			args: args{
+				v:        "550e8400-e29b-41d4-a716-446655440001",
+				expected: reflect.TypeOf(&uuid.UUID{}),
+			},
+			expected:      func() any { u := uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"); return &u }(),
+			expectedError: false,
+		},
+		{
+			name: "Invalid UUID format string to uuid.UUID",
+			args: args{
+				v:        "not-a-uuid",
+				expected: reflect.TypeOf(uuid.UUID{}),
+			},
+			expectedError: true,
+		},
+		{
+			name: "Valid string to net.IP",
+			args: args{
+				v:        "192.168.0.1",
+				expected: reflect.TypeOf(net.IP{}),
+			},
+			expected:      net.ParseIP("192.168.0.1"),
+			expectedError: false,
+		},
+		{
+			name: "Invalid string to net.IP",
+			args: args{
+				v:        "not-an-ip",
+				expected: reflect.TypeOf(net.IP{}),
+			},
+			expectedError: true,
 		},
 		// Array/Slice from []any
 		{

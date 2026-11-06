@@ -840,6 +840,15 @@ func TestContains(t *testing.T) {
 			valid:   false,
 			wantErr: false,
 		},
+		{
+			name: "Null value",
+			args: args{
+				v:       nil,
+				element: "apple",
+			},
+			valid:   false,
+			wantErr: false,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -2174,6 +2183,26 @@ func TestFrom(t *testing.T) {
 			},
 			valid:   false,
 			wantErr: true,
+		},
+		{
+			name: "Null value from",
+			args: args{
+				v:    nil,
+				from: "apple,banana",
+				not:  false,
+			},
+			valid:   false,
+			wantErr: false,
+		},
+		{
+			name: "Null value not from",
+			args: args{
+				v:    nil,
+				from: "apple,banana",
+				not:  true,
+			},
+			valid:   true,
+			wantErr: false,
 		},
 	}
 	for _, test := range tests {

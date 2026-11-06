@@ -41,6 +41,14 @@ func TestValidateFrom(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "Invalid null from",
+			args: args{
+				v:   nil,
+				ast: &model.AstValue{ConditionValue: "apple,banana"},
+			},
+			wantErr: true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -87,6 +95,14 @@ func TestValidateNotFrom(t *testing.T) {
 				ast: &model.AstValue{ConditionValue: "apple,banana"},
 			},
 			wantErr: true,
+		},
+		{
+			name: "Valid null not from",
+			args: args{
+				v:   nil,
+				ast: &model.AstValue{ConditionValue: "apple,banana"},
+			},
+			wantErr: false,
 		},
 	}
 	for _, test := range tests {

@@ -1,17 +1,21 @@
 package helper
 
 import (
+	"encoding"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
 	"time"
-
-	"github.com/google/uuid"
 )
+
+var textUnmarshalerType = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
 
 func AnyToFloat(v any) (float64, error) {
 	switch v := v.(type) {
+	case nil:
+		// A null value has no length, so it counts as 0
+		return 0, nil
 	case string:
 		return float64(len(v)), nil
 	case time.Time:
@@ -64,6 +68,16 @@ func AnyToString(v any) (string, error) {
 		return fmt.Sprintf("%d", v), nil
 	case float32, float64:
 		return fmt.Sprintf("%v", v), nil
+	case encoding.TextMarshaler:
+		// A nil pointer still implements the interface, but calling it would panic.
+		if rv := reflect.ValueOf(v); rv.Kind() == reflect.Ptr && rv.IsNil() {
+			return "", fmt.Errorf("unsupported nil value: %T", v)
+		}
+		text, err := v.MarshalText()
+		if err != nil {
+			return "", fmt.Errorf("error marshaling value to text: %v", err)
+		}
+		return string(text), nil
 	default:
 		return "", fmt.Errorf("unsupported type for value: %T", v)
 	}
@@ -440,17 +454,24 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 			}
 			return typedArray.Interface(), nil
 		} else if strValue, ok := in.(string); ok {
+			// Types like uuid.UUID or net.IP know how to parse themselves from text
+			if reflect.PointerTo(expected).Implements(textUnmarshalerType) {
+				target := reflect.New(expected)
+				err := target.Interface().(encoding.TextUnmarshaler).UnmarshalText([]byte(strValue))
+				if err == nil {
+					return target.Elem().Interface(), nil
+				}
+				// Raw bytes of matching length are still accepted for byte arrays (e.g. 16 bytes for uuid.UUID)
+				if expected.Kind() != reflect.Array || expected.Elem().Kind() != reflect.Uint8 || len(strValue) != expected.Len() {
+					return nil, fmt.Errorf("error parsing string to %v: %v", expected, err)
+				}
+			}
+
 			// Special case: if expected is []byte or [N]byte, convert string to byte array/slice
 			if expected.Elem().Kind() == reflect.Uint8 {
 				if expected.Kind() == reflect.Slice {
 					return []byte(strValue), nil
 				} else if expected.Kind() == reflect.Array {
-					// First try to parse as UUID as most common use case for [16]byte
-					parsedUUID, err := uuid.Parse(strValue)
-					if err == nil {
-						return parsedUUID, nil
-					}
-
 					byteSlice := []byte(strValue)
 					arrayValue := reflect.New(expected).Elem()
 					for i := 0; i < expected.Len() && i < len(byteSlice); i++ {
