@@ -41,6 +41,20 @@ func Contains(va any, contain string) (bool, error) {
 		if rv.Len() == 0 {
 			return false, nil
 		}
+		if rt.Elem().Kind() == reflect.Interface {
+			// E.g. []any from url values: compare against each item in its own type.
+			for i := 0; i < rv.Len(); i++ {
+				item := rv.Index(i).Interface()
+				if item == nil {
+					continue
+				}
+				con, err := helper.AnyToType(contain, reflect.TypeOf(item))
+				if err == nil && reflect.DeepEqual(item, con) {
+					return true, nil
+				}
+			}
+			return false, nil
+		}
 		con, err := helper.AnyToType(contain, rt.Elem())
 		if err != nil {
 			return false, fmt.Errorf("error converting condition to %T: %v", rt.Elem().Kind, err)

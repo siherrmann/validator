@@ -170,6 +170,21 @@ The key of a field is taken from the `json` tag, falls back to the `yaml` tag an
 
 Types that can be unmarshaled from text (they implement `encoding.TextUnmarshaler`, e.g. `uuid.UUID` or `net.IP`) are validated as their string representation, also as pointers. So `istuuid` works on a `uuid.UUID` field and `min`/`max` check the length of the string (36 for a uuid). On update the string is parsed into the field type. Structs like `time.Time` are not affected by this. Keep in mind that the nil uuid (`00000000-0000-0000-0000-000000000000`) is a valid uuid, you can exclude it with `neq00000000-0000-0000-0000-000000000000`.
 
+## Form values and slices
+
+When url values (form values) are unpacked, a key with several values (eg. `tools=miner&tools=run`) becomes a list and a key with a single value (eg. `tools=miner`) becomes a lone value.
+The struct field type decides the result: a `string` field gets the lone value, while a slice or array field (eg. `[]string`, `[]int`, `[2]string`) accepts either a list or a lone value, which is treated as a one-element list.
+Validations on a slice field (eg. `min1`, `max3`, `con`, `frm`) also see a lone value as a list with one item.
+
+```go
+type Request struct {
+    Tool  string   `json:"tool" vld:"min1"`
+    Tools []string `json:"tools" vld:"min1"`
+}
+// tool=miner&tools=miner          -> Tool: "miner", Tools: []string{"miner"}
+// tool=miner&tools=miner&tools=run -> Tool: "miner", Tools: []string{"miner", "run"}
+```
+
 ## Requirement
 
 You can build complex requirements by building a query of conditions, operators (`&&` (=AND) and `||` (=OR)) and groups (with `(` and `)`).

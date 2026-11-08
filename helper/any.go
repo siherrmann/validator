@@ -448,11 +448,7 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		}
 	case reflect.Array, reflect.Slice:
 		if inArray, ok := in.([]any); ok {
-			typedArray, err := ArrayToArrayOfType(inArray, expected.Elem())
-			if err != nil {
-				return nil, err
-			}
-			return typedArray.Interface(), nil
+			return anyArrayToType(inArray, expected)
 		} else if strValue, ok := in.(string); ok {
 			// Types like uuid.UUID or net.IP know how to parse themselves from text
 			if reflect.PointerTo(expected).Implements(textUnmarshalerType) {
@@ -483,13 +479,50 @@ func AnyToType(in any, expected reflect.Type) (out any, err error) {
 		}
 
 		// Handle array/slice of other types
-		if reflect.TypeOf(in).ConvertibleTo(expected) {
+		if inType.ConvertibleTo(expected) && !(expected.Kind() == reflect.Array && inType.Kind() == reflect.Slice) {
 			return reflect.ValueOf(in).Convert(expected).Interface(), nil
 		}
+
+		// Typed array/slice (e.g. []string into []int): convert element by element.
+		if inKind := inType.Kind(); inKind == reflect.Array || inKind == reflect.Slice {
+			inArray, err := ArrayToArrayOfAny(in)
+			if err != nil {
+				return nil, err
+			}
+			return anyArrayToType(inArray, expected)
+		}
+
+		// A lone value (e.g. a single form value) is treated as a one-element list,
+		// so the struct field type decides whether it becomes a slice.
+		return anyArrayToType([]any{in}, expected)
 	case reflect.Interface:
 		return in, nil
 	default:
 		return nil, fmt.Errorf("unsupported type %T", expected)
 	}
 	return nil, fmt.Errorf("unsupported type %T", expected)
+}
+
+// anyArrayToType converts each element of in to the element type of expected
+// and returns a value of type expected (slice or fixed-size array).
+func anyArrayToType(in []any, expected reflect.Type) (any, error) {
+	if expected.Kind() == reflect.Array && len(in) > expected.Len() {
+		return nil, fmt.Errorf("too many elements for %v: got %d, max %d", expected, len(in), expected.Len())
+	}
+
+	typedArray, err := ArrayToArrayOfType(in, expected.Elem())
+	if err != nil {
+		return nil, err
+	}
+
+	if expected.Kind() == reflect.Array {
+		arrayValue := reflect.New(expected).Elem()
+		reflect.Copy(arrayValue, typedArray)
+		return arrayValue.Interface(), nil
+	}
+	if typedArray.Type() != expected {
+		// Named slice types like `type Kinds []Kind`
+		return typedArray.Convert(expected).Interface(), nil
+	}
+	return typedArray.Interface(), nil
 }

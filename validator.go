@@ -208,6 +208,10 @@ func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations
 				err = r.ValidateValueWithParser(jsonValue, &validation)
 			} else if jsonValue == nil {
 				err = r.ValidateValueWithParser(jsonValue, &validation)
+			} else if len(validation.InnerValidation) == 0 {
+				// A lone value (e.g. a single form value) is treated as a one-element list.
+				jsonValue = []any{jsonValue}
+				err = r.ValidateValueWithParser(jsonValue, &validation)
 			}
 		default:
 			err = r.ValidateValueWithParser(jsonValue, &validation)

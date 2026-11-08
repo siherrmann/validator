@@ -311,6 +311,7 @@ func TestAnyToType(t *testing.T) {
 		Nested        nestedStruct  `json:"nested"`
 		NestedPointer *nestedStruct `json:"nested_pointer"`
 	}
+	type kind string
 	type args struct {
 		v        any
 		expected reflect.Type
@@ -1384,6 +1385,131 @@ func TestAnyToType(t *testing.T) {
 				expected: reflect.TypeOf([]string{}),
 			},
 			expected:      any([]string{}),
+			expectedError: false,
+		},
+		{
+			name: "Valid []any to [2]string",
+			args: args{
+				v:        []any{"miner", "run"},
+				expected: reflect.TypeOf([2]string{}),
+			},
+			expected:      any([2]string{"miner", "run"}),
+			expectedError: false,
+		},
+		{
+			name: "Invalid []any to [2]string (too many elements)",
+			args: args{
+				v:        []any{"a", "b", "c"},
+				expected: reflect.TypeOf([2]string{}),
+			},
+			expectedError: true,
+		},
+		// Array/Slice from a lone value (e.g. a single url value)
+		{
+			name: "Valid lone string to []string",
+			args: args{
+				v:        "miner",
+				expected: reflect.TypeOf([]string{}),
+			},
+			expected:      any([]string{"miner"}),
+			expectedError: false,
+		},
+		{
+			name: "Valid lone string to []int",
+			args: args{
+				v:        "7",
+				expected: reflect.TypeOf([]int{}),
+			},
+			expected:      any([]int{7}),
+			expectedError: false,
+		},
+		{
+			name: "Valid lone float64 to []int",
+			args: args{
+				v:        7.0,
+				expected: reflect.TypeOf([]int{}),
+			},
+			expected:      any([]int{7}),
+			expectedError: false,
+		},
+		{
+			name: "Valid lone string to []float64",
+			args: args{
+				v:        "1.5",
+				expected: reflect.TypeOf([]float64{}),
+			},
+			expected:      any([]float64{1.5}),
+			expectedError: false,
+		},
+		{
+			name: "Valid lone bool to []bool",
+			args: args{
+				v:        true,
+				expected: reflect.TypeOf([]bool{}),
+			},
+			expected:      any([]bool{true}),
+			expectedError: false,
+		},
+		{
+			name: "Valid lone string to []bool",
+			args: args{
+				v:        "on",
+				expected: reflect.TypeOf([]bool{}),
+			},
+			expected:      any([]bool{true}),
+			expectedError: false,
+		},
+		{
+			name: "Valid lone string to slice of named type",
+			args: args{
+				v:        "miner",
+				expected: reflect.TypeOf([]kind{}),
+			},
+			expected:      any([]kind{"miner"}),
+			expectedError: false,
+		},
+		{
+			name: "Valid lone string to [1]string",
+			args: args{
+				v:        "miner",
+				expected: reflect.TypeOf([1]string{}),
+			},
+			expected:      any([1]string{"miner"}),
+			expectedError: false,
+		},
+		{
+			name: "Valid lone string to [2]string",
+			args: args{
+				v:        "miner",
+				expected: reflect.TypeOf([2]string{}),
+			},
+			expected:      any([2]string{"miner", ""}),
+			expectedError: false,
+		},
+		{
+			name: "Invalid lone string to []int (non-convertible)",
+			args: args{
+				v:        "abc",
+				expected: reflect.TypeOf([]int{}),
+			},
+			expectedError: true,
+		},
+		{
+			name: "Valid lone string to string stays string",
+			args: args{
+				v:        "miner",
+				expected: reflect.TypeOf(""),
+			},
+			expected:      any("miner"),
+			expectedError: false,
+		},
+		{
+			name: "Valid typed slice to []string (converted per element)",
+			args: args{
+				v:        []int{1, 2},
+				expected: reflect.TypeOf([]string{}),
+			},
+			expected:      any([]string{"1", "2"}),
 			expectedError: false,
 		},
 		{
