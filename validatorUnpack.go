@@ -10,6 +10,9 @@ import (
 	"github.com/siherrmann/validator/model"
 )
 
+// All unpack functions validate with the context of the request (request.Context()),
+// so values injected with Inject into the request context can be used in requirements and functions.
+
 // UnmapOrUnmarshalAndValidate unmarshals given json ([]byte) or given url.Values (from request.Form),
 // validates them and updates the given struct.
 // It returns an error if the unmapping or validation fails.
@@ -56,7 +59,7 @@ func (r *Validator) UnmarshalAndValidate(request *http.Request, structToValidate
 		return fmt.Errorf("error unmarshaling json: %v", err)
 	}
 
-	err = r.Validate(structToValidate, tagType...)
+	err = r.ValidateContext(request.Context(), structToValidate, tagType...)
 	if err != nil {
 		return fmt.Errorf("error validating struct: %v", err)
 	}
@@ -82,7 +85,7 @@ func (r *Validator) UnmapAndValidate(request *http.Request, structToValidate any
 		return fmt.Errorf("error mapping json map to struct: %v", err)
 	}
 
-	err = r.Validate(structToValidate, tagType...)
+	err = r.ValidateContext(request.Context(), structToValidate, tagType...)
 	if err != nil {
 		return fmt.Errorf("error validating url values: %v", err)
 	}
@@ -120,7 +123,7 @@ func (r *Validator) UnmarshalValidateAndUpdate(request *http.Request, structToUp
 		return fmt.Errorf("error unmarshaling request body: %v", err)
 	}
 
-	err = r.ValidateAndUpdate(mapOut, structToUpdate, tagType...)
+	err = r.ValidateAndUpdateContext(request.Context(), mapOut, structToUpdate, tagType...)
 	if err != nil {
 		return fmt.Errorf("error updating struct: %v", err)
 	}
@@ -138,7 +141,7 @@ func (r *Validator) UnmapValidateAndUpdate(request *http.Request, structToUpdate
 		return fmt.Errorf("error unmapping form values: %v", err)
 	}
 
-	err = r.ValidateAndUpdate(mapOut, structToUpdate, tagType...)
+	err = r.ValidateAndUpdateContext(request.Context(), mapOut, structToUpdate, tagType...)
 	if err != nil {
 		return fmt.Errorf("error updating struct: %v", err)
 	}
@@ -173,7 +176,7 @@ func (r *Validator) UnmarshalValidateAndUpdateWithValidation(request *http.Reque
 		return fmt.Errorf("error unmarshaling request body: %v", err)
 	}
 
-	err = r.ValidateAndUpdateWithValidation(mapOut, mapToUpdate, validations)
+	err = r.ValidateAndUpdateWithValidationContext(request.Context(), mapOut, mapToUpdate, validations)
 	if err != nil {
 		return fmt.Errorf("error updating struct: %v", err)
 	}
@@ -190,7 +193,7 @@ func (r *Validator) UnmapValidateAndUpdateWithValidation(request *http.Request, 
 		return fmt.Errorf("error unmapping form values: %v", err)
 	}
 
-	err = r.ValidateAndUpdateWithValidation(mapOut, mapToUpdate, validations)
+	err = r.ValidateAndUpdateWithValidationContext(request.Context(), mapOut, mapToUpdate, validations)
 	if err != nil {
 		return fmt.Errorf("error updating struct: %v", err)
 	}

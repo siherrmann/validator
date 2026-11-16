@@ -195,7 +195,13 @@ func TestHasFieldUsage(t *testing.T) {
 	assert.True(t, (&AstValue{ConditionGroup: ConditionGroup{{Type: GROUP, ConditionGroup: ConditionGroup{{Type: CONDITION, ConditionType: RELATION, Ref: ref}}}}}).HasFieldUsage())
 }
 
-func TestAstConditionToStringWithFields(t *testing.T) {
+func TestAstConditionToString(t *testing.T) {
+	plain := AstValue{Type: CONDITION, ConditionType: MIN_VALUE, ConditionValue: "3"}
+	assert.Equal(t, "min'3'", plain.AstConditionToString())
+
+	injected := AstValue{Type: CONDITION, ConditionType: EQUAL, Ref: &FieldRef{Raw: "${api_key}", Path: []string{"api_key"}, Injected: true}}
+	assert.Equal(t, "equ${api_key}", injected.AstConditionToString())
+
 	ref := &FieldRef{Raw: "../type", Up: 1, Path: []string{"type"}}
 	relation := AstValue{
 		Type:           CONDITION,

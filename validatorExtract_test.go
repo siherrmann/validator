@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/siherrmann/validator/model"
@@ -181,7 +182,6 @@ func TestGetValidationsFromStruct(t *testing.T) {
 			} else {
 				assert.NoError(t, err, "Expected no error when getting validations")
 
-				// Helper to clear ASTs and derived flags for equality testing
 				var clearASTs func(vs []model.Validation)
 				clearASTs = func(vs []model.Validation) {
 					for i := range vs {
@@ -196,27 +196,100 @@ func TestGetValidationsFromStruct(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("Field usage of rel and references", func(t *testing.T) {
+		type Inner struct {
+			Value int `json:"value" vld:"min$../min"`
+		}
+		type Plain struct {
+			Value int `json:"value" vld:"min1"`
+		}
+		type Request struct {
+			Min   int    `json:"min" vld:"min1"`
+			Name  string `json:"name" vld:"rel(min equ1) => min1"`
+			Inner Inner  `json:"inner" vld:"-"`
+			Plain Plain  `json:"plain" vld:"-"`
+		}
+
+		validations, err := GetValidationsFromStruct(&Request{}, model.VLD)
+		require.NoError(t, err)
+		usage := map[string]bool{}
+		for _, v := range validations {
+			usage[v.Key] = v.UsesFields()
+		}
+		assert.Equal(t, map[string]bool{"min": false, "name": true, "inner": true, "plain": false}, usage)
+	})
 }
 
-func TestGetValidationsFromStructFieldUsage(t *testing.T) {
+func TestGetValidationFromStructField(t *testing.T) {
 	type Inner struct {
-		Value int `json:"value" vld:"min$../min"`
-	}
-	type Plain struct {
-		Value int `json:"value" vld:"min1"`
+		Name string `json:"name" vld:"min1"`
 	}
 	type Request struct {
-		Min   int    `json:"min" vld:"min1"`
-		Name  string `json:"name" vld:"rel(min equ1) => min1"`
-		Inner Inner  `json:"inner" vld:"-"`
-		Plain Plain  `json:"plain" vld:"-"`
+		Name     string  `json:"name,omitempty" vld:"min3 def'abc', gr1min1"`
+		Short    string  `vld:"unq"`
+		Ignored  string  `json:"ignored"`
+		Inner    Inner   `json:"inner" vld:"-"`
+		List     []Inner `json:"list" vld:"min1"`
+		Relation string  `json:"relation" vld:"rel(name equabc) => min1"`
+		Invalid  string  `vld:"invalid"`
 	}
 
-	validations, err := GetValidationsFromStruct(&Request{}, model.VLD)
-	require.NoError(t, err)
-	usage := map[string]bool{}
-	for _, v := range validations {
-		usage[v.Key] = v.UsesFields()
+	extract := func(name string) (*model.Validation, error) {
+		value := reflect.ValueOf(&Request{}).Elem()
+		structField, ok := value.Type().FieldByName(name)
+		require.True(t, ok)
+		return GetValidationFromStructField(model.VLD, value.FieldByName(name), structField)
 	}
-	assert.Equal(t, map[string]bool{"min": false, "name": true, "inner": true, "plain": false}, usage)
+
+	t.Run("Requirement, default, omitempty and groups", func(t *testing.T) {
+		validation, err := extract("Name")
+		require.NoError(t, err)
+		require.NotNil(t, validation)
+		assert.Equal(t, "name", validation.Key)
+		assert.Equal(t, model.String, validation.Type)
+		assert.Equal(t, "min3 def'abc'", validation.Requirement)
+		assert.Equal(t, "abc", validation.Default)
+		assert.True(t, validation.OmitEmpty)
+		require.Len(t, validation.Groups, 1)
+		assert.Equal(t, "gr1", validation.Groups[0].Name)
+		assert.NotNil(t, validation.RequirementAST)
+		assert.False(t, validation.UsesFields())
+	})
+
+	t.Run("Short requirement", func(t *testing.T) {
+		validation, err := extract("Short")
+		require.NoError(t, err)
+		require.NotNil(t, validation)
+		assert.Equal(t, "unq", validation.Requirement)
+	})
+
+	t.Run("Field without tag", func(t *testing.T) {
+		validation, err := extract("Ignored")
+		assert.NoError(t, err)
+		assert.Nil(t, validation)
+	})
+
+	t.Run("Inner validations of struct and list", func(t *testing.T) {
+		validation, err := extract("Inner")
+		require.NoError(t, err)
+		require.Len(t, validation.InnerValidation, 1)
+		assert.Equal(t, "name", validation.InnerValidation[0].Key)
+
+		validation, err = extract("List")
+		require.NoError(t, err)
+		assert.Equal(t, model.Array, validation.Type)
+		require.Len(t, validation.InnerValidation, 1)
+	})
+
+	t.Run("Field usage", func(t *testing.T) {
+		validation, err := extract("Relation")
+		require.NoError(t, err)
+		assert.True(t, validation.UsesFields())
+	})
+
+	t.Run("Invalid requirement", func(t *testing.T) {
+		_, err := extract("Invalid")
+		assert.Error(t, err)
+	})
 }

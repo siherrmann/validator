@@ -30,6 +30,18 @@ func newValidator() *Validator {
 	return &Validator{}
 }
 
+func newInjectedRequest(t *testing.T, body string) *http.Request {
+	t.Helper()
+	request, err := http.NewRequest(http.MethodPost, "/", bytes.NewBufferString(body))
+	require.NoError(t, err)
+	request.Header.Set("Content-Type", "application/json")
+	return request.WithContext(Inject(request.Context(), "api_key", "s3cr3t"))
+}
+
+type injectedRequest struct {
+	Key string `json:"key" vld:"equ${api_key}"`
+}
+
 func TestUnmapOrUnmarshalAndValidate(t *testing.T) {
 	v := newValidator()
 	ts := &testStruct{}
@@ -159,6 +171,12 @@ func TestUnmarshalAndValidate(t *testing.T) {
 		err = v.UnmarshalAndValidate(req, testStruct)
 		assert.NoError(t, err, "Expected no error on unmarshal and validate")
 		assert.Equal(t, uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"), testStruct.ID, "Expected id to be updated")
+	})
+
+	t.Run("Values injected into the request context", func(t *testing.T) {
+		r := NewValidator()
+		assert.NoError(t, r.UnmarshalAndValidate(newInjectedRequest(t, `{"key":"s3cr3t"}`), &injectedRequest{}))
+		assert.Error(t, r.UnmarshalAndValidate(newInjectedRequest(t, `{"key":"guess"}`), &injectedRequest{}))
 	})
 }
 
@@ -338,6 +356,14 @@ func TestUnmarshalValidateAndUpdate(t *testing.T) {
 		assert.Equal(t, id, testStruct.ID, "Expected id to be updated")
 		require.NotNil(t, testStruct.Optional, "Expected optional to be set")
 		assert.Equal(t, id, *testStruct.Optional, "Expected optional to be updated")
+	})
+
+	t.Run("Values injected into the request context", func(t *testing.T) {
+		r := NewValidator()
+		result := &injectedRequest{}
+		require.NoError(t, r.UnmarshalValidateAndUpdate(newInjectedRequest(t, `{"key":"s3cr3t"}`), result))
+		assert.Equal(t, "s3cr3t", result.Key)
+		assert.Error(t, r.UnmarshalValidateAndUpdate(newInjectedRequest(t, `{"key":"guess"}`), &injectedRequest{}))
 	})
 }
 

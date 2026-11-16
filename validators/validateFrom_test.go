@@ -60,6 +60,12 @@ func TestValidateFrom(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("List split by the parser", func(t *testing.T) {
+		ast := &model.AstValue{ConditionValue: "invalid", List: []string{"go", "dockerfile"}}
+		assert.NoError(t, ValidateFrom("go", ast))
+		assert.Error(t, ValidateFrom("oci", ast))
+	})
 }
 
 func TestValidateNotFrom(t *testing.T) {
@@ -115,6 +121,12 @@ func TestValidateNotFrom(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("List split by the parser", func(t *testing.T) {
+		ast := &model.AstValue{ConditionValue: "invalid", List: []string{"go", "dockerfile"}}
+		assert.NoError(t, ValidateNotFrom("oci", ast))
+		assert.Error(t, ValidateNotFrom("go", ast))
+	})
 }
 
 func TestValidateFromValues(t *testing.T) {
@@ -151,13 +163,4 @@ func TestValidateFromValues(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestValidateFromWithParsedList(t *testing.T) {
-	// The condition value is intentionally different, to show that the list split by the parser is used.
-	ast := &model.AstValue{ConditionValue: "invalid", List: []string{"go", "dockerfile"}}
-	assert.NoError(t, ValidateFrom("go", ast))
-	assert.Error(t, ValidateFrom("oci", ast))
-	assert.NoError(t, ValidateNotFrom("oci", ast))
-	assert.Error(t, ValidateNotFrom("go", ast))
 }

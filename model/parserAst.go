@@ -23,8 +23,9 @@ func (r *RootNode) ExtractDefault() string {
 // The ConditionType is a [model.ConditionType] and the ConditionValue is any string (numbers are also represented as string).
 //
 // A `rel` condition holds the path of the related field in Ref and the conditions
-// for the related field in ConditionGroup. A condition with a `$` value (eg. `min$min_replicas`)
-// holds the path of the referenced field in Ref, its value is resolved while validating.
+// for the related field in ConditionGroup. A condition with a `$` value (eg. `min$min_replicas`
+// or the injected value `equ${api_key}`) holds the path of the referenced field in Ref,
+// its value is resolved while validating.
 //
 // The AST is cached and shared between goroutines, it must not be modified while validating.
 type AstValue struct {
@@ -136,12 +137,15 @@ func (r AstValue) AstGroupToString() string {
 // If the AstValue has an Operator, it includes that in the string.
 // The resulting string is formatted as "<ConditionType>'<ConditionValue>' <Operator>" if the Operator is present,
 // or as "<ConditionType>'<ConditionValue>'" if the Operator is not present.
-// A `rel` condition is formatted as "rel(<path> <conditions>)" and a `$` reference as "<ConditionType>$<path>".
+// A `rel` condition is formatted as "rel(<path> <conditions>)", a `$` reference as "<ConditionType>$<path>"
+// and an injected value as "<ConditionType>${<name>}".
 func (r AstValue) AstConditionToString() string {
 	var condition string
 	switch {
 	case r.ConditionType == RELATION && r.Ref != nil:
 		condition = fmt.Sprintf("rel(%v %v)", r.Ref.Raw, r.AstGroupToString())
+	case r.Ref != nil && r.Ref.Injected:
+		condition = fmt.Sprintf("%v%v", r.ConditionType, r.Ref.Raw)
 	case r.Ref != nil:
 		condition = fmt.Sprintf("%v$%v", r.ConditionType, r.Ref.Raw)
 	default:

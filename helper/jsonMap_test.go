@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetValidMap(t *testing.T) {
@@ -436,6 +437,24 @@ func TestSetStructValueByJson(t *testing.T) {
 	})
 }
 
+func TestJsonMapToMapKV(t *testing.T) {
+	t.Run("Converts keys and values", func(t *testing.T) {
+		result, err := JsonMapToMapKV(map[string]any{"1": 2.0, "3": "4"}, reflect.TypeOf(0), reflect.TypeOf(""))
+		require.NoError(t, err)
+		assert.Equal(t, map[int]string{1: "2", 3: "4"}, result.Interface())
+	})
+
+	t.Run("Invalid key", func(t *testing.T) {
+		_, err := JsonMapToMapKV(map[string]any{"a": "b"}, reflect.TypeOf(0), reflect.TypeOf(""))
+		assert.Error(t, err)
+	})
+
+	t.Run("Invalid value", func(t *testing.T) {
+		_, err := JsonMapToMapKV(map[string]any{"1": "b"}, reflect.TypeOf(0), reflect.TypeOf(0))
+		assert.Error(t, err)
+	})
+}
+
 func TestMapJsonMapToStruct(t *testing.T) {
 	t.Run("UUID conversion", func(t *testing.T) {
 		t.Run("String to UUID", func(t *testing.T) {
@@ -483,7 +502,6 @@ func TestMapJsonMapToStruct(t *testing.T) {
 			},
 		}
 
-		// Marshal and unmarshal through JSON
 		jsonBytes, err := json.Marshal(original)
 		assert.NoError(t, err)
 
@@ -491,7 +509,6 @@ func TestMapJsonMapToStruct(t *testing.T) {
 		err = json.Unmarshal(jsonBytes, &jsonMap)
 		assert.NoError(t, err)
 
-		// Convert using MapJsonMapToStruct
 		var result TestStruct
 		err = MapJsonMapToStruct(jsonMap, &result)
 		assert.NoError(t, err)

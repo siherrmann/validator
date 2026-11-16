@@ -26,9 +26,6 @@ type TestStructValidation struct {
 	Array  []string `json:"array" vld:"min3, gr1min3"`
 }
 
-// BenchStructFourFields mirrors the struct used in the module's documented allocation
-// baseline: one simple tag, one grouped/OR tag, one float min/max tag, and one field
-// with no validation at all.
 type BenchStructFourFields struct {
 	Field1 string  `vld:"min3 max20"`
 	Field2 int     `vld:"(min18 && max99) || equ0"`
@@ -58,14 +55,12 @@ func BenchmarkUnmarshalAndManualValidation(b *testing.B) {
 
 	b.ReportAllocs()
 	for b.Loop() {
-		// Unmarshal JSON string to struct
 		manualValidation := &TestStructValidation{}
 		err := json.Unmarshal(jsonString, manualValidation)
 		if err != nil {
 			b.Fatalf("error unmarshal %v", err)
 		}
 
-		// manual validation with minimal regex (only string)
 		var errCount int
 		match, err := regexp.MatchString("^[a-zA-Z0-9]+$", manualValidation.String)
 		if err != nil || !match {
@@ -91,7 +86,6 @@ func BenchmarkUnmarshalAndValidate(b *testing.B) {
 
 	b.ReportAllocs()
 	for b.Loop() {
-		// unmarshal and validate
 		unmarshalAndValidate := &TestStructValidation{}
 		req, err := http.NewRequest("POST", "/", bytes.NewBuffer(jsonString))
 		if err != nil {
@@ -105,9 +99,6 @@ func BenchmarkUnmarshalAndValidate(b *testing.B) {
 	}
 }
 
-// BenchmarkGetValidationsFromStruct measures the uncached, reflection-based extraction
-// path directly — this is what Validate paid on every call before the per-type cache
-// was added, and what GetValidationsFromStruct still does whenever called directly.
 func BenchmarkGetValidationsFromStruct(b *testing.B) {
 	s := &BenchStructFourFields{}
 
@@ -120,9 +111,6 @@ func BenchmarkGetValidationsFromStruct(b *testing.B) {
 	}
 }
 
-// BenchmarkValidateCachedType measures Validate once the (type, tagType) extraction is
-// already warm in validationCache — i.e. the steady-state cost for any type after its
-// first call.
 func BenchmarkValidateCachedType(b *testing.B) {
 	s := &BenchStructFourFields{Field1: "hello", Field2: 50, Field3: 42.5, Field4: "ignored"}
 
@@ -139,7 +127,6 @@ func BenchmarkValidateCachedType(b *testing.B) {
 	}
 }
 
-// BenchmarkParseValidationSimple parses a plain, ungrouped requirement.
 func BenchmarkParseValidationSimple(b *testing.B) {
 	p := parser.NewParser()
 
@@ -151,8 +138,6 @@ func BenchmarkParseValidationSimple(b *testing.B) {
 	}
 }
 
-// BenchmarkParseValidationGrouped parses a requirement with a parenthesised group and
-// an OR, exercising nested parseGroup/parseCondition calls.
 func BenchmarkParseValidationGrouped(b *testing.B) {
 	p := parser.NewParser()
 
@@ -164,9 +149,6 @@ func BenchmarkParseValidationGrouped(b *testing.B) {
 	}
 }
 
-// BenchmarkLexing measures lexing alone, with no AST built on top, by draining a fresh
-// Lexer to EOF. This isolates the allocation cost the parser pays before it constructs
-// a single AstValue.
 func BenchmarkLexing(b *testing.B) {
 	const tag = "(min18 && max99) || equ0"
 
@@ -182,8 +164,6 @@ func BenchmarkLexing(b *testing.B) {
 	}
 }
 
-// BenchmarkValidateRelations measures a struct with rel, =>, $ references, unq and fun
-// (the service spec of validatorRelation_test.go) once its extraction is cached.
 func BenchmarkValidateRelations(b *testing.B) {
 	r := newRelValidator()
 	spec := validRelServiceSpec()
@@ -199,8 +179,7 @@ func BenchmarkValidateRelations(b *testing.B) {
 	}
 }
 
-// BenchmarkManualRelations is the hand written equivalent of BenchmarkValidateRelations,
-// as the baseline for what the tags cost.
+// BenchmarkManualRelations is the hand written equivalent of BenchmarkValidateRelations as baseline.
 func BenchmarkManualRelations(b *testing.B) {
 	spec := validRelServiceSpec()
 	envKey := regexp.MustCompile(`^[A-Z_][A-Z0-9_]*$`)
@@ -291,4 +270,19 @@ func manualRelRules(s *relServiceSpec, envKey *regexp.Regexp) error {
 		}
 	}
 	return nil
+}
+
+func BenchmarkValidateInjected(b *testing.B) {
+	r := NewValidator()
+	request := validInjectRequest()
+	if err := r.ValidateContext(injectContext("user"), request); err != nil {
+		b.Fatalf("error validating %v", err)
+	}
+
+	b.ReportAllocs()
+	for b.Loop() {
+		if err := r.ValidateContext(injectContext("user"), request); err != nil {
+			b.Fatalf("error validating %v", err)
+		}
+	}
 }

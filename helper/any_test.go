@@ -322,7 +322,6 @@ func TestAnyToType(t *testing.T) {
 		expected      any
 		expectedError bool
 	}{
-		// string
 		{
 			name: "Valid string to string",
 			args: args{
@@ -332,7 +331,6 @@ func TestAnyToType(t *testing.T) {
 			expected:      any("apple"),
 			expectedError: false,
 		},
-		// bool
 		{
 			name: "Valid bool to bool",
 			args: args{
@@ -377,7 +375,6 @@ func TestAnyToType(t *testing.T) {
 			},
 			expectedError: true,
 		},
-		// int
 		{
 			name: "Valid int to int",
 			args: args{
@@ -422,7 +419,6 @@ func TestAnyToType(t *testing.T) {
 			expected:      any(1),
 			expectedError: false,
 		},
-		// int8
 		{
 			name: "Valid int8 to int8",
 			args: args{
@@ -467,7 +463,6 @@ func TestAnyToType(t *testing.T) {
 			expected:      any(int8(1)),
 			expectedError: false,
 		},
-		// int16
 		{
 			name: "Valid int16 to int16",
 			args: args{
@@ -512,7 +507,6 @@ func TestAnyToType(t *testing.T) {
 			expected:      any(int16(1)),
 			expectedError: false,
 		},
-		// int32
 		{
 			name: "Valid int32 to int32",
 			args: args{
@@ -557,7 +551,6 @@ func TestAnyToType(t *testing.T) {
 			expected:      any(int32(1)),
 			expectedError: false,
 		},
-		// int64
 		{
 			name: "Valid int64 to int64",
 			args: args{
@@ -602,7 +595,6 @@ func TestAnyToType(t *testing.T) {
 			expected:      any(int64(1)),
 			expectedError: false,
 		},
-		// uint
 		{
 			name: "Valid uint to uint",
 			args: args{
@@ -647,7 +639,6 @@ func TestAnyToType(t *testing.T) {
 			expected:      any(uint(1)),
 			expectedError: false,
 		},
-		// uint8
 		{
 			name: "Valid uint8 to uint8",
 			args: args{
@@ -692,7 +683,6 @@ func TestAnyToType(t *testing.T) {
 			expected:      any(uint8(1)),
 			expectedError: false,
 		},
-		// uint16
 		{
 			name: "Valid uint16 to uint16",
 			args: args{
@@ -737,7 +727,6 @@ func TestAnyToType(t *testing.T) {
 			expected:      any(uint16(1)),
 			expectedError: false,
 		},
-		// uint32
 		{
 			name: "Valid uint32 to uint32",
 			args: args{
@@ -782,7 +771,6 @@ func TestAnyToType(t *testing.T) {
 			expected:      any(uint32(1)),
 			expectedError: false,
 		},
-		// uint64
 		{
 			name: "Valid uint64 to uint64",
 			args: args{
@@ -827,7 +815,6 @@ func TestAnyToType(t *testing.T) {
 			expected:      any(uint64(1)),
 			expectedError: false,
 		},
-		// float32
 		{
 			name: "Valid float32 to float32",
 			args: args{
@@ -872,7 +859,6 @@ func TestAnyToType(t *testing.T) {
 			expected:      any(float32(1)),
 			expectedError: false,
 		},
-		// float64
 		{
 			name: "Valid float64 to float64",
 			args: args{
@@ -1020,7 +1006,6 @@ func TestAnyToType(t *testing.T) {
 			},
 			expectedError: true,
 		},
-		// Pointer types
 		{
 			name: "Valid string to *string",
 			args: args{
@@ -1244,7 +1229,6 @@ func TestAnyToType(t *testing.T) {
 			},
 			expectedError: true,
 		},
-		// Array and Slice types
 		{
 			name: "Valid string to []byte",
 			args: args{
@@ -1324,7 +1308,6 @@ func TestAnyToType(t *testing.T) {
 			},
 			expectedError: true,
 		},
-		// Array/Slice from []any
 		{
 			name: "Valid []any to []int",
 			args: args{

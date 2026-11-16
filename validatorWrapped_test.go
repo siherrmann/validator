@@ -2,6 +2,7 @@ package validator
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/url"
 	"testing"
@@ -215,4 +216,51 @@ func TestWrappedUnmarshalYamlValidateAndUpdateWithValidation(t *testing.T) {
 	assert.NoError(t, err, "Expected no error on unmarshal yaml validate and update with validation")
 	assert.Equal(t, "apple", mapToUpdate["name"], "Expected name to be 'apple'")
 	assert.Equal(t, 2, mapToUpdate["age"], "Expected age to be 2")
+}
+
+type wrappedInjectedStruct struct {
+	Owner string `json:"owner" yaml:"owner" vld:"equ${user_id}"`
+}
+
+var wrappedInjectedValidations = []model.Validation{{Key: "owner", Type: model.String, Requirement: "equ${user_id}"}}
+
+func TestWrappedValidateContext(t *testing.T) {
+	ctx := Inject(context.Background(), "user_id", "u1")
+	assert.NoError(t, ValidateContext(ctx, &wrappedInjectedStruct{Owner: "u1"}))
+	assert.Error(t, ValidateContext(ctx, &wrappedInjectedStruct{Owner: "u2"}))
+}
+
+func TestWrappedValidateWithValidationContext(t *testing.T) {
+	ctx := Inject(context.Background(), "user_id", "u1")
+	result, err := ValidateWithValidationContext(ctx, map[string]any{"owner": "u1"}, wrappedInjectedValidations)
+	require.NoError(t, err)
+	assert.Equal(t, "u1", result["owner"])
+}
+
+func TestWrappedValidateAndUpdateContext(t *testing.T) {
+	ctx := Inject(context.Background(), "user_id", "u1")
+	s := &wrappedInjectedStruct{}
+	require.NoError(t, ValidateAndUpdateContext(ctx, map[string]any{"owner": "u1"}, s))
+	assert.Equal(t, "u1", s.Owner)
+}
+
+func TestWrappedValidateAndUpdateWithValidationContext(t *testing.T) {
+	ctx := Inject(context.Background(), "user_id", "u1")
+	result := map[string]any{}
+	require.NoError(t, ValidateAndUpdateWithValidationContext(ctx, map[string]any{"owner": "u1"}, &result, wrappedInjectedValidations))
+	assert.Equal(t, "u1", result["owner"])
+}
+
+func TestWrappedUnmarshalYamlValidateAndUpdateContext(t *testing.T) {
+	ctx := Inject(context.Background(), "user_id", "u1")
+	s := &wrappedInjectedStruct{}
+	require.NoError(t, UnmarshalYamlValidateAndUpdateContext(ctx, []byte("owner: u1\n"), s))
+	assert.Equal(t, "u1", s.Owner)
+}
+
+func TestWrappedUnmarshalYamlValidateAndUpdateWithValidationContext(t *testing.T) {
+	ctx := Inject(context.Background(), "user_id", "u1")
+	result := map[string]any{}
+	require.NoError(t, UnmarshalYamlValidateAndUpdateWithValidationContext(ctx, []byte("owner: u1\n"), &result, wrappedInjectedValidations))
+	assert.Equal(t, "u1", result["owner"])
 }

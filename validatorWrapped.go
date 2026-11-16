@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/siherrmann/validator/model"
@@ -109,4 +110,46 @@ func UnmarshalYamlValidateAndUpdate(yamlInput []byte, structToUpdate any, tagTyp
 func UnmarshalYamlValidateAndUpdateWithValidation(yamlInput []byte, mapToUpdate *map[string]any, validations []model.Validation) error {
 	r := NewValidator()
 	return r.UnmarshalYamlValidateAndUpdateWithValidation(yamlInput, mapToUpdate, validations)
+}
+
+// ValidateContext is the wrapper function for the ValidateContext method of the Validator struct.
+// More details can be found in the ValidateContext method.
+func ValidateContext(ctx context.Context, v any, tagType ...string) error {
+	r := NewValidator()
+	return r.ValidateContext(ctx, v, tagType...)
+}
+
+// ValidateWithValidationContext is the wrapper function for the ValidateWithValidationContext method of the Validator struct.
+// More details can be found in the ValidateWithValidationContext method.
+func ValidateWithValidationContext(ctx context.Context, jsonInput map[string]any, validations []model.Validation) (map[string]any, error) {
+	r := NewValidator()
+	return r.ValidateWithValidationContext(ctx, jsonInput, validations)
+}
+
+// ValidateAndUpdateContext is the wrapper function for the ValidateAndUpdateContext method of the Validator struct.
+// More details can be found in the ValidateAndUpdateContext method.
+func ValidateAndUpdateContext(ctx context.Context, jsonInput map[string]any, structToUpdate any, tagType ...string) error {
+	r := NewValidator()
+	return r.ValidateAndUpdateContext(ctx, jsonInput, structToUpdate, tagType...)
+}
+
+// ValidateAndUpdateWithValidationContext is the wrapper function for the ValidateAndUpdateWithValidationContext method of the Validator struct.
+// More details can be found in the ValidateAndUpdateWithValidationContext method.
+func ValidateAndUpdateWithValidationContext(ctx context.Context, jsonInput map[string]any, mapToUpdate *map[string]any, validations []model.Validation) error {
+	r := NewValidator()
+	return r.ValidateAndUpdateWithValidationContext(ctx, jsonInput, mapToUpdate, validations)
+}
+
+// UnmarshalYamlValidateAndUpdateContext is the wrapper function for the UnmarshalYamlValidateAndUpdateContext method of the Validator struct.
+// More details can be found in the UnmarshalYamlValidateAndUpdateContext method.
+func UnmarshalYamlValidateAndUpdateContext(ctx context.Context, yamlInput []byte, structToUpdate any, tagType ...string) error {
+	r := NewValidator()
+	return r.UnmarshalYamlValidateAndUpdateContext(ctx, yamlInput, structToUpdate, tagType...)
+}
+
+// UnmarshalYamlValidateAndUpdateWithValidationContext is the wrapper function for the UnmarshalYamlValidateAndUpdateWithValidationContext method of the Validator struct.
+// More details can be found in the UnmarshalYamlValidateAndUpdateWithValidationContext method.
+func UnmarshalYamlValidateAndUpdateWithValidationContext(ctx context.Context, yamlInput []byte, mapToUpdate *map[string]any, validations []model.Validation) error {
+	r := NewValidator()
+	return r.UnmarshalYamlValidateAndUpdateWithValidationContext(ctx, yamlInput, mapToUpdate, validations)
 }

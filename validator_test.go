@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"testing"
@@ -11,6 +12,76 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestNewValidator(t *testing.T) {
+	r := NewValidator()
+	require.NotNil(t, r)
+	assert.NotNil(t, r.ValidationFuncs)
+	assert.Empty(t, r.ValidationFuncs)
+}
+
+func TestAddValidationFunc(t *testing.T) {
+	type Request struct {
+		Fruit string `json:"fruit" vld:"funisApple"`
+	}
+	isApple := func(input any, astValue *model.AstValue) error {
+		if input != "apple" {
+			return fmt.Errorf("value is not apple")
+		}
+		return nil
+	}
+
+	r := NewValidator()
+	r.AddValidationFunc(isApple, "isApple")
+	require.Contains(t, r.ValidationFuncs, "isApple")
+	assert.NoError(t, r.Validate(&Request{Fruit: "apple"}))
+	assert.ErrorContains(t, r.Validate(&Request{Fruit: "banana"}), "value is not apple")
+
+	t.Run("Zero validator", func(t *testing.T) {
+		zero := &Validator{}
+		zero.AddValidationFunc(isApple, "isApple")
+		assert.Contains(t, zero.ValidationFuncs, "isApple")
+	})
+}
+
+func TestAddValidationFuncContext(t *testing.T) {
+	type Request struct {
+		Token string `json:"token" vld:"funsigned"`
+	}
+
+	r := NewValidator()
+	r.AddValidationFuncContext(func(ctx context.Context, input any, astValue *model.AstValue) error {
+		secret, ok := Get[string](ctx, "signing_key")
+		if !ok {
+			return fmt.Errorf("signing key not injected")
+		}
+		if input != "payload."+secret {
+			return fmt.Errorf("invalid signature")
+		}
+		return nil
+	}, "signed")
+
+	ctx := Inject(context.Background(), "signing_key", "k1")
+	assert.NoError(t, r.ValidateContext(ctx, &Request{Token: "payload.k1"}))
+	assert.ErrorContains(t, r.ValidateContext(ctx, &Request{Token: "payload.k2"}), "invalid signature")
+	assert.ErrorContains(t, r.Validate(&Request{Token: "payload.k1"}), "signing key not injected")
+
+	t.Run("Functions with the same name replace each other", func(t *testing.T) {
+		r.AddValidationFunc(func(input any, astValue *model.AstValue) error { return nil }, "signed")
+		assert.NoError(t, r.Validate(&Request{Token: "anything"}))
+
+		r.AddValidationFuncContext(func(ctx context.Context, input any, astValue *model.AstValue) error {
+			return fmt.Errorf("context function")
+		}, "signed")
+		assert.ErrorContains(t, r.Validate(&Request{Token: "anything"}), "context function")
+	})
+
+	t.Run("Zero validator", func(t *testing.T) {
+		zero := &Validator{}
+		zero.AddValidationFuncContext(func(ctx context.Context, input any, astValue *model.AstValue) error { return nil }, "ok")
+		assert.Contains(t, zero.ValidationFuncs, "ok")
+	})
+}
 
 func TestValidate(t *testing.T) {
 	t.Run("Valid struct", func(t *testing.T) {
@@ -277,6 +348,43 @@ func TestValidate(t *testing.T) {
 		assert.Error(t, err, "Expected an error but got none")
 		assert.Contains(t, err.Error(), "field code invalid")
 	})
+
+	t.Run("Requirement of a list of structs", func(t *testing.T) {
+		type Item struct {
+			Name string `json:"name" vld:"min1"`
+		}
+		type Request struct {
+			Items []Item   `json:"items" vld:"min1 && unqname"`
+			Tags  []string `json:"tags" vld:"unq"`
+		}
+
+		r := NewValidator()
+		assert.NoError(t, r.Validate(&Request{Items: []Item{{Name: "a"}, {Name: "b"}}, Tags: []string{"a"}}))
+
+		err := r.Validate(&Request{Items: []Item{}, Tags: []string{"a"}})
+		require.Error(t, err, "The requirement of a list of structs has to be checked")
+		assert.Contains(t, err.Error(), "field items invalid")
+
+		err = r.Validate(&Request{Items: []Item{{Name: "a"}, {Name: "a"}}})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not unique")
+
+		err = r.Validate(&Request{Items: []Item{{Name: "a"}}, Tags: []string{"a", "a"}})
+		require.Error(t, err, "A tag with only `unq` has to be validated")
+		assert.Contains(t, err.Error(), "field tags invalid")
+	})
+}
+
+func TestValidateContext(t *testing.T) {
+	type Request struct {
+		Owner string `json:"owner" vld:"equ${user_id}"`
+	}
+	ctx := Inject(context.Background(), "user_id", "u1")
+
+	r := NewValidator()
+	assert.NoError(t, r.ValidateContext(ctx, &Request{Owner: "u1"}))
+	assert.ErrorContains(t, r.ValidateContext(ctx, &Request{Owner: "u2"}), "field owner invalid")
+	assert.ErrorContains(t, r.ValidateContext(context.Background(), &Request{Owner: "u1"}), "is not given")
 }
 
 func TestValidateAndUpdate(t *testing.T) {
@@ -664,6 +772,22 @@ func TestValidateAndUpdate(t *testing.T) {
 	})
 }
 
+func TestValidateAndUpdateContext(t *testing.T) {
+	type Request struct {
+		Owner string `json:"owner" vld:"equ${user_id}"`
+	}
+	ctx := Inject(context.Background(), "user_id", "u1")
+
+	r := NewValidator()
+	result := &Request{}
+	require.NoError(t, r.ValidateAndUpdateContext(ctx, map[string]any{"owner": "u1"}, result))
+	assert.Equal(t, "u1", result.Owner)
+
+	result = &Request{}
+	assert.Error(t, r.ValidateAndUpdateContext(ctx, map[string]any{"owner": "u2"}, result))
+	assert.Empty(t, result.Owner)
+}
+
 func TestValidateAndUpdateWithValidation(t *testing.T) {
 	type args struct {
 		jsonMap     map[string]any
@@ -727,6 +851,20 @@ func TestValidateAndUpdateWithValidation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidateAndUpdateWithValidationContext(t *testing.T) {
+	validations := []model.Validation{{Key: "owner", Type: model.String, Requirement: "equ${user_id}"}}
+	ctx := Inject(context.Background(), "user_id", "u1")
+
+	r := NewValidator()
+	result := map[string]any{}
+	require.NoError(t, r.ValidateAndUpdateWithValidationContext(ctx, map[string]any{"owner": "u1"}, &result, validations))
+	assert.Equal(t, map[string]any{"owner": "u1"}, result)
+
+	result = map[string]any{}
+	assert.Error(t, r.ValidateAndUpdateWithValidationContext(ctx, map[string]any{"owner": "u2"}, &result, validations))
+	assert.Empty(t, result)
 }
 
 func TestValidateWithValidation(t *testing.T) {
@@ -1729,6 +1867,19 @@ func TestValidateWithValidation(t *testing.T) {
 	}
 }
 
+func TestValidateWithValidationContext(t *testing.T) {
+	validations := []model.Validation{{Key: "amount", Type: model.Int, Requirement: "max${limit}"}}
+	ctx := Inject(context.Background(), "limit", 100)
+
+	r := NewValidator()
+	validated, err := r.ValidateWithValidationContext(ctx, map[string]any{"amount": 50.0}, validations)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]any{"amount": 50}, validated)
+
+	_, err = r.ValidateWithValidationContext(ctx, map[string]any{"amount": 150.0}, validations)
+	assert.ErrorContains(t, err, "value does not fulfill max${limit}")
+}
+
 func TestValidateValueWithParser(t *testing.T) {
 	type args struct {
 		input      any
@@ -2301,44 +2452,57 @@ func TestRunValidatorsOnConditionGroup(t *testing.T) {
 			}
 		})
 	}
-}
 
-func TestValidateListOfStructsRequirement(t *testing.T) {
-	type Item struct {
-		Name string `json:"name" vld:"min1"`
-	}
-	type Request struct {
-		Items []Item   `json:"items" vld:"min1 && unqname"`
-		Tags  []string `json:"tags" vld:"unq"`
-	}
+	t.Run("Implication", func(t *testing.T) {
+		tests := []struct {
+			requirement string
+			value       any
+			wantErr     bool
+		}{
+			{requirement: "equoci => min5", value: "oci", wantErr: true},
+			{requirement: "min3 => max5", value: "ab"},
+			{requirement: "min3 => max5", value: "abcd"},
+			{requirement: "min3 => max5", value: "abcdef", wantErr: true},
+			{requirement: "min1 && max3 => equab || equabc", value: "abc"},
+			{requirement: "min1 && max3 => equab || equabc", value: "a", wantErr: true},
+			{requirement: "min1 && max3 => equab || equabc", value: "abcde"},
+			{requirement: "min1 => min2 => min3", value: "ab", wantErr: true},
+			{requirement: "min1 => min2 => min3", value: "a"},
+			{requirement: "(min3 => max5) && conb", value: "abcdef", wantErr: true},
+			{requirement: "(min3 => max5) && conb", value: "ab"},
+		}
 
-	r := NewValidator()
-	assert.NoError(t, r.Validate(&Request{Items: []Item{{Name: "a"}, {Name: "b"}}, Tags: []string{"a"}}))
+		r := NewValidator()
+		for _, test := range tests {
+			t.Run(fmt.Sprintf("%v with %v", test.requirement, test.value), func(t *testing.T) {
+				err := r.ValidateValueWithParser(test.value, &model.Validation{Requirement: test.requirement})
+				if test.wantErr {
+					assert.Error(t, err)
+				} else {
+					assert.NoError(t, err)
+				}
+			})
+		}
 
-	err := r.Validate(&Request{Items: []Item{}, Tags: []string{"a"}})
-	require.Error(t, err, "The requirement of a list of structs has to be checked")
-	assert.Contains(t, err.Error(), "field items invalid")
+		t.Run("Error names the premise", func(t *testing.T) {
+			err := r.ValidateValueWithParser("abcdef", &model.Validation{Requirement: "min3 => max5"})
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "required because of min'3'")
+		})
+	})
 
-	err = r.Validate(&Request{Items: []Item{{Name: "a"}, {Name: "a"}}})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "not unique")
+	t.Run("OR group stops at the first fulfilled condition", func(t *testing.T) {
+		r := NewValidator()
+		called := 0
+		r.AddValidationFunc(func(input any, astValue *model.AstValue) error {
+			called++
+			return nil
+		}, "count")
 
-	err = r.Validate(&Request{Items: []Item{{Name: "a"}}, Tags: []string{"a", "a"}})
-	require.Error(t, err, "A tag with only `unq` has to be validated")
-	assert.Contains(t, err.Error(), "field tags invalid")
-}
+		assert.NoError(t, r.ValidateValueWithParser("abc", &model.Validation{Requirement: "min1 || funcount"}))
+		assert.Equal(t, 0, called, "The second condition of a fulfilled OR group does not have to be checked")
 
-func TestValidateOrShortCircuit(t *testing.T) {
-	r := NewValidator()
-	called := 0
-	r.AddValidationFunc(func(input any, astValue *model.AstValue) error {
-		called++
-		return nil
-	}, "count")
-
-	assert.NoError(t, r.ValidateValueWithParser("abc", &model.Validation{Requirement: "min1 || funcount"}))
-	assert.Equal(t, 0, called, "The second condition of a fulfilled OR group does not have to be checked")
-
-	assert.NoError(t, r.ValidateValueWithParser("abc", &model.Validation{Requirement: "max1 || funcount"}))
-	assert.Equal(t, 1, called)
+		assert.NoError(t, r.ValidateValueWithParser("abc", &model.Validation{Requirement: "max1 || funcount"}))
+		assert.Equal(t, 1, called)
+	})
 }

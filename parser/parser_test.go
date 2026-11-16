@@ -4,9 +4,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestParser(t *testing.T) {
+func TestParseValidation(t *testing.T) {
 	parser := NewParser()
 
 	tests := []struct {
@@ -220,6 +221,36 @@ func TestParser(t *testing.T) {
 			wantErr:  true,
 		},
 		{
+			name:     "Injected value",
+			input:    "equ${api_key} || frm${allowed_ids}",
+			expected: "equ${api_key} || frm${allowed_ids}",
+			wantErr:  false,
+		},
+		{
+			name:     "Relation with injected value",
+			input:    "rel(${role} equadmin) => min1",
+			expected: "rel(${role} equ'admin') => min'1'",
+			wantErr:  false,
+		},
+		{
+			name:     "Injected value without name",
+			input:    "equ${}",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Injected value without closing brace",
+			input:    "equ${api_key",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Quoted injected value is a fixed value",
+			input:    "equ'${api_key}'",
+			expected: "equ'${api_key}'",
+			wantErr:  false,
+		},
+		{
 			name:     "Unique without value",
 			input:    "unq && min1",
 			expected: "unq'' && min'1'",
@@ -252,9 +283,7 @@ func TestParser(t *testing.T) {
 			}
 		})
 	}
-}
 
-func TestParserPrecomputedValues(t *testing.T) {
 	t.Run("Regex is compiled", func(t *testing.T) {
 		root, err := NewParser().ParseValidation("rex^[A-Z]+$")
 		assert.NoError(t, err)
@@ -293,4 +322,21 @@ func TestParserPrecomputedValues(t *testing.T) {
 			assert.Equal(t, expected, root.RootValue.UsesFields, input)
 		}
 	})
+}
+
+func TestNewParser(t *testing.T) {
+	parser := NewParser()
+	require.NotNil(t, parser)
+	assert.Empty(t, parser.Errors())
+}
+
+func TestErrors(t *testing.T) {
+	parser := NewParser()
+	_, err := parser.ParseValidation("invalid")
+	require.Error(t, err)
+	assert.Contains(t, parser.Errors(), "expected a valid condition type")
+
+	_, err = parser.ParseValidation("min1")
+	require.NoError(t, err)
+	assert.Empty(t, parser.Errors(), "Expected the errors to be reset for a new parse")
 }

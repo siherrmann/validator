@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestValidatorTypeToReflectKind(t *testing.T) {
+func TestToReflectType(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    ValidatorType

@@ -2216,3 +2216,27 @@ func TestFrom(t *testing.T) {
 		})
 	}
 }
+
+func TestFromArray(t *testing.T) {
+	from, err := FromArray([]string{"a", "b"}, []string{"a", "b", "c"}, false)
+	assert.NoError(t, err)
+	assert.True(t, from)
+
+	from, err = FromArray([]string{"a", "x"}, []string{"a", "b"}, false)
+	assert.NoError(t, err)
+	assert.False(t, from)
+
+	notFrom, err := FromArray([]int{4, 5}, []int{1, 2}, true)
+	assert.NoError(t, err)
+	assert.True(t, notFrom)
+
+	notFrom, err = FromArray([]int{1, 5}, []int{1, 2}, true)
+	assert.NoError(t, err)
+	assert.False(t, notFrom)
+}
+
+func TestRegex(t *testing.T) {
+	assert.True(t, Regex("ABC", "^[A-Z]+$"))
+	assert.False(t, Regex("abc", "^[A-Z]+$"))
+	assert.False(t, Regex("abc", "invalid("), "Expected an invalid regex to not match")
+}

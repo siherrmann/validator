@@ -215,11 +215,11 @@ Conditions have different usages per variable type:
 - `cmx` - Checks if at most `condition` inner fields of a struct are correct (eg. `cmx2`), only usable on struct fields.
 - `unq` - Checks that every item of a list is unique (`unq`) or that a field of every item in a list of structs is unique (eg. `unqname`).
 - `rel` - Checks the conditions in the brackets on another field (eg. `rel(delivery equshipping)`), see [Relations](#relations).
-- `fun` - Checks the value with a custom function. The function has to be added to the validator, so it does not work with the wrapped functions. It can be used beside other requirements like `min3 && funYourCheckFunction`. This also allows you to check unsupported types by only using `funYourCheckFunction`.
+- `fun` - Checks the value with a custom function. The function has to be added to the validator (with `AddValidationFunc`, or with `AddValidationFuncContext` to read [injected values](#injected-values)), so it does not work with the wrapped functions. It can be used beside other requirements like `min3 && funYourCheckFunction`. This also allows you to check unsupported types by only using `funYourCheckFunction`.
 
 A `null` value (e.g. `{"name": null}` in json or `name:` in yaml) counts as length/value `0` for `min` and `max`, so `max0` passes and `min1` fails. It is not equal to, does not contain, is not part of and does not match any condition, so `equ`, `con`, `frm`, `rex` and `ist` fail and `neq`, `nco` and `nfr` pass.
 
-All conditions except `fun`, `def`, `ist`, `cmn`, `cmx` and `unq` can compare with the value of another field instead of a fixed value by using `$` and the path of the field (eg. `min$earliest_day`), see [Relations](#relations). A value starting with `$` is therefore always a reference, put it in quotes (eg. `equ'$100'`) to use it as a fixed value.
+All conditions except `fun`, `def`, `ist`, `cmn`, `cmx` and `unq` can compare with the value of another field instead of a fixed value by using `$` and the path of the field (eg. `min$earliest_day`), see [Relations](#relations). With `${name}` they compare with a value injected for the validation call instead (eg. `equ${api_key}`), see [Injected values](#injected-values). A value starting with `$` is therefore always a reference, put it in quotes (eg. `equ'$100'`) to use it as a fixed value.
 
 For con you need to put in a condition that is convertable to the underlying type of the arrary.
 Eg. for an array of int the condition must be convertable to int (bad: `vld:"conA"`, good: `vld:"con1"`).
@@ -288,6 +288,39 @@ type Order struct {
 }
 ```
 
+## Injected values
+
+Values that are not part of the input (eg. the id or role of the logged in user, a limit of the account or a secret) can be injected for a single validation call with `validator.Inject`. They are stored in the context, so they only exist for the calls with this context (eg. one request) and concurrent requests do not see each others values.
+
+```go
+ctx := validator.Inject(r.Context(), "user_id", userID)
+ctx = validator.Inject(ctx, "role", role)
+
+// The unpack functions use the context of the request.
+err := v.UnmarshalValidateAndUpdate(r.WithContext(ctx), &request)
+
+// All other functions have a Context variant (eg. ValidateContext, ValidateAndUpdateContext, ValidateWithValidationContext).
+err = v.ValidateContext(ctx, &request)
+```
+
+- `<condition>${name}` compares with the injected value (eg. `equ${user_id}`, `max${credit_limit}`). `frm` and `nfr` also accept a list or a map (eg. `frm${allowed_regions}`).
+- `rel(${name} <conditions>)` checks the injected value (eg. `rel(${role} equadmin) => ...`). A missing value is `null`, like a missing field.
+- Functions added with `AddValidationFuncContext` get the context and can read the values with `validator.Get`.
+
+```go
+v.AddValidationFuncContext(func(ctx context.Context, input any, astValue *model.AstValue) error {
+    userID, ok := validator.Get[string](ctx, "user_id")
+    if !ok {
+        return errors.New("user id not injected")
+    }
+    // Check the input with the user id ...
+    return nil
+}, "ownedByUser")
+```
+
+A missing injected value for `<condition>${name}` is a configuration error (the value was not injected), so it is also returned inside an `||` group. Without a context (eg. `Validate` instead of `ValidateContext`) no values are injected.
+For the security of injected values see [Injected values and secrets](#injected-values-and-secrets).
+
 ## Lists of structs
 
 The inner fields of every item are validated by their own tags. The requirement of the list itself is checked on the list, eg. `min1` for at least one item or `unqname` for unique names.
@@ -337,6 +370,56 @@ user := &User{}
 err := v.ValidateAndUpdate(jsonInput, user, "upd")
 ```
 
+## Injected values and secrets
+
+[Injected values](#injected-values) are often permissions or secrets, so they are handled with special care:
+
+- **Not shared between calls**: The values belong to the context of the validation call, not to the validator. A validator used by concurrent requests never validates one request with the values of another one.
+- **Never in error messages**: Validation errors are often returned to the client. An error of a condition with an injected value only names it (eg. `value does not fulfill equ${api_key}`), never the value itself. This also applies to `rel(${name} ...)`.
+- **Constant time comparison**: `equ${name}` and `neq${name}` compare strings (and `[]byte` values) in constant time, so a secret can not be guessed by measuring how long the validation takes. Only the length of the secret can be measured.
+- **Not cached**: The parsed requirements are cached per struct type, the injected values are only resolved during the call and never stored.
+
+An example with permissions by role and a secret check:
+
+```go
+type UpdateDocument struct {
+    // Users can only update their own documents, admins can update all.
+    Owner string `json:"owner" vld:"rel(${role} equadmin) || equ${user_id}"`
+    // Only admins can publish a document.
+    Published bool `json:"published,omitempty" vld:"rel(${role} equadmin) || equfalse"`
+    // The document has to be signed with the secret of the account.
+    Signature string `json:"signature" vld:"funvalidSignature"`
+}
+
+v := validator.NewValidator()
+v.AddValidationFuncContext(func(ctx context.Context, input any, astValue *model.AstValue) error {
+    secret, ok := validator.Get[[]byte](ctx, "signing_secret")
+    if !ok {
+        return errors.New("signing secret not injected")
+    }
+    signature, _ := input.(string)
+    if !verifySignature(signature, secret) { // eg. with crypto/hmac
+        return errors.New("invalid signature")
+    }
+    return nil
+}, "validSignature")
+
+func handler(w http.ResponseWriter, r *http.Request) {
+    ctx := validator.Inject(r.Context(), "user_id", currentUserID(r))
+    ctx = validator.Inject(ctx, "role", currentRole(r))
+    ctx = validator.Inject(ctx, "signing_secret", accountSecret(r))
+
+    document := &UpdateDocument{}
+    if err := v.UnmarshalValidateAndUpdate(r.WithContext(ctx), document); err != nil {
+        // The error does not contain the injected user id, role or secret.
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
+}
+```
+
+For a secret that is compared directly, use `equ${name}` instead of comparing it in a function, so the comparison is done in constant time.
+
 ---
 
 # Testing
@@ -356,6 +439,7 @@ To run benchmarks run `go test -bench . -count 100 > bench.txt` (with memory all
 - Validate and update a struct from `JsonMap`.
 - **Tag-based validation**: Define validation rules directly within struct tags using a concise syntax (e.g. `vld:"(min3 && ncotest) || max0"`). Use multiple custom tags in one struct for multiple validation situations. The dafault tag is `vld`.
 - **Relations**: Conditional requirements and comparisons with other fields, also on other levels (e.g. `vld:"rel(delivery equshipping) => min1"` or `vld:"min$earliest_day"`).
+- **Injected values**: Validate against values of the current request like the user, the role or a secret (e.g. `vld:"rel(${role} equadmin) || equ${user_id}"`), safe for concurrent requests and without the values in error messages.
 - **Custom validation functions**: Extend the validation capabilities by registering and using your own custom validation logic. Use it beside other requirements like `min3 && funYourCheckFunction`. This also allows you to check unsupported types by only using `funYourCheckFunction`.
 - **Nested struct support**: Seamlessly validate complex data structures containing nested structs.
 - **Array validation**: Apply validation rules to elements within arrays and slices.

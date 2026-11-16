@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -92,6 +93,19 @@ func TestUnmarshalYamlValidateAndUpdate(t *testing.T) {
 	})
 }
 
+func TestUnmarshalYamlValidateAndUpdateContext(t *testing.T) {
+	type Request struct {
+		Owner string `yaml:"owner" vld:"equ${user_id}"`
+	}
+	ctx := Inject(context.Background(), "user_id", "u1")
+
+	r := NewValidator()
+	result := &Request{}
+	require.NoError(t, r.UnmarshalYamlValidateAndUpdateContext(ctx, []byte("owner: u1\n"), result))
+	assert.Equal(t, "u1", result.Owner)
+	assert.Error(t, r.UnmarshalYamlValidateAndUpdateContext(ctx, []byte("owner: u2\n"), &Request{}))
+}
+
 func TestUnmarshalYamlValidateAndUpdateWithValidation(t *testing.T) {
 	validations := []model.Validation{
 		{Key: "name", Type: model.String, Requirement: "equapple"},
@@ -112,4 +126,15 @@ func TestUnmarshalYamlValidateAndUpdateWithValidation(t *testing.T) {
 		assert.Contains(t, err.Error(), "field age invalid", "Expected error for age")
 		assert.Empty(t, mapToUpdate, "Expected map not to be updated")
 	})
+}
+
+func TestUnmarshalYamlValidateAndUpdateWithValidationContext(t *testing.T) {
+	validations := []model.Validation{{Key: "owner", Type: model.String, Requirement: "equ${user_id}"}}
+	ctx := Inject(context.Background(), "user_id", "u1")
+
+	r := NewValidator()
+	result := map[string]any{}
+	require.NoError(t, r.UnmarshalYamlValidateAndUpdateWithValidationContext(ctx, []byte("owner: u1\n"), &result, validations))
+	assert.Equal(t, "u1", result["owner"])
+	assert.Error(t, r.UnmarshalYamlValidateAndUpdateWithValidationContext(ctx, []byte("owner: u2\n"), &map[string]any{}, validations))
 }

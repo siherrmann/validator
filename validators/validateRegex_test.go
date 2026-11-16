@@ -93,12 +93,11 @@ func TestValidateRegex(t *testing.T) {
 			}
 		})
 	}
-}
 
-func TestValidateRegexWithCompiledRegex(t *testing.T) {
-	// The condition value is intentionally invalid, to show that the regex compiled by the parser is used.
-	ast := &model.AstValue{ConditionValue: "invalid(", Regex: regexp.MustCompile("^[A-Z]+$")}
-	assert.NoError(t, ValidateRegex("ABC", ast))
-	assert.Error(t, ValidateRegex("abc", ast))
-	assert.NoError(t, ValidateRegex(map[string]int{"ABC": 1}, ast))
+	t.Run("Regex compiled by the parser", func(t *testing.T) {
+		ast := &model.AstValue{ConditionValue: "invalid(", Regex: regexp.MustCompile("^[A-Z]+$")}
+		assert.NoError(t, ValidateRegex("ABC", ast))
+		assert.Error(t, ValidateRegex("abc", ast))
+		assert.NoError(t, ValidateRegex(map[string]int{"ABC": 1}, ast))
+	})
 }

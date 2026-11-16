@@ -76,6 +76,12 @@ func TestValidateMin(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("Number parsed by the parser", func(t *testing.T) {
+		ast := &model.AstValue{ConditionValue: "invalid", Number: 3, HasNumber: true}
+		assert.NoError(t, ValidateMin(5, ast))
+		assert.Error(t, ValidateMin(2, ast))
+	})
 }
 
 func TestValidateMax(t *testing.T) {
@@ -139,6 +145,12 @@ func TestValidateMax(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("Number parsed by the parser", func(t *testing.T) {
+		ast := &model.AstValue{ConditionValue: "invalid", Number: 3, HasNumber: true}
+		assert.NoError(t, ValidateMax(2, ast))
+		assert.Error(t, ValidateMax(5, ast))
+	})
 }
 
 func TestValidateCorrectMin(t *testing.T) {
@@ -233,13 +245,4 @@ func TestValidateCorrectMax(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestValidateMinMaxWithParsedNumber(t *testing.T) {
-	// The condition value is intentionally different, to show that the number parsed by the parser is used.
-	ast := &model.AstValue{ConditionValue: "invalid", Number: 3, HasNumber: true}
-	assert.NoError(t, ValidateMin(5, ast))
-	assert.Error(t, ValidateMin(2, ast))
-	assert.NoError(t, ValidateMax(2, ast))
-	assert.Error(t, ValidateMax(5, ast))
 }

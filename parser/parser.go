@@ -216,7 +216,8 @@ func normalizeImplication(group *model.AstValue) error {
 //
 // Special cases:
 //   - `rel(<path> <conditions>)` parses the path of the related field and its conditions as a group.
-//   - A value starting with `$` (not quoted) is a reference to another field (eg. `min$min_replicas`).
+//   - A value starting with `$` (not quoted) is a reference to another field (eg. `min$min_replicas`)
+//     or to an injected value (eg. `equ${api_key}`).
 //   - `unq` can be used without a value.
 //   - Fixed values are prepared once here (see precomputeConditionValue).
 func (p *Parser) parseCondition() *model.AstValue {
@@ -301,14 +302,19 @@ func (p *Parser) parseRelation(condition *model.AstValue) {
 	condition.End = inner.End
 }
 
-// parseReference parses a `$<path>` condition value.
+// parseReference parses a `$<path>` or `${<name>}` condition value.
 func (p *Parser) parseReference(condition *model.AstValue) {
 	switch condition.ConditionType {
 	case model.FUNC, model.DEF, model.IS_TYPE, model.CORRECT_MIN, model.CORRECT_MAX, model.UNIQUE:
 		p.parseError(fmt.Sprintf("error parsing condition, %v can not reference a field", condition.ConditionType))
 		return
 	}
-	ref, err := model.ParseFieldRef(condition.ConditionValue[1:])
+	// `$name` is a field (path without the `$`), `${name}` an injected value.
+	raw := condition.ConditionValue
+	if !strings.HasPrefix(raw, "${") {
+		raw = raw[1:]
+	}
+	ref, err := model.ParseFieldRef(raw)
 	if err != nil {
 		p.parseError(fmt.Sprintf("error parsing reference: %v", err))
 		return
