@@ -52,6 +52,58 @@ func TestExtractDefault(t *testing.T) {
 	}
 }
 
+func TestHasCondition(t *testing.T) {
+	isMin := func(conditionType ConditionType) bool { return conditionType == MIN_VALUE }
+	tests := []struct {
+		name     string
+		astValue *AstValue
+		expected bool
+	}{
+		{
+			name:     "Nil ast value",
+			astValue: nil,
+			expected: false,
+		},
+		{
+			name: "No matching condition",
+			astValue: &AstValue{
+				ConditionGroup: ConditionGroup{
+					&AstValue{Type: CONDITION, ConditionType: EQUAL, ConditionValue: "1"},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "Matching condition",
+			astValue: &AstValue{
+				ConditionGroup: ConditionGroup{
+					&AstValue{Type: CONDITION, ConditionType: EQUAL, ConditionValue: "1"},
+					&AstValue{Type: CONDITION, ConditionType: MIN_VALUE, ConditionValue: "1"},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "Matching condition in group",
+			astValue: &AstValue{
+				ConditionGroup: ConditionGroup{
+					&AstValue{Type: GROUP, ConditionGroup: ConditionGroup{
+						&AstValue{Type: CONDITION, ConditionType: MIN_VALUE, ConditionValue: "1"},
+					}},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := test.astValue.HasCondition(isMin)
+			assert.Equal(t, test.expected, result, "Expected HasCondition result to match")
+		})
+	}
+}
+
 func TestAstGroupToString(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"encoding"
 	"fmt"
 	"reflect"
 )
@@ -13,21 +14,87 @@ func GetValidMap(in any) (map[string]any, error) {
 	return nil, fmt.Errorf("error getting valid map from json")
 }
 
+// UnmapStructToJsonMap writes the exported fields of the given struct pointer into the JsonMap.
+// Nested structs (also behind pointers) and slices/arrays of structs are converted recursively
+// to JsonMaps (and []any of JsonMaps), so their inner validations can be run like for json input.
+// Fields tagged with `inline` are flattened into the parent map, unexported fields are skipped.
+// Structs implementing encoding.TextMarshaler (eg. time.Time) are kept as they are.
 func UnmapStructToJsonMap(structInput any, jsonMapToUpdate *map[string]any) error {
 	err := CheckValidPointerToStruct(structInput)
 	if err != nil {
 		return err
 	}
 
-	structFull := reflect.ValueOf(structInput).Elem()
-	for i := 0; i < structFull.Type().NumField(); i++ {
-		field := structFull.Field(i)
-		fieldType := structFull.Type().Field(i)
-
-		fieldKey, _, _ := FieldKey(fieldType)
-		(*jsonMapToUpdate)[fieldKey] = field.Interface()
-	}
+	unmapStructValue(reflect.ValueOf(structInput).Elem(), *jsonMapToUpdate)
 	return nil
+}
+
+var textMarshalerType = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
+
+// unmapStructValue writes the exported fields of the struct value into the JsonMap.
+func unmapStructValue(structValue reflect.Value, jsonMap map[string]any) {
+	structType := structValue.Type()
+	for i := 0; i < structType.NumField(); i++ {
+		fieldType := structType.Field(i)
+		if !fieldType.IsExported() {
+			continue
+		}
+		field := structValue.Field(i)
+
+		fieldKey, _, isInline := FieldKey(fieldType)
+		if isInline {
+			inner := field
+			if inner.Kind() == reflect.Ptr {
+				if inner.IsNil() {
+					continue
+				}
+				inner = inner.Elem()
+			}
+			if inner.Kind() == reflect.Struct {
+				unmapStructValue(inner, jsonMap)
+				continue
+			}
+		}
+
+		jsonMap[fieldKey] = unmapValue(field)
+	}
+}
+
+// unmapValue converts a struct (or pointer to struct) to a JsonMap
+// and a slice/array of structs to a []any of JsonMaps. All other values are returned as they are.
+func unmapValue(value reflect.Value) any {
+	switch value.Kind() {
+	case reflect.Ptr:
+		if value.Type().Elem().Kind() == reflect.Struct && !isTextMarshalerStruct(value.Type().Elem()) {
+			if value.IsNil() {
+				return nil
+			}
+			return unmapValue(value.Elem())
+		}
+	case reflect.Struct:
+		if !isTextMarshalerStruct(value.Type()) {
+			jsonMap := map[string]any{}
+			unmapStructValue(value, jsonMap)
+			return jsonMap
+		}
+	case reflect.Slice, reflect.Array:
+		if value.Type().Elem().Kind() == reflect.Struct && !isTextMarshalerStruct(value.Type().Elem()) {
+			if value.Kind() == reflect.Slice && value.IsNil() {
+				return nil
+			}
+			array := make([]any, value.Len())
+			for i := 0; i < value.Len(); i++ {
+				array[i] = unmapValue(value.Index(i))
+			}
+			return array
+		}
+	}
+	return value.Interface()
+}
+
+// isTextMarshalerStruct reports if the struct type (or its pointer) implements encoding.TextMarshaler.
+func isTextMarshalerStruct(structType reflect.Type) bool {
+	return structType.Implements(textMarshalerType) || reflect.PointerTo(structType).Implements(textMarshalerType)
 }
 
 func JsonMapToMapKV(m map[string]any, expectedKey reflect.Type, expectedValue reflect.Type) (reflect.Value, error) {

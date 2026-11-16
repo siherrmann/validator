@@ -140,3 +140,97 @@ func TestValidateMax(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateCorrectMin(t *testing.T) {
+	type args struct {
+		correct int
+		ast     *model.AstValue
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Valid correct min",
+			args: args{
+				correct: 2,
+				ast:     &model.AstValue{ConditionValue: "2"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid correct min",
+			args: args{
+				correct: 1,
+				ast:     &model.AstValue{ConditionValue: "2"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Invalid condition value type",
+			args: args{
+				correct: 1,
+				ast:     &model.AstValue{ConditionValue: "banana"},
+			},
+			wantErr: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := ValidateCorrectMin(test.args.correct, test.args.ast)
+			if test.wantErr {
+				assert.Error(t, err, "Expected error but got none")
+			} else {
+				assert.NoError(t, err, "Expected no error but got one")
+			}
+		})
+	}
+}
+
+func TestValidateCorrectMax(t *testing.T) {
+	type args struct {
+		correct int
+		ast     *model.AstValue
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Valid correct max",
+			args: args{
+				correct: 2,
+				ast:     &model.AstValue{ConditionValue: "2"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid correct max",
+			args: args{
+				correct: 3,
+				ast:     &model.AstValue{ConditionValue: "2"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Invalid condition value type",
+			args: args{
+				correct: 1,
+				ast:     &model.AstValue{ConditionValue: "banana"},
+			},
+			wantErr: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := ValidateCorrectMax(test.args.correct, test.args.ast)
+			if test.wantErr {
+				assert.Error(t, err, "Expected error but got none")
+			} else {
+				assert.NoError(t, err, "Expected no error but got one")
+			}
+		})
+	}
+}

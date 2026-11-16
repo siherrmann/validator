@@ -201,14 +201,16 @@ Conditions have different usages per variable type:
 - `-` - Not validating/update without validating.
 - `equ` - `int/float/string == condition`, `len(array) == condition`
 - `neq` - `int/float/string != condition`, `len(array) != condition`
-- `min` - `int/float >= condition`, `len(strings.TrimSpace(string)/array) >= condition`
-- `max` - `int/float <= condition`, `len(strings.TrimSpace(string)/array) <= condition`
+- `min` - `int/float >= condition`, `len(strings.TrimSpace(string)/array/map) >= condition`, number of keys of a struct `>= condition`
+- `max` - `int/float <= condition`, `len(strings.TrimSpace(string)/array/map) <= condition`, number of keys of a struct `<= condition`
 - `con` - `strings.Contains(string, condition)`, `contains(array, condition)`, int/float ignored
 - `nco` - `!strings.Contains(string, condition)`, `!contains(array, condition)`, int/float ignored
 - `frm` - Checks if given comma seperated list contains value/every item in array/every key in map.
 - `nfr` - Checks if given comma seperated list does not contain value/every item in array/every key in map.
 - `rex` - `regexp.MatchString(condition, strconv.Itoa(int)/strconv.FormatFloat(float, 'f', 3, 64)/string)`, array ignored
 - `ist` - Checks if string is of a certain format (e.g., `istuuid`, `istemail`, `istpassword`). Supported types: `uuid`, `unixmilli`, `timerfc3339`, `email`, `url`, `alpha`, `alphanum`, `numeric`, `hex`, `base64`, `json`, `jwt`, `ip`, `ipv4`, `ipv6`, `mac`, `password`.
+- `cmn` - Checks if at least `condition` inner fields of a struct are correct (eg. `cmn2`), only usable on struct fields.
+- `cmx` - Checks if at most `condition` inner fields of a struct are correct (eg. `cmx2`), only usable on struct fields.
 - `fun` - Checks the value with a custom function. The function has to be added to the validator, so it does not work with the wrapped functions. It can be used beside other requirements like `min3 && funYourCheckFunction`. This also allows you to check unsupported types by only using `funYourCheckFunction`.
 
 A `null` value (e.g. `{"name": null}` in json or `name:` in yaml) counts as length/value `0` for `min` and `max`, so `max0` passes and `min1` fails. It is not equal to, does not contain, is not part of and does not match any condition, so `equ`, `con`, `frm`, `rex` and `ist` fail and `neq`, `nco` and `nfr` pass.
@@ -218,6 +220,29 @@ Eg. for an array of int the condition must be convertable to int (bad: `vld:"con
 
 In the case of rex the int and float input will get converted to a string (`strconv.Itoa(int)` and `fmt.Sprintf("%f", f)`).
 If you want to check more complex cases you can obviously replace `equ`, `neq`, `min`, `max` and `con` with one regular expression.
+
+## Structs
+
+The inner fields of a struct field are validated by their own tags. The requirement of the struct field itself works like this:
+
+- Without a requirement (eg. `vld:"-"`) all inner fields have to be valid.
+- With a requirement, it is checked on the struct itself, so `min` and `max` check the number of given keys. If the struct is empty (`{}` or `null`) and fulfills the requirement, the inner fields are not validated. If it is not empty, the inner fields have to be valid. A missing key is still an error, like for every other field.
+- With `cmn` or `cmx` in the requirement, invalid inner fields are allowed. A field counts as correct if it is given (or has a default) and fulfills its own requirement. Invalid fields are left out, so on update they keep their current value.
+
+```go
+type Request struct {
+    // Can be empty, but if not, the name has to be valid.
+    Fruit struct {
+        Name string `json:"name" vld:"min1"`
+    } `json:"fruit" vld:"max0 || min1"`
+    // Empty or at least two of the three fields have to be correct.
+    Address struct {
+        Street string `json:"street" vld:"min1"`
+        City   string `json:"city" vld:"min1"`
+        Zip    string `json:"zip" vld:"min5"`
+    } `json:"address" vld:"max0 || cmn2"`
+}
+```
 
 ## Groups
 

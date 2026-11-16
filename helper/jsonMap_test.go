@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -122,6 +123,44 @@ func TestUnmapStructToJsonMap(t *testing.T) {
 		assert.Equal(t, "Test", result["name"], "Expected name to be mapped")
 		assert.Equal(t, []string{"tag1", "tag2"}, result["tags"], "Expected tags to be mapped")
 		assert.Equal(t, map[string]any{"key": "value"}, result["config"], "Expected config to be mapped")
+	})
+
+	t.Run("Valid struct with nested structs", func(t *testing.T) {
+		type Inner struct {
+			Name string `json:"name"`
+		}
+		type Inline struct {
+			Code string `json:"code"`
+		}
+		type TestStruct struct {
+			Inner      Inner     `json:"inner"`
+			Pointer    *Inner    `json:"pointer"`
+			NilPointer *Inner    `json:"nil_pointer"`
+			List       []Inner   `json:"list"`
+			Time       time.Time `json:"time"`
+			Inline     `json:",inline"`
+			unexported string
+		}
+		now := time.Now()
+		input := &TestStruct{
+			Inner:      Inner{Name: "a"},
+			Pointer:    &Inner{Name: "b"},
+			List:       []Inner{{Name: "c"}},
+			Time:       now,
+			Inline:     Inline{Code: "d"},
+			unexported: "e",
+		}
+		result := map[string]any{}
+
+		err := UnmapStructToJsonMap(input, &result)
+		assert.NoError(t, err, "Expected no error unmapping struct with nested structs")
+		assert.Equal(t, map[string]any{"name": "a"}, result["inner"], "Expected nested struct to be a map")
+		assert.Equal(t, map[string]any{"name": "b"}, result["pointer"], "Expected nested struct pointer to be a map")
+		assert.Nil(t, result["nil_pointer"], "Expected nil pointer to be nil")
+		assert.Equal(t, []any{map[string]any{"name": "c"}}, result["list"], "Expected list of structs to be a list of maps")
+		assert.Equal(t, now, result["time"], "Expected time to be kept as is")
+		assert.Equal(t, "d", result["code"], "Expected inline struct to be flattened")
+		assert.NotContains(t, result, "unexported", "Expected unexported field to be skipped")
 	})
 
 	t.Run("Invalid input - not a pointer", func(t *testing.T) {

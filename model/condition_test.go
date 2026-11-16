@@ -6,6 +6,44 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestIsRequirement(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    ConditionType
+		expected bool
+	}{
+		{name: "Min condition type", input: MIN_VALUE, expected: true},
+		{name: "Correct min condition type", input: CORRECT_MIN, expected: true},
+		{name: "None condition type", input: NONE, expected: false},
+		{name: "Default condition type", input: DEF, expected: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, test.input.IsRequirement(), "Expected IsRequirement result to match")
+		})
+	}
+}
+
+func TestIsCorrect(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    ConditionType
+		expected bool
+	}{
+		{name: "Correct min condition type", input: CORRECT_MIN, expected: true},
+		{name: "Correct max condition type", input: CORRECT_MAX, expected: true},
+		{name: "Min condition type", input: MIN_VALUE, expected: false},
+		{name: "None condition type", input: NONE, expected: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, test.input.IsCorrect(), "Expected IsCorrect result to match")
+		})
+	}
+}
+
 func TestLookupConditionType(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -15,6 +53,21 @@ func TestLookupConditionType(t *testing.T) {
 		{
 			name:    "Valid condition type",
 			input:   EQUAL,
+			wantErr: false,
+		},
+		{
+			name:    "Valid correct min condition type",
+			input:   CORRECT_MIN,
+			wantErr: false,
+		},
+		{
+			name:    "Valid correct max condition type",
+			input:   CORRECT_MAX,
+			wantErr: false,
+		},
+		{
+			name:    "Valid func condition type",
+			input:   FUNC,
 			wantErr: false,
 		},
 		{
@@ -53,6 +106,12 @@ func TestGetConditionType(t *testing.T) {
 			name:    "Valid condition type without value",
 			input:   "equ",
 			want:    EQUAL,
+			wantErr: false,
+		},
+		{
+			name:    "Valid correct min condition type",
+			input:   "cmn2",
+			want:    CORRECT_MIN,
 			wantErr: false,
 		},
 		{

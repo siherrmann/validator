@@ -45,6 +45,22 @@ func (r *AstValue) ExtractDefault() string {
 	return ""
 }
 
+// HasCondition recursively checks if the AST value contains a condition for which [match] returns true.
+func (r *AstValue) HasCondition(match func(ConditionType) bool) bool {
+	if r == nil {
+		return false
+	}
+	for _, v := range r.ConditionGroup {
+		if v.Type == CONDITION && match(v.ConditionType) {
+			return true
+		}
+		if v.Type == GROUP && v.HasCondition(match) {
+			return true
+		}
+	}
+	return false
+}
+
 // AstValueType is the type for all available AST value types.
 type AstValueType string
 

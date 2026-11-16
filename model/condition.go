@@ -23,6 +23,8 @@ const (
 	FUNC         ConditionType = "fun"
 	DEF          ConditionType = "def"
 	IS_TYPE      ConditionType = "ist"
+	CORRECT_MIN  ConditionType = "cmn"
+	CORRECT_MAX  ConditionType = "cmx"
 )
 
 var ValidConditionTypes = map[ConditionType]int{
@@ -38,6 +40,19 @@ var ValidConditionTypes = map[ConditionType]int{
 	REGX:         9,
 	DEF:          10,
 	IS_TYPE:      11,
+	CORRECT_MIN:  12,
+	CORRECT_MAX:  13,
+	FUNC:         14,
+}
+
+// IsRequirement reports if the condition type is an actual check (not none or default).
+func (c ConditionType) IsRequirement() bool {
+	return c != NONE && c != DEF
+}
+
+// IsCorrect reports if the condition type checks the number of correct inner fields.
+func (c ConditionType) IsCorrect() bool {
+	return c == CORRECT_MIN || c == CORRECT_MAX
 }
 
 // LookupConditionType checks our validConditionType map for the scanned condition type.

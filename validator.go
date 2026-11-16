@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -115,12 +116,17 @@ func (r *Validator) ValidateAndUpdateWithValidation(jsonInput map[string]any, ma
 // If a validation has groups, it checks if the values are valid for the groups.
 // If a validation has a key that is already in the map, it returns an error.
 //
+// All fields are validated, also if one is invalid. The errors of invalid fields (that are not in a group)
+// are returned together as [model.FieldErrors], with the JsonMap of the valid fields.
+// Any other error (eg. a duplicate key or a failed group) is returned with an empty JsonMap.
+//
 // It returns a new JsonMap with the validated values or an error if the validation fails.
 func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations []model.Validation) (map[string]any, error) {
 	keys := []string{}
 	groups := map[string]*model.Group{}
 	groupSize := map[string]int{}
 	groupErrors := map[string][]error{}
+	fieldErrors := model.FieldErrors{}
 
 	validateValues := map[string]any{}
 
@@ -137,98 +143,17 @@ func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations
 			groupSize[g.Name]++
 		}
 
-		var ok bool
-		var jsonValue any
-		if jsonValue, ok = jsonInput[validation.Key]; !ok {
-			if validation.Default != "" {
-				jsonValue = validation.Default
-				ok = true
-			} else if strings.TrimSpace(validation.Requirement) == string(model.NONE) {
-				continue
-			} else if len(validation.Groups) == 0 {
-				return map[string]any{}, fmt.Errorf("json %v key not in map", validation.Key)
-			} else {
-				for _, group := range validation.Groups {
-					groupErrors[group.Name] = append(groupErrors[group.Name], fmt.Errorf("json %v key not in map", validation.Key))
-				}
-				continue
-			}
-		}
-		if validation.OmitEmpty && jsonValue == "" {
-			continue
-		}
-
-		if jsonValue != nil {
-			switch validation.Type {
-			case model.String, model.Int, model.Float, model.Bool:
-				coerced, coerceErr := helper.AnyToType(jsonValue, validation.Type.ToReflectType())
-				if coerceErr == nil {
-					jsonValue = coerced
-				}
-			}
-		}
-
-		var err error
-		switch validation.Type {
-		case model.Struct:
-			if jsonValueMap, ok := jsonValue.(map[string]any); ok {
-				jsonValue, err = r.ValidateWithValidation(jsonValueMap, validation.InnerValidation)
-				if err != nil {
-					return map[string]any{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
-				}
-			} else {
-				err = r.ValidateValueWithParser(jsonValue, &validation)
-			}
-		case model.Array:
-			if helper.IsArray(jsonValue) && len(validation.InnerValidation) > 0 {
-				jsonArray, ok := jsonValue.([]any)
-				if !ok {
-					return map[string]any{}, fmt.Errorf("field %v must be of type array, was %T", validation.Key, jsonValue)
-				}
-
-				validatedArray := []any{}
-				for _, jsonValueInner := range jsonArray {
-					jsonValueInnerMap, err := helper.GetValidMap(jsonValueInner)
-					if err != nil {
-						return map[string]any{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
-					}
-
-					validatedInnerMap, err := r.ValidateWithValidation(jsonValueInnerMap, validation.InnerValidation)
-					if err != nil {
-						return map[string]any{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
-					}
-					validatedArray = append(validatedArray, validatedInnerMap)
-				}
-				jsonValue = validatedArray
-			} else if helper.IsArray(jsonValue) {
-				err = r.ValidateValueWithParser(jsonValue, &validation)
-			} else if helper.IsString(jsonValue) {
-				// Check if the value is a string from a url value.
-				jsonValue = []string{jsonValue.(string)}
-				err = r.ValidateValueWithParser(jsonValue, &validation)
-			} else if jsonValue == nil {
-				err = r.ValidateValueWithParser(jsonValue, &validation)
-			} else if len(validation.InnerValidation) == 0 {
-				// A lone value (e.g. a single form value) is treated as a one-element list.
-				jsonValue = []any{jsonValue}
-				err = r.ValidateValueWithParser(jsonValue, &validation)
-			}
-		default:
-			err = r.ValidateValueWithParser(jsonValue, &validation)
-		}
-
+		jsonValue, ok, err := r.validateField(jsonInput, &validation)
 		if err != nil {
-			if validation.Default != "" {
-				jsonValue = validation.Default
-				err = nil
-			} else if len(validation.Groups) == 0 {
-				return map[string]any{}, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
-			} else {
-				for _, group := range validation.Groups {
-					groupErrors[group.Name] = append(groupErrors[group.Name], fmt.Errorf("field %v invalid: %v", validation.Key, err.Error()))
-				}
-				continue
+			if len(validation.Groups) == 0 {
+				fieldErrors = append(fieldErrors, err)
 			}
+			for _, group := range validation.Groups {
+				groupErrors[group.Name] = append(groupErrors[group.Name], err)
+			}
+			continue
+		} else if !ok {
+			continue
 		}
 
 		validateValues[validation.Key] = jsonValue
@@ -239,7 +164,158 @@ func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations
 		return map[string]any{}, err
 	}
 
+	if len(fieldErrors) > 0 {
+		return validateValues, fieldErrors
+	}
+
 	return validateValues, nil
+}
+
+// validateField validates the value of a single validation in the given JsonMap.
+// It returns the validated value and if the value should be added to the validated JsonMap.
+func (r *Validator) validateField(jsonInput map[string]any, validation *model.Validation) (any, bool, error) {
+	jsonValue, ok := jsonInput[validation.Key]
+	if !ok {
+		if validation.Default != "" {
+			jsonValue = validation.Default
+		} else if strings.TrimSpace(validation.Requirement) == string(model.NONE) {
+			return nil, false, nil
+		} else {
+			return nil, false, fmt.Errorf("json %v key not in map", validation.Key)
+		}
+	}
+	if validation.OmitEmpty && jsonValue == "" {
+		return nil, false, nil
+	}
+
+	if jsonValue != nil {
+		switch validation.Type {
+		case model.String, model.Int, model.Float, model.Bool:
+			coerced, coerceErr := helper.AnyToType(jsonValue, validation.Type.ToReflectType())
+			if coerceErr == nil {
+				jsonValue = coerced
+			}
+		}
+	}
+
+	var err error
+	switch validation.Type {
+	case model.Struct:
+		if jsonValueMap, ok := jsonValue.(map[string]any); ok {
+			jsonValue, err = r.validateStruct(jsonValueMap, validation)
+			if err != nil {
+				return nil, false, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
+			}
+		} else {
+			err = r.ValidateValueWithParser(jsonValue, validation)
+		}
+	case model.Array:
+		if helper.IsArray(jsonValue) && len(validation.InnerValidation) > 0 {
+			jsonArray, ok := jsonValue.([]any)
+			if !ok {
+				return nil, false, fmt.Errorf("field %v must be of type array, was %T", validation.Key, jsonValue)
+			}
+
+			validatedArray := []any{}
+			for _, jsonValueInner := range jsonArray {
+				jsonValueInnerMap, err := helper.GetValidMap(jsonValueInner)
+				if err != nil {
+					return nil, false, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
+				}
+
+				validatedInnerMap, err := r.ValidateWithValidation(jsonValueInnerMap, validation.InnerValidation)
+				if err != nil {
+					return nil, false, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
+				}
+				validatedArray = append(validatedArray, validatedInnerMap)
+			}
+			jsonValue = validatedArray
+		} else if helper.IsArray(jsonValue) {
+			err = r.ValidateValueWithParser(jsonValue, validation)
+		} else if helper.IsString(jsonValue) {
+			// Check if the value is a string from a url value.
+			jsonValue = []string{jsonValue.(string)}
+			err = r.ValidateValueWithParser(jsonValue, validation)
+		} else if jsonValue == nil {
+			err = r.ValidateValueWithParser(jsonValue, validation)
+		} else if len(validation.InnerValidation) == 0 {
+			// A lone value (e.g. a single form value) is treated as a one-element list.
+			jsonValue = []any{jsonValue}
+			err = r.ValidateValueWithParser(jsonValue, validation)
+		}
+	default:
+		err = r.ValidateValueWithParser(jsonValue, validation)
+	}
+
+	if err != nil {
+		if validation.Default != "" {
+			return validation.Default, true, nil
+		}
+		return nil, false, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
+	}
+
+	return jsonValue, true, nil
+}
+
+// validateStruct validates the JsonMap of a struct field by its inner validations.
+//
+// Without a requirement on the struct field all inner fields have to be valid.
+// With a requirement, the requirement is checked on the JsonMap itself (eg. min and max check the number of keys).
+// If the JsonMap is empty and fulfills the requirement, the inner validations are skipped.
+// If the requirement contains cmn or cmx, invalid inner fields are left out instead of failing
+// and cmn/cmx check the number of correct inner fields (the fields in the validated JsonMap).
+func (r *Validator) validateStruct(jsonValueMap map[string]any, validation *model.Validation) (map[string]any, error) {
+	astValue, err := getRequirementAST(validation)
+	if err != nil {
+		return nil, err
+	}
+
+	if !astValue.HasCondition(model.ConditionType.IsRequirement) {
+		return r.ValidateWithValidation(jsonValueMap, validation.InnerValidation)
+	}
+
+	if !astValue.HasCondition(model.ConditionType.IsCorrect) {
+		err = r.RunValidatorsOnConditionGroup(jsonValueMap, astValue, nil)
+		if err != nil {
+			return nil, err
+		} else if len(jsonValueMap) == 0 {
+			return map[string]any{}, nil
+		}
+		return r.ValidateWithValidation(jsonValueMap, validation.InnerValidation)
+	}
+
+	validated, innerErr := r.ValidateWithValidation(jsonValueMap, validation.InnerValidation)
+	var fieldErrors model.FieldErrors
+	if innerErr != nil && !errors.As(innerErr, &fieldErrors) {
+		return nil, innerErr
+	}
+
+	correct := len(validated)
+	err = r.RunValidatorsOnConditionGroup(jsonValueMap, astValue, &correct)
+	if err != nil {
+		if innerErr != nil {
+			return nil, fmt.Errorf("%v, inner errors: %v", err, innerErr)
+		}
+		return nil, err
+	} else if len(jsonValueMap) == 0 {
+		return map[string]any{}, nil
+	}
+
+	return validated, nil
+}
+
+// getRequirementAST returns the cached AST of the validation or parses the requirement.
+func getRequirementAST(validation *model.Validation) (*model.AstValue, error) {
+	if validation.RequirementAST != nil {
+		return validation.RequirementAST, nil
+	}
+
+	p := parser.NewParser()
+	v, err := p.ParseValidation(validation.Requirement)
+	if err != nil {
+		return nil, err
+	}
+	return v.RootValue, nil
 }
 
 // ValidateValueWithParser validates a value against a given validation using the parser.
@@ -247,20 +323,12 @@ func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations
 //
 // It returns an error if the validation fails.
 func (r *Validator) ValidateValueWithParser(input any, validation *model.Validation) error {
-	var astValue *model.AstValue
-
-	if validation.RequirementAST != nil {
-		astValue = validation.RequirementAST
-	} else {
-		p := parser.NewParser()
-		v, err := p.ParseValidation(validation.Requirement)
-		if err != nil {
-			return err
-		}
-		astValue = v.RootValue
+	astValue, err := getRequirementAST(validation)
+	if err != nil {
+		return err
 	}
 
-	err := r.RunValidatorsOnConditionGroup(input, astValue)
+	err = r.RunValidatorsOnConditionGroup(input, astValue, nil)
 	if err != nil {
 		return err
 	}
@@ -268,12 +336,12 @@ func (r *Validator) ValidateValueWithParser(input any, validation *model.Validat
 	return nil
 }
 
-// RunFuncOnConditionGroup runs the function [f] on each condition in the [astValue].
+// RunValidatorsOnConditionGroup runs the validators for each condition in the [astValue] on the [input].
 // If the condition is a group, it recursively calls itself on the group.
-// If the condition is a condition, it calls the function [f] with the input and the condition.
 // If the operator is AND, it returns an error if any condition fails.
 // If the operator is OR, it collects all errors and returns them if all conditions fail.
-func (r *Validator) RunValidatorsOnConditionGroup(input any, astValue *model.AstValue) error {
+// [correct] is the number of correct inner fields for cmn and cmx, it is nil if the input has no inner validations.
+func (r *Validator) RunValidatorsOnConditionGroup(input any, astValue *model.AstValue, correct *int) error {
 	var errors []error
 	for i, v := range astValue.ConditionGroup {
 		var err error
@@ -281,7 +349,7 @@ func (r *Validator) RunValidatorsOnConditionGroup(input any, astValue *model.Ast
 		case model.EMPTY:
 			return nil
 		case model.GROUP:
-			err = r.RunValidatorsOnConditionGroup(input, v)
+			err = r.RunValidatorsOnConditionGroup(input, v, correct)
 		case model.CONDITION:
 			switch v.ConditionType {
 			case model.NONE, model.DEF:
@@ -306,6 +374,14 @@ func (r *Validator) RunValidatorsOnConditionGroup(input any, astValue *model.Ast
 				err = validators.ValidateRegex(input, v)
 			case model.IS_TYPE:
 				err = validators.ValidateIsType(input, v)
+			case model.CORRECT_MIN, model.CORRECT_MAX:
+				if correct == nil {
+					err = fmt.Errorf("%v is only usable on struct fields with inner validations", v.ConditionType)
+				} else if v.ConditionType == model.CORRECT_MIN {
+					err = validators.ValidateCorrectMin(*correct, v)
+				} else {
+					err = validators.ValidateCorrectMax(*correct, v)
+				}
 			case model.FUNC:
 				fun, ok := r.ValidationFuncs[v.ConditionValue]
 				if !ok {

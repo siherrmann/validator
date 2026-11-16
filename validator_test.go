@@ -150,9 +150,17 @@ func TestValidate(t *testing.T) {
 		r := NewValidator()
 		err := r.Validate(&TestStruct{ID: id, Optional: &id})
 		assert.NoError(t, err, "Expected no error but got one")
+	})
 
-		err = r.Validate(&TestStruct{ID: id})
-		assert.NoError(t, err, "Expected no error for nil uuid pointer but got one")
+	t.Run("Valid struct with nil uuid pointer", func(t *testing.T) {
+		type TestStruct struct {
+			ID       uuid.UUID  `json:"id" vld:"istuuid"`
+			Optional *uuid.UUID `json:"optional" vld:"-"`
+		}
+		id := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
+		r := NewValidator()
+		err := r.Validate(&TestStruct{ID: id})
+		assert.NoError(t, err, "Expected no error but got one")
 	})
 
 	t.Run("Valid struct with uuid and min max", func(t *testing.T) {
@@ -181,6 +189,93 @@ func TestValidate(t *testing.T) {
 		r := NewValidator()
 		err := r.Validate(&TestStruct{IP: net.ParseIP("192.168.0.1")})
 		assert.NoError(t, err, "Expected no error but got one")
+	})
+
+	t.Run("Struct with custom validation function", func(t *testing.T) {
+		type TestStruct struct {
+			Fruit string `json:"fruit" vld:"funisApple"`
+		}
+		r := NewValidator()
+		r.AddValidationFunc(func(input any, astValue *model.AstValue) error {
+			if input != "apple" {
+				return fmt.Errorf("value is not apple")
+			}
+			return nil
+		}, "isApple")
+
+		err := r.Validate(&TestStruct{Fruit: "apple"})
+		assert.NoError(t, err, "Expected no error but got one")
+
+		err = r.Validate(&TestStruct{Fruit: "banana"})
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Contains(t, err.Error(), "value is not apple")
+	})
+
+	type NestedInner struct {
+		Name string `json:"name" vld:"min3"`
+	}
+	type NestedInline struct {
+		Code string `json:"code" vld:"min3"`
+	}
+	type NestedOuter struct {
+		Inner        NestedInner   `json:"inner" vld:"-"`
+		InnerPointer *NestedInner  `json:"inner_pointer" vld:"-"`
+		InnerList    []NestedInner `json:"inner_list" vld:"-"`
+		NestedInline `json:",inline" vld:"-"`
+		CreatedAt    time.Time `json:"created_at" vld:"-"`
+		unexported   string
+	}
+	validNested := func() *NestedOuter {
+		return &NestedOuter{
+			Inner:        NestedInner{Name: "abc"},
+			InnerPointer: &NestedInner{Name: "abc"},
+			InnerList:    []NestedInner{{Name: "abc"}, {Name: "def"}},
+			NestedInline: NestedInline{Code: "abc"},
+			CreatedAt:    time.Now(),
+			unexported:   "x",
+		}
+	}
+
+	t.Run("Valid struct with nested structs", func(t *testing.T) {
+		r := NewValidator()
+		assert.NoError(t, r.Validate(validNested()), "Expected no error but got one")
+
+		withNilPointer := validNested()
+		withNilPointer.InnerPointer = nil
+		withNilPointer.InnerList = nil
+		assert.NoError(t, r.Validate(withNilPointer), "Expected no error for nil pointer and nil list")
+	})
+
+	t.Run("Invalid nested struct", func(t *testing.T) {
+		in := validNested()
+		in.Inner.Name = "a"
+		err := NewValidator().Validate(in)
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Contains(t, err.Error(), "field inner invalid")
+	})
+
+	t.Run("Invalid nested struct pointer", func(t *testing.T) {
+		in := validNested()
+		in.InnerPointer.Name = "a"
+		err := NewValidator().Validate(in)
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Contains(t, err.Error(), "field inner_pointer invalid")
+	})
+
+	t.Run("Invalid nested struct in list", func(t *testing.T) {
+		in := validNested()
+		in.InnerList[1].Name = "a"
+		err := NewValidator().Validate(in)
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Contains(t, err.Error(), "field inner_list invalid")
+	})
+
+	t.Run("Invalid inline struct", func(t *testing.T) {
+		in := validNested()
+		in.Code = "a"
+		err := NewValidator().Validate(in)
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Contains(t, err.Error(), "field code invalid")
 	})
 }
 
@@ -224,6 +319,58 @@ func TestValidateAndUpdate(t *testing.T) {
 		}{}
 		err := r.ValidateAndUpdate(map[string]any{"fruit": map[string]any{"name": "banana"}}, testStruct, model.VLD)
 		assert.Error(t, err, "Expected an error but got none")
+		assert.Equal(t, "", testStruct.Fruit.Name, "Expected output to be unchanged")
+	})
+
+	t.Run("Valid struct with empty inner struct and max0", func(t *testing.T) {
+		testStruct := &struct {
+			Fruit struct {
+				Name string `json:"name" vld:"equapple"`
+			} `json:"fruit" vld:"max0 || min1"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"fruit": map[string]any{}}, testStruct, model.VLD)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, "", testStruct.Fruit.Name, "Expected output to be unchanged")
+	})
+
+	t.Run("Invalid struct with filled inner struct and max0", func(t *testing.T) {
+		testStruct := &struct {
+			Fruit struct {
+				Name string `json:"name" vld:"equapple"`
+			} `json:"fruit" vld:"max0 || min1"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"fruit": map[string]any{"name": "banana"}}, testStruct, model.VLD)
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Equal(t, "", testStruct.Fruit.Name, "Expected output to be unchanged")
+	})
+
+	t.Run("Valid struct with inner struct and cmn", func(t *testing.T) {
+		testStruct := &struct {
+			Fruit struct {
+				Name  string `json:"name" vld:"equapple"`
+				Color string `json:"color" vld:"equred"`
+				Size  int    `json:"size" vld:"min1"`
+			} `json:"fruit" vld:"cmn2"`
+		}{}
+		testStruct.Fruit.Color = "green"
+		err := r.ValidateAndUpdate(map[string]any{"fruit": map[string]any{"name": "apple", "color": "blue", "size": 3}}, testStruct, model.VLD)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, "apple", testStruct.Fruit.Name, "Expected name to be updated")
+		assert.Equal(t, "green", testStruct.Fruit.Color, "Expected invalid color to be left out")
+		assert.Equal(t, 3, testStruct.Fruit.Size, "Expected size to be updated")
+	})
+
+	t.Run("Invalid struct with inner struct and cmn", func(t *testing.T) {
+		testStruct := &struct {
+			Fruit struct {
+				Name  string `json:"name" vld:"equapple"`
+				Color string `json:"color" vld:"equred"`
+				Size  int    `json:"size" vld:"min1"`
+			} `json:"fruit" vld:"cmn2"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"fruit": map[string]any{"name": "apple", "color": "blue", "size": 0}}, testStruct, model.VLD)
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Contains(t, err.Error(), "less than 2 correct inner fields", "Expected cmn error")
 		assert.Equal(t, "", testStruct.Fruit.Name, "Expected output to be unchanged")
 	})
 
@@ -374,18 +521,22 @@ func TestValidateAndUpdate(t *testing.T) {
 		assert.Nil(t, testStruct.Optional, "Expected optional to be nil")
 	})
 
-	t.Run("Invalid struct with null values and min", func(t *testing.T) {
-		type TestStruct struct {
-			Name string   `json:"name" vld:"min1"`
+	t.Run("Invalid struct with null string and min", func(t *testing.T) {
+		testStruct := &struct {
+			Name string `json:"name" vld:"min1"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"name": nil}, testStruct)
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Contains(t, err.Error(), "field name invalid", "Expected error for null field")
+	})
+
+	t.Run("Invalid struct with null array and min", func(t *testing.T) {
+		testStruct := &struct {
 			Tags []string `json:"tags" vld:"min1"`
-		}
-		for _, key := range []string{"name", "tags"} {
-			input := map[string]any{"name": "apple", "tags": []any{"a"}}
-			input[key] = nil
-			err := r.ValidateAndUpdate(input, &TestStruct{})
-			assert.Error(t, err, "Expected an error but got none")
-			assert.Contains(t, err.Error(), "field "+key+" invalid", "Expected error for null field")
-		}
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"tags": nil}, testStruct)
+		assert.Error(t, err, "Expected an error but got none")
+		assert.Contains(t, err.Error(), "field tags invalid", "Expected error for null field")
 	})
 
 	t.Run("Valid struct with null value and def tag", func(t *testing.T) {
@@ -420,18 +571,24 @@ func TestValidateAndUpdate(t *testing.T) {
 		assert.Equal(t, id, testStruct.ID, "Expected id to be updated")
 	})
 
-	t.Run("Valid struct with missing and empty optional uuid", func(t *testing.T) {
-		type TestStruct struct {
+	t.Run("Valid struct with missing optional uuid", func(t *testing.T) {
+		testStruct := &struct {
 			ID       uuid.UUID  `json:"id" vld:"istuuid"`
 			Optional *uuid.UUID `json:"optional,omitempty" vld:"-"`
-		}
-		id := "550e8400-e29b-41d4-a716-446655440000"
-		for _, input := range []map[string]any{{"id": id}, {"id": id, "optional": ""}} {
-			testStruct := &TestStruct{}
-			err := r.ValidateAndUpdate(input, testStruct)
-			assert.NoError(t, err, "Expected no error but got one")
-			assert.Nil(t, testStruct.Optional, "Expected optional to stay nil")
-		}
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"id": "550e8400-e29b-41d4-a716-446655440000"}, testStruct)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Nil(t, testStruct.Optional, "Expected optional to stay nil")
+	})
+
+	t.Run("Valid struct with empty optional uuid", func(t *testing.T) {
+		testStruct := &struct {
+			ID       uuid.UUID  `json:"id" vld:"istuuid"`
+			Optional *uuid.UUID `json:"optional,omitempty" vld:"-"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"id": "550e8400-e29b-41d4-a716-446655440000", "optional": ""}, testStruct)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Nil(t, testStruct.Optional, "Expected optional to stay nil")
 	})
 
 	t.Run("Valid struct with empty uuid pointer without omitempty", func(t *testing.T) {
@@ -461,16 +618,22 @@ func TestValidateAndUpdate(t *testing.T) {
 		assert.Contains(t, err.Error(), "error parsing string to uuid.UUID", "Expected uuid parse error")
 	})
 
-	t.Run("Valid struct with net.IP", func(t *testing.T) {
-		type TestStruct struct {
+	t.Run("Valid struct with net.IP v4", func(t *testing.T) {
+		testStruct := &struct {
 			IP net.IP `json:"ip" vld:"istip"`
-		}
-		for _, input := range []string{"192.168.0.1", "2001:db8::1"} {
-			testStruct := &TestStruct{}
-			err := r.ValidateAndUpdate(map[string]any{"ip": input}, testStruct)
-			assert.NoError(t, err, "Expected no error but got one")
-			assert.Equal(t, input, testStruct.IP.String(), "Expected ip to be updated")
-		}
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"ip": "192.168.0.1"}, testStruct)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, "192.168.0.1", testStruct.IP.String(), "Expected ip to be updated")
+	})
+
+	t.Run("Valid struct with net.IP v6", func(t *testing.T) {
+		testStruct := &struct {
+			IP net.IP `json:"ip" vld:"istip"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"ip": "2001:db8::1"}, testStruct)
+		assert.NoError(t, err, "Expected no error but got one")
+		assert.Equal(t, "2001:db8::1", testStruct.IP.String(), "Expected ip to be updated")
 	})
 
 	t.Run("Invalid struct with net.IP", func(t *testing.T) {
@@ -482,15 +645,20 @@ func TestValidateAndUpdate(t *testing.T) {
 		assert.Contains(t, err.Error(), "value is not a valid ip address", "Expected ip validation error")
 	})
 
-	t.Run("Valid struct with time.Time", func(t *testing.T) {
+	t.Run("Valid struct with time.Time from iso8601", func(t *testing.T) {
 		testStruct := &struct {
 			CreatedAt time.Time `json:"created_at" vld:"-"`
 		}{}
 		err := r.ValidateAndUpdate(map[string]any{"created_at": "2025-01-02T00:00:00Z"}, testStruct)
 		assert.NoError(t, err, "Expected no error but got one")
 		assert.Equal(t, time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC), testStruct.CreatedAt.UTC(), "Expected created_at to be updated")
+	})
 
-		err = r.ValidateAndUpdate(map[string]any{"created_at": "1735776000"}, testStruct)
+	t.Run("Valid struct with time.Time from unix", func(t *testing.T) {
+		testStruct := &struct {
+			CreatedAt time.Time `json:"created_at" vld:"-"`
+		}{}
+		err := r.ValidateAndUpdate(map[string]any{"created_at": "1735776000"}, testStruct)
 		assert.NoError(t, err, "Expected no error but got one")
 		assert.Equal(t, int64(1735776000), testStruct.CreatedAt.Unix(), "Expected created_at to be updated from unix")
 	})
@@ -567,11 +735,42 @@ func TestValidateWithValidation(t *testing.T) {
 		validations []model.Validation
 	}
 	tests := []struct {
-		name     string
-		args     args
-		expected any
-		wantErr  bool
+		name                string
+		args                args
+		expected            any
+		expectedFieldErrors int
+		wantErr             bool
 	}{
+		{
+			name: "Invalid fields with collected field errors",
+			args: args{
+				jsonMap: map[string]any{
+					"fruit": "apple",
+					"color": "blue",
+				},
+				validations: []model.Validation{
+					{Key: "fruit", Type: model.String, Requirement: "equapple"},
+					{Key: "color", Type: model.String, Requirement: "equred"},
+					{Key: "size", Type: model.Int, Requirement: "min1"},
+				},
+			},
+			expected:            map[string]any{"fruit": "apple"},
+			expectedFieldErrors: 2,
+			wantErr:             true,
+		},
+		{
+			name: "Invalid duplicate key",
+			args: args{
+				jsonMap: map[string]any{
+					"fruit": "apple",
+				},
+				validations: []model.Validation{
+					{Key: "fruit", Type: model.String, Requirement: "equapple"},
+					{Key: "fruit", Type: model.String, Requirement: "equapple"},
+				},
+			},
+			wantErr: true,
+		},
 		{
 			name: "Valid omitempty logic with empty string",
 			args: args{
@@ -864,6 +1063,263 @@ func TestValidateWithValidation(t *testing.T) {
 				},
 			},
 			wantErr: true,
+		},
+		{
+			name: "Valid empty nested struct with max0",
+			args: args{
+				jsonMap: map[string]any{
+					"fruit": map[string]any{},
+				},
+				validations: []model.Validation{
+					{
+						Key:         "fruit",
+						Type:        model.Struct,
+						Requirement: "max0 || min1",
+						InnerValidation: []model.Validation{
+							{Key: "name", Type: model.String, Requirement: "equapple"},
+							{Key: "color", Type: model.String, Requirement: "equred"},
+							{Key: "size", Type: model.Int, Requirement: "min1"},
+						},
+					},
+				},
+			},
+			expected: map[string]any{"fruit": map[string]any{}},
+			wantErr:  false,
+		},
+		{
+			name: "Invalid empty nested struct with min1",
+			args: args{
+				jsonMap: map[string]any{
+					"fruit": map[string]any{},
+				},
+				validations: []model.Validation{
+					{
+						Key:         "fruit",
+						Type:        model.Struct,
+						Requirement: "min1",
+						InnerValidation: []model.Validation{
+							{Key: "name", Type: model.String, Requirement: "equapple"},
+							{Key: "color", Type: model.String, Requirement: "equred"},
+							{Key: "size", Type: model.Int, Requirement: "min1"},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Invalid empty nested struct without requirement",
+			args: args{
+				jsonMap: map[string]any{
+					"fruit": map[string]any{},
+				},
+				validations: []model.Validation{
+					{
+						Key:  "fruit",
+						Type: model.Struct,
+						InnerValidation: []model.Validation{
+							{Key: "name", Type: model.String, Requirement: "equapple"},
+							{Key: "color", Type: model.String, Requirement: "equred"},
+							{Key: "size", Type: model.Int, Requirement: "min1"},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Invalid filled nested struct with max0",
+			args: args{
+				jsonMap: map[string]any{
+					"fruit": map[string]any{"name": "banana", "color": "red", "size": 1},
+				},
+				validations: []model.Validation{
+					{
+						Key:         "fruit",
+						Type:        model.Struct,
+						Requirement: "max0 || min1",
+						InnerValidation: []model.Validation{
+							{Key: "name", Type: model.String, Requirement: "equapple"},
+							{Key: "color", Type: model.String, Requirement: "equred"},
+							{Key: "size", Type: model.Int, Requirement: "min1"},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Invalid nested struct with too many keys for max2",
+			args: args{
+				jsonMap: map[string]any{
+					"fruit": map[string]any{"name": "apple", "color": "red", "size": 1},
+				},
+				validations: []model.Validation{
+					{
+						Key:         "fruit",
+						Type:        model.Struct,
+						Requirement: "max2",
+						InnerValidation: []model.Validation{
+							{Key: "name", Type: model.String, Requirement: "equapple"},
+							{Key: "color", Type: model.String, Requirement: "equred"},
+							{Key: "size", Type: model.Int, Requirement: "min1"},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid nested struct with cmn2 and one invalid field",
+			args: args{
+				jsonMap: map[string]any{
+					"fruit": map[string]any{"name": "apple", "color": "blue", "size": 1},
+				},
+				validations: []model.Validation{
+					{
+						Key:         "fruit",
+						Type:        model.Struct,
+						Requirement: "cmn2",
+						InnerValidation: []model.Validation{
+							{Key: "name", Type: model.String, Requirement: "equapple"},
+							{Key: "color", Type: model.String, Requirement: "equred"},
+							{Key: "size", Type: model.Int, Requirement: "min1"},
+						},
+					},
+				},
+			},
+			expected: map[string]any{"fruit": map[string]any{"name": "apple", "size": 1}},
+			wantErr:  false,
+		},
+		{
+			name: "Valid nested struct with cmn2 and one missing field",
+			args: args{
+				jsonMap: map[string]any{
+					"fruit": map[string]any{"name": "apple", "color": "red"},
+				},
+				validations: []model.Validation{
+					{
+						Key:         "fruit",
+						Type:        model.Struct,
+						Requirement: "cmn2",
+						InnerValidation: []model.Validation{
+							{Key: "name", Type: model.String, Requirement: "equapple"},
+							{Key: "color", Type: model.String, Requirement: "equred"},
+							{Key: "size", Type: model.Int, Requirement: "min1"},
+						},
+					},
+				},
+			},
+			expected: map[string]any{"fruit": map[string]any{"name": "apple", "color": "red"}},
+			wantErr:  false,
+		},
+		{
+			name: "Invalid nested struct with cmn2 and two invalid fields",
+			args: args{
+				jsonMap: map[string]any{
+					"fruit": map[string]any{"name": "apple", "color": "blue", "size": 0},
+				},
+				validations: []model.Validation{
+					{
+						Key:         "fruit",
+						Type:        model.Struct,
+						Requirement: "cmn2",
+						InnerValidation: []model.Validation{
+							{Key: "name", Type: model.String, Requirement: "equapple"},
+							{Key: "color", Type: model.String, Requirement: "equred"},
+							{Key: "size", Type: model.Int, Requirement: "min1"},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid nested struct with cmx1 and one correct field",
+			args: args{
+				jsonMap: map[string]any{
+					"fruit": map[string]any{"name": "apple", "color": "blue", "size": 0},
+				},
+				validations: []model.Validation{
+					{
+						Key:         "fruit",
+						Type:        model.Struct,
+						Requirement: "cmx1",
+						InnerValidation: []model.Validation{
+							{Key: "name", Type: model.String, Requirement: "equapple"},
+							{Key: "color", Type: model.String, Requirement: "equred"},
+							{Key: "size", Type: model.Int, Requirement: "min1"},
+						},
+					},
+				},
+			},
+			expected: map[string]any{"fruit": map[string]any{"name": "apple"}},
+			wantErr:  false,
+		},
+		{
+			name: "Invalid nested struct with cmx1 and two correct fields",
+			args: args{
+				jsonMap: map[string]any{
+					"fruit": map[string]any{"name": "apple", "color": "red", "size": 0},
+				},
+				validations: []model.Validation{
+					{
+						Key:         "fruit",
+						Type:        model.Struct,
+						Requirement: "cmx1",
+						InnerValidation: []model.Validation{
+							{Key: "name", Type: model.String, Requirement: "equapple"},
+							{Key: "color", Type: model.String, Requirement: "equred"},
+							{Key: "size", Type: model.Int, Requirement: "min1"},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid empty nested struct with max0 || cmn2",
+			args: args{
+				jsonMap: map[string]any{
+					"fruit": map[string]any{},
+				},
+				validations: []model.Validation{
+					{
+						Key:         "fruit",
+						Type:        model.Struct,
+						Requirement: "max0 || cmn2",
+						InnerValidation: []model.Validation{
+							{Key: "name", Type: model.String, Requirement: "equapple"},
+							{Key: "color", Type: model.String, Requirement: "equred"},
+							{Key: "size", Type: model.Int, Requirement: "min1"},
+						},
+					},
+				},
+			},
+			expected: map[string]any{"fruit": map[string]any{}},
+			wantErr:  false,
+		},
+		{
+			name: "Valid nested struct with max0 || cmn2",
+			args: args{
+				jsonMap: map[string]any{
+					"fruit": map[string]any{"name": "apple", "color": "red", "size": 0},
+				},
+				validations: []model.Validation{
+					{
+						Key:         "fruit",
+						Type:        model.Struct,
+						Requirement: "max0 || cmn2",
+						InnerValidation: []model.Validation{
+							{Key: "name", Type: model.String, Requirement: "equapple"},
+							{Key: "color", Type: model.String, Requirement: "equred"},
+							{Key: "size", Type: model.Int, Requirement: "min1"},
+						},
+					},
+				},
+			},
+			expected: map[string]any{"fruit": map[string]any{"name": "apple", "color": "red"}},
+			wantErr:  false,
 		},
 		{
 			name: "Valid array validation",
@@ -1255,6 +1711,12 @@ func TestValidateWithValidation(t *testing.T) {
 			out, err := r.ValidateWithValidation(test.args.jsonMap, test.args.validations)
 			if test.wantErr {
 				assert.Error(t, err, "Expected an error but got none")
+				if test.expectedFieldErrors > 0 {
+					var fieldErrors model.FieldErrors
+					require.ErrorAs(t, err, &fieldErrors, "Expected field errors")
+					assert.Len(t, fieldErrors, test.expectedFieldErrors, "Expected number of field errors to match")
+					assert.Equal(t, test.expected, out, "Expected output to contain the valid fields")
+				}
 			} else {
 				assert.NoError(t, err, "Expected no error but got one")
 				if test.expected != nil {
@@ -1328,9 +1790,11 @@ func TestValidateValueWithParser(t *testing.T) {
 }
 
 func TestRunValidatorsOnConditionGroup(t *testing.T) {
+	correctTwo := 2
 	type args struct {
 		input    any
 		astValue *model.AstValue
+		correct  *int
 	}
 	tests := []struct {
 		name    string
@@ -1378,6 +1842,56 @@ func TestRunValidatorsOnConditionGroup(t *testing.T) {
 							Type:          model.CONDITION,
 							ConditionType: model.ConditionType("Uff"),
 							Operator:      model.AND,
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Valid cmn with correct inner fields",
+			args: args{
+				input: map[string]any{"name": "apple", "color": "red"},
+				astValue: &model.AstValue{
+					ConditionGroup: []*model.AstValue{
+						{
+							Type:           model.CONDITION,
+							ConditionType:  model.CORRECT_MIN,
+							ConditionValue: "2",
+						},
+					},
+				},
+				correct: &correctTwo,
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid cmx with correct inner fields",
+			args: args{
+				input: map[string]any{"name": "apple", "color": "red"},
+				astValue: &model.AstValue{
+					ConditionGroup: []*model.AstValue{
+						{
+							Type:           model.CONDITION,
+							ConditionType:  model.CORRECT_MAX,
+							ConditionValue: "1",
+						},
+					},
+				},
+				correct: &correctTwo,
+			},
+			wantErr: true,
+		},
+		{
+			name: "Invalid cmn without inner validations",
+			args: args{
+				input: map[string]any{"name": "apple"},
+				astValue: &model.AstValue{
+					ConditionGroup: []*model.AstValue{
+						{
+							Type:           model.CONDITION,
+							ConditionType:  model.CORRECT_MIN,
+							ConditionValue: "1",
 						},
 					},
 				},
@@ -1779,7 +2293,7 @@ func TestRunValidatorsOnConditionGroup(t *testing.T) {
 			require.NotNil(t, r, "Validator should not be nil")
 			require.Contains(t, r.ValidationFuncs, "testFunc", "Validation function 'testFunc' should be registered")
 
-			err := r.RunValidatorsOnConditionGroup(test.args.input, test.args.astValue)
+			err := r.RunValidatorsOnConditionGroup(test.args.input, test.args.astValue, test.args.correct)
 			if test.wantErr {
 				assert.Error(t, err, "Expected an error but got none")
 			} else {
