@@ -135,6 +135,108 @@ func TestParser(t *testing.T) {
 			expected: "(min'1' && (max'2' || min'3')) || (min'4' && max'5')",
 			wantErr:  false,
 		},
+		{
+			name:     "Implication",
+			input:    "equoci => min1",
+			expected: "equ'oci' => min'1'",
+			wantErr:  false,
+		},
+		{
+			name:     "Implication binds weaker than AND and OR and is right associative",
+			input:    "min1 && max5 => equ3 || equ4 => min2",
+			expected: "(min'1' && max'5') => ((equ'3' || equ'4') => min'2')",
+			wantErr:  false,
+		},
+		{
+			name:     "Implication without consequence",
+			input:    "min1 =>",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Relation",
+			input:    "rel(type equoci) => min1",
+			expected: "rel(type equ'oci') => min'1'",
+			wantErr:  false,
+		},
+		{
+			name:     "Relation with parent path and group",
+			input:    "rel(../stateful (equtrue || equ1)) => max0",
+			expected: "rel(../stateful (equ'true' || equ'1')) => max'0'",
+			wantErr:  false,
+		},
+		{
+			name:     "Relation in group",
+			input:    "(rel(/stateful equfalse) => max0) && unqname",
+			expected: "(rel(/stateful equ'false') => max'0') && unq'name'",
+			wantErr:  false,
+		},
+		{
+			name:     "Relation without brace",
+			input:    "rel type",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Relation without conditions",
+			input:    "rel(type)",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Relation without closing brace",
+			input:    "rel(type equoci",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Relation with invalid path",
+			input:    "rel(/../type equoci)",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Reference",
+			input:    "min$min_replicas && frm$../ports.port",
+			expected: "min$min_replicas && frm$../ports.port",
+			wantErr:  false,
+		},
+		{
+			name:     "Quoted value is not a reference",
+			input:    "equ'$literal'",
+			expected: "equ'$literal'",
+			wantErr:  false,
+		},
+		{
+			name:     "Reference without field name",
+			input:    "min$../",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Reference on fun",
+			input:    "fun$check",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Unique without value",
+			input:    "unq && min1",
+			expected: "unq'' && min'1'",
+			wantErr:  false,
+		},
+		{
+			name:     "Unique with key",
+			input:    "unqname",
+			expected: "unq'name'",
+			wantErr:  false,
+		},
+		{
+			name:     "Invalid regex",
+			input:    "rex'(['",
+			expected: "",
+			wantErr:  true,
+		},
 	}
 
 	for _, test := range tests {
@@ -150,4 +252,45 @@ func TestParser(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestParserPrecomputedValues(t *testing.T) {
+	t.Run("Regex is compiled", func(t *testing.T) {
+		root, err := NewParser().ParseValidation("rex^[A-Z]+$")
+		assert.NoError(t, err)
+		condition := root.RootValue.ConditionGroup[0]
+		assert.NotNil(t, condition.Regex, "Expected compiled regex")
+		assert.True(t, condition.Regex.MatchString("ABC"))
+	})
+
+	t.Run("Min and max values are parsed", func(t *testing.T) {
+		root, err := NewParser().ParseValidation("min1.5 && max10")
+		assert.NoError(t, err)
+		assert.True(t, root.RootValue.ConditionGroup[0].HasNumber)
+		assert.Equal(t, 1.5, root.RootValue.ConditionGroup[0].Number)
+		assert.True(t, root.RootValue.ConditionGroup[1].HasNumber)
+		assert.Equal(t, 10.0, root.RootValue.ConditionGroup[1].Number)
+	})
+
+	t.Run("Reference is not parsed as number", func(t *testing.T) {
+		root, err := NewParser().ParseValidation("min$other")
+		assert.NoError(t, err)
+		condition := root.RootValue.ConditionGroup[0]
+		assert.False(t, condition.HasNumber)
+		assert.Equal(t, []string{"other"}, condition.Ref.Path)
+	})
+
+	t.Run("Field usage is set on the root", func(t *testing.T) {
+		for input, expected := range map[string]bool{
+			"min1 && max2":                  false,
+			"(min1 || rel(a equ1))":         true,
+			"min$a":                         true,
+			"equ'$a'":                       false,
+			"rel(a equ1) => (min1 || max2)": true,
+		} {
+			root, err := NewParser().ParseValidation(input)
+			assert.NoError(t, err, input)
+			assert.Equal(t, expected, root.RootValue.UsesFields, input)
+		}
+	})
 }

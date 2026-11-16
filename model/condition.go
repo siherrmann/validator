@@ -25,6 +25,8 @@ const (
 	IS_TYPE      ConditionType = "ist"
 	CORRECT_MIN  ConditionType = "cmn"
 	CORRECT_MAX  ConditionType = "cmx"
+	RELATION     ConditionType = "rel"
+	UNIQUE       ConditionType = "unq"
 )
 
 var ValidConditionTypes = map[ConditionType]int{
@@ -43,6 +45,8 @@ var ValidConditionTypes = map[ConditionType]int{
 	CORRECT_MIN:  12,
 	CORRECT_MAX:  13,
 	FUNC:         14,
+	RELATION:     15,
+	UNIQUE:       16,
 }
 
 // IsRequirement reports if the condition type is an actual check (not none or default).

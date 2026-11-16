@@ -27,3 +27,22 @@ func TestMapKeysToArrayOfAny(t *testing.T) {
 		assert.Equal(t, []interface{}(nil), mapKeys, "Expected nil result")
 	})
 }
+
+func TestMapValue(t *testing.T) {
+	value, ok := MapValue(map[string]any{"a": 1}, "a")
+	assert.True(t, ok)
+	assert.Equal(t, 1, value)
+
+	value, ok = MapValue(map[string]string{"a": "b"}, "a")
+	assert.True(t, ok)
+	assert.Equal(t, "b", value)
+
+	_, ok = MapValue(map[string]any{"a": 1}, "b")
+	assert.False(t, ok, "Expected missing key")
+
+	_, ok = MapValue(map[int]string{1: "a"}, "1")
+	assert.False(t, ok, "Expected no value for a map without string keys")
+
+	_, ok = MapValue([]string{"a"}, "a")
+	assert.False(t, ok, "Expected no value for a non map")
+}

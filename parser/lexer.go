@@ -16,6 +16,8 @@ type Lexer struct {
 	Input         string
 	char          byte            // current char under examination
 	lastTokenType model.TokenType // last TokenType for splitting condition type from value.
+	relPending    bool            // last token was the condition type `rel`, a `(` is expected.
+	pathNext      bool            // last tokens were `rel(`, the next token is a field path.
 	position      int             // current position in input (points to current char)
 	nextPosition  int             // current reading position in input (after current char)
 	line          int             // line number for better error reporting, etc
@@ -48,14 +50,30 @@ func (l *Lexer) NextToken() model.Token {
 
 	l.skipWhitespace()
 
+	// `rel(` is followed by a field path instead of a condition type.
+	relPending, pathNext := l.relPending, l.pathNext
+	l.relPending, l.pathNext = false, false
+	if pathNext && l.char != 0 && l.char != '(' && l.char != ')' {
+		t.Literal = l.readFieldPath()
+
+		t.Line = l.line
+		t.Start = l.position
+		t.End = l.position
+
+		t.Type = model.LexerFieldPath
+		l.lastTokenType = model.LexerFieldPath
+		return t
+	}
+
 	switch l.char {
 	case '-':
 		t = newToken(model.LexerEmptyRequirement, l.line, l.position, l.position+1, l.Input[l.position:l.position+1])
 	case '(':
 		t = newToken(model.LexerLeftBrace, l.line, l.position, l.position+1, l.Input[l.position:l.position+1])
+		l.pathNext = relPending
 	case ')':
 		t = newToken(model.LexerRightBrace, l.line, l.position, l.position+1, l.Input[l.position:l.position+1])
-	case '|', '&':
+	case '|', '&', '=':
 		t.Literal = l.readOperator()
 
 		t.Line = l.line
@@ -71,8 +89,8 @@ func (l *Lexer) NextToken() model.Token {
 		t.Start = l.position
 		t.End = l.position + 1
 
-		t.Type = model.LexerConditionValue
-		l.lastTokenType = model.LexerConditionValue
+		t.Type = model.LexerConditionValueString
+		l.lastTokenType = model.LexerConditionValueString
 	case 0:
 		t.Literal = ""
 
@@ -100,6 +118,7 @@ func (l *Lexer) NextToken() model.Token {
 
 			t.Type = model.LexerConditionType
 			l.lastTokenType = model.LexerConditionType
+			l.relPending = t.Literal == string(model.RELATION)
 			return t
 		}
 		t = newToken(model.LexerIllegal, l.line, l.position, l.position, l.Input[l.position:l.position+1])
@@ -138,7 +157,7 @@ func isLetter(char byte) bool {
 }
 
 func isOperator(char byte) bool {
-	return char == '|' || char == '&'
+	return char == '|' || char == '&' || char == '=' || char == '>'
 }
 
 // readOperator sets a start position and reads through two characters to get a full operator
@@ -191,4 +210,10 @@ func (l *Lexer) readConditionValue() string {
 		l.readChar()
 	}
 	return l.Input[position:l.position]
+}
+
+// readFieldPath sets a start position and reads through characters
+// until any kind of whitespace or a closing brace to get a field path (unvalidated).
+func (l *Lexer) readFieldPath() string {
+	return l.readConditionValue()
 }

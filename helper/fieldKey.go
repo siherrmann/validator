@@ -20,12 +20,16 @@ func FieldKey(fieldType reflect.StructField) (key string, omitEmpty bool, inline
 		return key, false, false
 	}
 
-	parts := strings.Split(tag, ",")
-	if parts[0] != "-" && parts[0] != "" {
-		key = parts[0]
+	// strings.Cut instead of strings.Split, because this runs for every field on every
+	// Validate call and Split allocates a slice for every tag.
+	name, options, _ := strings.Cut(tag, ",")
+	if name != "-" && name != "" {
+		key = name
 	}
-	for _, part := range parts[1:] {
-		switch part {
+	for options != "" {
+		var option string
+		option, options, _ = strings.Cut(options, ",")
+		switch option {
 		case "omitempty":
 			omitEmpty = true
 		case "inline":

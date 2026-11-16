@@ -71,6 +71,16 @@ func TestLookupConditionType(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "Valid relation condition type",
+			input:   RELATION,
+			wantErr: false,
+		},
+		{
+			name:    "Valid unique condition type",
+			input:   UNIQUE,
+			wantErr: false,
+		},
+		{
 			name:    "Invalid condition type",
 			input:   ConditionType("invalid"),
 			wantErr: true,

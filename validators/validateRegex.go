@@ -21,7 +21,7 @@ func ValidateRegex(v any, ast *model.AstValue) error {
 			return err
 		}
 		for _, check := range checks {
-			match := Regex(check, ast.ConditionValue)
+			match := matchRegex(ast, check)
 			if !match {
 				return fmt.Errorf("value %v does not match regex %v", check, ast.ConditionValue)
 			}
@@ -31,11 +31,19 @@ func ValidateRegex(v any, ast *model.AstValue) error {
 		if err != nil {
 			return fmt.Errorf("error converting value to string: %v", err)
 		}
-		match := Regex(check, ast.ConditionValue)
+		match := matchRegex(ast, check)
 		if !match {
 			return fmt.Errorf("value %v does not match regex %v", check, ast.ConditionValue)
 		}
 	}
 
 	return nil
+}
+
+// matchRegex uses the regex compiled by the parser and only compiles it, if the AST was built without the parser.
+func matchRegex(ast *model.AstValue, s string) bool {
+	if ast.Regex != nil {
+		return ast.Regex.MatchString(s)
+	}
+	return Regex(s, ast.ConditionValue)
 }

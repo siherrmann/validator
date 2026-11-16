@@ -3,6 +3,8 @@ package parser
 import (
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/siherrmann/validator/model"
@@ -46,6 +48,7 @@ func (p *Parser) ParseValidation(validation string) (model.RootNode, error) {
 		))
 		return model.RootNode{RootValue: &model.AstValue{}}, errors.New(p.Errors())
 	}
+	val.UsesFields = val.HasFieldUsage()
 	rootNode.RootValue = val
 
 	return rootNode, nil
@@ -64,12 +67,23 @@ func (p *Parser) currentTokenTypeIs(t model.TokenType) bool {
 
 // parseGroup is called when an open left brace `(` token is found or a requirement starts without a '('.
 func (p *Parser) parseGroup(root bool) *model.AstValue {
+	return p.parseGroupFrom(root, false)
+}
+
+// parseGroupFrom parses a group. With open, the group starts as already opened.
+// This is used for the inner conditions of `rel(<path> <conditions>)`,
+// where the opening brace and the path are already consumed.
+func (p *Parser) parseGroupFrom(root bool, open bool) *model.AstValue {
 	// Most tags hold only a handful of conditions/sub-groups; sizing the slice up
 	// front avoids the repeated grow-and-copy an append-from-nil would do. A group
 	// that turns out to be EMPTY or errors before appending anything just leaves this
 	// capacity unused, which is cheaper than the reallocations it saves in the common case.
 	group := &model.AstValue{Type: model.GROUP, ConditionGroup: make(model.ConditionGroup, 0, 4)}
 	grpState := model.GrpStart
+	if open {
+		grpState = model.GrpOpen
+		group.Start = p.currentToken.Start
+	}
 
 	for !p.currentTokenTypeIs(model.LexerEOF) && grpState != model.GrpEnd {
 		if len(p.errors) > 0 {
@@ -146,10 +160,65 @@ func (p *Parser) parseGroup(root bool) *model.AstValue {
 
 	group.End = p.currentToken.Start
 
+	if len(p.errors) > 0 {
+		return nil
+	}
+	if err := normalizeImplication(group); err != nil {
+		p.parseError(err.Error())
+		return nil
+	}
+
 	return group
 }
 
+// normalizeImplication restructures a group with an implication (`=>`) into exactly two values:
+// the premise (everything before the first `=>`, carrying the `=>` operator) and the consequence
+// (everything after it). `=>` binds weaker than `&&` and `||` and is right associative,
+// so `a && b => c => d` is `(a && b) => (c => d)`. Doing this while parsing keeps the validation
+// a single check: if the premise fails, the group is fulfilled.
+func normalizeImplication(group *model.AstValue) error {
+	conditions := group.ConditionGroup
+	k := -1
+	for i, v := range conditions {
+		if v.Operator == model.IMPLIES {
+			k = i
+			break
+		}
+	}
+	if k == -1 {
+		return nil
+	}
+	if last := conditions[len(conditions)-1]; len(last.Operator) > 0 {
+		return fmt.Errorf("error parsing group, expected a condition after %v", last.Operator)
+	}
+
+	premise := conditions[k]
+	if k > 0 {
+		inner := conditions[: k+1 : k+1]
+		inner[k].Operator = ""
+		premise = &model.AstValue{Type: model.GROUP, ConditionGroup: inner, Operator: model.IMPLIES, Start: inner[0].Start, End: inner[k].End}
+	}
+
+	consequence := conditions[k+1]
+	if len(conditions)-(k+1) > 1 {
+		inner := conditions[k+1:]
+		consequence = &model.AstValue{Type: model.GROUP, ConditionGroup: inner, Start: inner[0].Start, End: inner[len(inner)-1].End}
+		if err := normalizeImplication(consequence); err != nil {
+			return err
+		}
+	}
+
+	group.ConditionGroup = model.ConditionGroup{premise, consequence}
+	return nil
+}
+
 // parseCondition is used to parse a condition and setting the `conditionType`:`condition` pair.
+//
+// Special cases:
+//   - `rel(<path> <conditions>)` parses the path of the related field and its conditions as a group.
+//   - A value starting with `$` (not quoted) is a reference to another field (eg. `min$min_replicas`).
+//   - `unq` can be used without a value.
+//   - Fixed values are prepared once here (see precomputeConditionValue).
 func (p *Parser) parseCondition() *model.AstValue {
 	condition := &model.AstValue{Type: model.CONDITION}
 	conditionState := model.ConType
@@ -158,8 +227,13 @@ func (p *Parser) parseCondition() *model.AstValue {
 		switch conditionState {
 		case model.ConType:
 			if p.currentTokenTypeIs(model.LexerConditionType) {
+				condition.Start = p.currentToken.Start
 				condition.ConditionType = p.parseConditionType()
 				p.nextToken()
+				if condition.ConditionType == model.RELATION {
+					p.parseRelation(condition)
+					return condition
+				}
 				conditionState = model.ConValue
 			} else {
 				p.parseError(fmt.Sprintf(
@@ -171,7 +245,16 @@ func (p *Parser) parseCondition() *model.AstValue {
 		case model.ConValue:
 			if p.currentTokenTypeIs(model.LexerConditionValue) || p.currentTokenTypeIs(model.LexerConditionValueString) {
 				condition.ConditionValue = p.parseConditionValue()
+				if p.currentTokenTypeIs(model.LexerConditionValue) && strings.HasPrefix(condition.ConditionValue, "$") {
+					p.parseReference(condition)
+				} else {
+					p.precomputeConditionValue(condition)
+				}
+				condition.End = p.currentToken.End
 				p.nextToken()
+				conditionState = model.ConEnd
+			} else if condition.ConditionType == model.UNIQUE {
+				// `unq` without a value checks the items themselves.
 				conditionState = model.ConEnd
 			} else {
 				p.parseError(fmt.Sprintf(
@@ -184,6 +267,77 @@ func (p *Parser) parseCondition() *model.AstValue {
 	}
 
 	return condition
+}
+
+// parseRelation parses `(<path> <conditions>)` after the condition type `rel`.
+func (p *Parser) parseRelation(condition *model.AstValue) {
+	if !p.currentTokenTypeIs(model.LexerLeftBrace) {
+		p.parseError(fmt.Sprintf("error parsing rel, expected `(`, got: %s", p.currentToken.Literal))
+		return
+	}
+	p.nextToken()
+	if !p.currentTokenTypeIs(model.LexerFieldPath) {
+		p.parseError(fmt.Sprintf("error parsing rel, expected a field path, got: %s", p.currentToken.Literal))
+		return
+	}
+	ref, err := model.ParseFieldRef(p.currentToken.Literal)
+	if err != nil {
+		p.parseError(fmt.Sprintf("error parsing rel: %v", err))
+		return
+	}
+	condition.Ref = ref
+	condition.ConditionValue = ref.Raw
+	p.nextToken()
+	if p.currentTokenTypeIs(model.LexerRightBrace) {
+		p.parseError(fmt.Sprintf("error parsing rel, expected conditions for field %s", ref.Raw))
+		return
+	}
+
+	inner := p.parseGroupFrom(false, true)
+	if inner == nil {
+		return
+	}
+	condition.ConditionGroup = inner.ConditionGroup
+	condition.End = inner.End
+}
+
+// parseReference parses a `$<path>` condition value.
+func (p *Parser) parseReference(condition *model.AstValue) {
+	switch condition.ConditionType {
+	case model.FUNC, model.DEF, model.IS_TYPE, model.CORRECT_MIN, model.CORRECT_MAX, model.UNIQUE:
+		p.parseError(fmt.Sprintf("error parsing condition, %v can not reference a field", condition.ConditionType))
+		return
+	}
+	ref, err := model.ParseFieldRef(condition.ConditionValue[1:])
+	if err != nil {
+		p.parseError(fmt.Sprintf("error parsing reference: %v", err))
+		return
+	}
+	condition.Ref = ref
+}
+
+// precomputeConditionValue prepares the fixed value of a condition once while parsing,
+// so it does not have to be done on every validation:
+// `rex` is compiled, `frm` and `nfr` are split and `min` and `max` are parsed to a number.
+func (p *Parser) precomputeConditionValue(condition *model.AstValue) {
+	switch condition.ConditionType {
+	case model.REGX:
+		regex, err := regexp.Compile(condition.ConditionValue)
+		if err != nil {
+			p.parseError(fmt.Sprintf("error parsing regex %s: %v", condition.ConditionValue, err))
+			return
+		}
+		condition.Regex = regex
+	case model.FROM, model.NOT_FROM:
+		if strings.TrimSpace(condition.ConditionValue) != "" {
+			condition.List = strings.Split(condition.ConditionValue, ",")
+		}
+	case model.MIN_VALUE, model.MAX_VALUE:
+		if number, err := strconv.ParseFloat(condition.ConditionValue, 64); err == nil {
+			condition.Number = number
+			condition.HasNumber = true
+		}
+	}
 }
 
 // parseOperator is used to parse the condition type.

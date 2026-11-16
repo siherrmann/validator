@@ -58,7 +58,7 @@ func GetValidationFromStructField(tagType string, fieldValue reflect.Value, fiel
 
 	if len(tagSplit) > tagIndex {
 		// Ignore if tag is empty, we do not want to validate this field at all
-		if len(tagSplit[tagIndex]) <= 3 && tagSplit[tagIndex] != "-" {
+		if len(tagSplit[tagIndex]) == 0 {
 			return nil, nil
 		}
 		validation.Requirement = tagSplit[tagIndex]
@@ -100,6 +100,13 @@ func GetValidationFromStructField(tagType string, fieldValue reflect.Value, fiel
 			return nil, fmt.Errorf("error getting inner validation from struct: %v", err)
 		}
 		validation.InnerValidation = append(validation.InnerValidation, innerValidation...)
+	}
+
+	validation.NoFieldUsage = validation.RequirementAST == nil || !validation.RequirementAST.UsesFields
+	for i := range validation.InnerValidation {
+		if validation.InnerValidation[i].UsesFields() {
+			validation.NoFieldUsage = false
+		}
 	}
 
 	return validation, nil

@@ -3,7 +3,6 @@ package validator
 import (
 	"errors"
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/siherrmann/validator/helper"
@@ -122,7 +121,22 @@ func (r *Validator) ValidateAndUpdateWithValidation(jsonInput map[string]any, ma
 //
 // It returns a new JsonMap with the validated values or an error if the validation fails.
 func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations []model.Validation) (map[string]any, error) {
-	keys := []string{}
+	return r.validateWithScope(jsonInput, validations, nil)
+}
+
+// validateWithScope is ValidateWithValidation for a level below the given parent scope (nil for the top level).
+//
+// The scope of this level is only created if a validation of this level (or below) uses other fields,
+// so validations without `rel` or `$` do not pay for it.
+func (r *Validator) validateWithScope(jsonInput map[string]any, validations []model.Validation, parent *scope) (map[string]any, error) {
+	var sc *scope
+	for i := range validations {
+		if validations[i].UsesFields() {
+			sc = &scope{current: jsonInput, parent: parent}
+			break
+		}
+	}
+
 	groups := map[string]*model.Group{}
 	groupSize := map[string]int{}
 	groupErrors := map[string][]error{}
@@ -132,10 +146,8 @@ func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations
 
 	for validationIndex := range validations {
 		validation := validations[validationIndex]
-		if len(validation.Key) > 0 && slices.Contains(keys, validation.Key) {
+		if len(validation.Key) > 0 && hasKeyBefore(validations, validationIndex) {
 			return map[string]any{}, fmt.Errorf("duplicate validation key: %v", validation.Key)
-		} else {
-			keys = append(keys, validation.Key)
 		}
 
 		for _, g := range validation.Groups {
@@ -143,7 +155,7 @@ func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations
 			groupSize[g.Name]++
 		}
 
-		jsonValue, ok, err := r.validateField(jsonInput, &validation)
+		jsonValue, ok, err := r.validateField(jsonInput, &validation, sc)
 		if err != nil {
 			if len(validation.Groups) == 0 {
 				fieldErrors = append(fieldErrors, err)
@@ -171,21 +183,41 @@ func (r *Validator) ValidateWithValidation(jsonInput map[string]any, validations
 	return validateValues, nil
 }
 
+// hasKeyBefore reports if a validation before index i has the same key as validation i.
+func hasKeyBefore(validations []model.Validation, i int) bool {
+	for j := 0; j < i; j++ {
+		if validations[j].Key == validations[i].Key {
+			return true
+		}
+	}
+	return false
+}
+
 // validateField validates the value of a single validation in the given JsonMap.
 // It returns the validated value and if the value should be added to the validated JsonMap.
-func (r *Validator) validateField(jsonInput map[string]any, validation *model.Validation) (any, bool, error) {
+//
+// A requirement that depends on other fields (`rel` or `$`) is also checked if the key is missing
+// or the value is empty with omitempty, with the value null (or ""). This makes conditional requirements
+// like `rel(type equoci) => min1` possible. The field is then not added to the validated JsonMap.
+func (r *Validator) validateField(jsonInput map[string]any, validation *model.Validation, sc *scope) (any, bool, error) {
+	skipResult := false
 	jsonValue, ok := jsonInput[validation.Key]
 	if !ok {
 		if validation.Default != "" {
 			jsonValue = validation.Default
 		} else if strings.TrimSpace(validation.Requirement) == string(model.NONE) {
 			return nil, false, nil
+		} else if requirementUsesFields(validation) {
+			skipResult = true
 		} else {
 			return nil, false, fmt.Errorf("json %v key not in map", validation.Key)
 		}
 	}
 	if validation.OmitEmpty && jsonValue == "" {
-		return nil, false, nil
+		if !requirementUsesFields(validation) {
+			return nil, false, nil
+		}
+		skipResult = true
 	}
 
 	if jsonValue != nil {
@@ -202,18 +234,26 @@ func (r *Validator) validateField(jsonInput map[string]any, validation *model.Va
 	switch validation.Type {
 	case model.Struct:
 		if jsonValueMap, ok := jsonValue.(map[string]any); ok {
-			jsonValue, err = r.validateStruct(jsonValueMap, validation)
+			jsonValue, err = r.validateStruct(jsonValueMap, validation, sc)
 			if err != nil {
 				return nil, false, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
 			}
 		} else {
-			err = r.ValidateValueWithParser(jsonValue, validation)
+			err = r.validateValue(jsonValue, validation, sc)
 		}
 	case model.Array:
 		if helper.IsArray(jsonValue) && len(validation.InnerValidation) > 0 {
 			jsonArray, ok := jsonValue.([]any)
 			if !ok {
 				return nil, false, fmt.Errorf("field %v must be of type array, was %T", validation.Key, jsonValue)
+			}
+
+			// The requirement of the list itself (eg. `min1` or `unqname`).
+			if err := r.validateValue(jsonArray, validation, sc); err != nil {
+				if validation.Default != "" {
+					return validation.Default, true, nil
+				}
+				return nil, false, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
 			}
 
 			validatedArray := []any{}
@@ -223,7 +263,7 @@ func (r *Validator) validateField(jsonInput map[string]any, validation *model.Va
 					return nil, false, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
 				}
 
-				validatedInnerMap, err := r.ValidateWithValidation(jsonValueInnerMap, validation.InnerValidation)
+				validatedInnerMap, err := r.validateWithScope(jsonValueInnerMap, validation.InnerValidation, sc)
 				if err != nil {
 					return nil, false, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
 				}
@@ -231,20 +271,20 @@ func (r *Validator) validateField(jsonInput map[string]any, validation *model.Va
 			}
 			jsonValue = validatedArray
 		} else if helper.IsArray(jsonValue) {
-			err = r.ValidateValueWithParser(jsonValue, validation)
+			err = r.validateValue(jsonValue, validation, sc)
 		} else if helper.IsString(jsonValue) {
 			// Check if the value is a string from a url value.
 			jsonValue = []string{jsonValue.(string)}
-			err = r.ValidateValueWithParser(jsonValue, validation)
+			err = r.validateValue(jsonValue, validation, sc)
 		} else if jsonValue == nil {
-			err = r.ValidateValueWithParser(jsonValue, validation)
+			err = r.validateValue(jsonValue, validation, sc)
 		} else if len(validation.InnerValidation) == 0 {
 			// A lone value (e.g. a single form value) is treated as a one-element list.
 			jsonValue = []any{jsonValue}
-			err = r.ValidateValueWithParser(jsonValue, validation)
+			err = r.validateValue(jsonValue, validation, sc)
 		}
 	default:
-		err = r.ValidateValueWithParser(jsonValue, validation)
+		err = r.validateValue(jsonValue, validation, sc)
 	}
 
 	if err != nil {
@@ -253,8 +293,18 @@ func (r *Validator) validateField(jsonInput map[string]any, validation *model.Va
 		}
 		return nil, false, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
 	}
+	if skipResult {
+		return nil, false, nil
+	}
 
 	return jsonValue, true, nil
+}
+
+// requirementUsesFields reports if the requirement of the validation contains `rel` or a `$` reference.
+// It is only called for missing or empty values, so parsing an uncached requirement here is fine.
+func requirementUsesFields(validation *model.Validation) bool {
+	astValue, err := getRequirementAST(validation)
+	return err == nil && astValue.UsesFields
 }
 
 // validateStruct validates the JsonMap of a struct field by its inner validations.
@@ -264,34 +314,34 @@ func (r *Validator) validateField(jsonInput map[string]any, validation *model.Va
 // If the JsonMap is empty and fulfills the requirement, the inner validations are skipped.
 // If the requirement contains cmn or cmx, invalid inner fields are left out instead of failing
 // and cmn/cmx check the number of correct inner fields (the fields in the validated JsonMap).
-func (r *Validator) validateStruct(jsonValueMap map[string]any, validation *model.Validation) (map[string]any, error) {
+func (r *Validator) validateStruct(jsonValueMap map[string]any, validation *model.Validation, sc *scope) (map[string]any, error) {
 	astValue, err := getRequirementAST(validation)
 	if err != nil {
 		return nil, err
 	}
 
 	if !astValue.HasCondition(model.ConditionType.IsRequirement) {
-		return r.ValidateWithValidation(jsonValueMap, validation.InnerValidation)
+		return r.validateWithScope(jsonValueMap, validation.InnerValidation, sc)
 	}
 
 	if !astValue.HasCondition(model.ConditionType.IsCorrect) {
-		err = r.RunValidatorsOnConditionGroup(jsonValueMap, astValue, nil)
+		err = r.runConditions(jsonValueMap, astValue, nil, sc)
 		if err != nil {
 			return nil, err
 		} else if len(jsonValueMap) == 0 {
 			return map[string]any{}, nil
 		}
-		return r.ValidateWithValidation(jsonValueMap, validation.InnerValidation)
+		return r.validateWithScope(jsonValueMap, validation.InnerValidation, sc)
 	}
 
-	validated, innerErr := r.ValidateWithValidation(jsonValueMap, validation.InnerValidation)
+	validated, innerErr := r.validateWithScope(jsonValueMap, validation.InnerValidation, sc)
 	var fieldErrors model.FieldErrors
 	if innerErr != nil && !errors.As(innerErr, &fieldErrors) {
 		return nil, innerErr
 	}
 
 	correct := len(validated)
-	err = r.RunValidatorsOnConditionGroup(jsonValueMap, astValue, &correct)
+	err = r.runConditions(jsonValueMap, astValue, &correct, sc)
 	if err != nil {
 		if innerErr != nil {
 			return nil, fmt.Errorf("%v, inner errors: %v", err, innerErr)
@@ -321,27 +371,40 @@ func getRequirementAST(validation *model.Validation) (*model.AstValue, error) {
 // ValidateValueWithParser validates a value against a given validation using the parser.
 // It parses the validation requirement and runs the validation function on the input value.
 //
+// A requirement with `rel` or `$` references can not be validated with this function,
+// because the other fields are unknown. Use ValidateWithValidation instead.
+//
 // It returns an error if the validation fails.
 func (r *Validator) ValidateValueWithParser(input any, validation *model.Validation) error {
+	return r.validateValue(input, validation, nil)
+}
+
+// validateValue validates a value against a given validation with the scope of its level.
+func (r *Validator) validateValue(input any, validation *model.Validation, sc *scope) error {
 	astValue, err := getRequirementAST(validation)
 	if err != nil {
 		return err
 	}
 
-	err = r.RunValidatorsOnConditionGroup(input, astValue, nil)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return r.runConditions(input, astValue, nil, sc)
 }
 
 // RunValidatorsOnConditionGroup runs the validators for each condition in the [astValue] on the [input].
 // If the condition is a group, it recursively calls itself on the group.
 // If the operator is AND, it returns an error if any condition fails.
 // If the operator is OR, it collects all errors and returns them if all conditions fail.
+// If the operator is IMPLIES (`=>`), the group is fulfilled if the premise fails, otherwise the consequence has to be fulfilled.
 // [correct] is the number of correct inner fields for cmn and cmx, it is nil if the input has no inner validations.
+//
+// A requirement with `rel` or `$` references can not be validated with this function,
+// because the other fields are unknown. Use ValidateWithValidation instead.
 func (r *Validator) RunValidatorsOnConditionGroup(input any, astValue *model.AstValue, correct *int) error {
+	return r.runConditions(input, astValue, correct, nil)
+}
+
+// runConditions is RunValidatorsOnConditionGroup with the scope of the validated level.
+func (r *Validator) runConditions(input any, astValue *model.AstValue, correct *int, sc *scope) error {
+	onlyOr := isOnlyOr(astValue.ConditionGroup)
 	var errors []error
 	for i, v := range astValue.ConditionGroup {
 		var err error
@@ -349,51 +412,29 @@ func (r *Validator) RunValidatorsOnConditionGroup(input any, astValue *model.Ast
 		case model.EMPTY:
 			return nil
 		case model.GROUP:
-			err = r.RunValidatorsOnConditionGroup(input, v, correct)
+			err = r.runConditions(input, v, correct, sc)
 		case model.CONDITION:
-			switch v.ConditionType {
-			case model.NONE, model.DEF:
-				continue
-			case model.EQUAL:
-				err = validators.ValidateEqual(input, v)
-			case model.NOT_EQUAL:
-				err = validators.ValidateNotEqual(input, v)
-			case model.MIN_VALUE:
-				err = validators.ValidateMin(input, v)
-			case model.MAX_VALUE:
-				err = validators.ValidateMax(input, v)
-			case model.CONTAINS:
-				err = validators.ValidateContains(input, v)
-			case model.NOT_CONTAINS:
-				err = validators.ValidateNotContains(input, v)
-			case model.FROM:
-				err = validators.ValidateFrom(input, v)
-			case model.NOT_FROM:
-				err = validators.ValidateNotFrom(input, v)
-			case model.REGX:
-				err = validators.ValidateRegex(input, v)
-			case model.IS_TYPE:
-				err = validators.ValidateIsType(input, v)
-			case model.CORRECT_MIN, model.CORRECT_MAX:
-				if correct == nil {
-					err = fmt.Errorf("%v is only usable on struct fields with inner validations", v.ConditionType)
-				} else if v.ConditionType == model.CORRECT_MIN {
-					err = validators.ValidateCorrectMin(*correct, v)
-				} else {
-					err = validators.ValidateCorrectMax(*correct, v)
-				}
-			case model.FUNC:
-				fun, ok := r.ValidationFuncs[v.ConditionValue]
-				if !ok {
-					return fmt.Errorf("unknown validation function: %v", v.ConditionValue)
-				}
-				err = fun(input, v)
-			default:
-				return fmt.Errorf("unknown condition type: %v", v.ConditionType)
+			var fatal bool
+			if v.Ref != nil {
+				fatal, err = r.runFieldCondition(input, v, correct, sc)
+			} else {
+				fatal, err = r.runCondition(input, v, correct)
+			}
+			if fatal {
+				return err
 			}
 		}
+		if err == nil && onlyOr {
+			// One fulfilled condition is enough, the other conditions do not have to be checked.
+			return nil
+		}
 		if err != nil {
-			if (i == 0 && v.Operator == model.OR) || (i > 0 && astValue.ConditionGroup[i-1].Operator == model.OR) {
+			if v.Operator == model.IMPLIES {
+				// The premise is not fulfilled, so the consequence does not have to be.
+				return nil
+			} else if i > 0 && astValue.ConditionGroup[i-1].Operator == model.IMPLIES {
+				return fmt.Errorf("%v (required because of %v)", err, premiseToString(astValue.ConditionGroup[i-1]))
+			} else if (i == 0 && v.Operator == model.OR) || (i > 0 && astValue.ConditionGroup[i-1].Operator == model.OR) {
 				errors = append(errors, err)
 			} else {
 				return err
@@ -406,4 +447,65 @@ func (r *Validator) RunValidatorsOnConditionGroup(input any, astValue *model.Ast
 	}
 
 	return nil
+}
+
+// isOnlyOr reports if all conditions of the group are connected with OR.
+func isOnlyOr(conditions model.ConditionGroup) bool {
+	if len(conditions) < 2 {
+		return false
+	}
+	for _, v := range conditions[:len(conditions)-1] {
+		if v.Operator != model.OR {
+			return false
+		}
+	}
+	return true
+}
+
+// runCondition runs the validator of a single condition (without `rel` or `$` reference).
+// fatal reports a configuration error (eg. an unknown function), that is returned also inside an OR group.
+func (r *Validator) runCondition(input any, v *model.AstValue, correct *int) (fatal bool, err error) {
+	switch v.ConditionType {
+	case model.NONE, model.DEF:
+		return false, nil
+	case model.EQUAL:
+		err = validators.ValidateEqual(input, v)
+	case model.NOT_EQUAL:
+		err = validators.ValidateNotEqual(input, v)
+	case model.MIN_VALUE:
+		err = validators.ValidateMin(input, v)
+	case model.MAX_VALUE:
+		err = validators.ValidateMax(input, v)
+	case model.CONTAINS:
+		err = validators.ValidateContains(input, v)
+	case model.NOT_CONTAINS:
+		err = validators.ValidateNotContains(input, v)
+	case model.FROM:
+		err = validators.ValidateFrom(input, v)
+	case model.NOT_FROM:
+		err = validators.ValidateNotFrom(input, v)
+	case model.REGX:
+		err = validators.ValidateRegex(input, v)
+	case model.IS_TYPE:
+		err = validators.ValidateIsType(input, v)
+	case model.UNIQUE:
+		err = validators.ValidateUnique(input, v)
+	case model.CORRECT_MIN, model.CORRECT_MAX:
+		if correct == nil {
+			err = fmt.Errorf("%v is only usable on struct fields with inner validations", v.ConditionType)
+		} else if v.ConditionType == model.CORRECT_MIN {
+			err = validators.ValidateCorrectMin(*correct, v)
+		} else {
+			err = validators.ValidateCorrectMax(*correct, v)
+		}
+	case model.FUNC:
+		fun, ok := r.ValidationFuncs[v.ConditionValue]
+		if !ok {
+			return true, fmt.Errorf("unknown validation function: %v", v.ConditionValue)
+		}
+		err = fun(input, v)
+	default:
+		return true, fmt.Errorf("unknown condition type: %v", v.ConditionType)
+	}
+	return false, err
 }

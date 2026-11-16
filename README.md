@@ -187,12 +187,14 @@ type Request struct {
 
 ## Requirement
 
-You can build complex requirements by building a query of conditions, operators (`&&` (=AND) and `||` (=OR)) and groups (with `(` and `)`).
+You can build complex requirements by building a query of conditions, operators (`&&` (=AND), `||` (=OR) and `=>` (=IMPLIES)) and groups (with `(` and `)`).
 
 A complex example for a password check (min length 8, max length 30, at least one capital letter, one small letter, one digit and one special character) would be:
 `vld:"min8 max30 rex^(.*[A-Z])+(.*)$ rex^(.*[a-z])+(.*)$ rex^(.*\\d)+(.*)$ rex^(.*[\x60!@#$%^&*()_+={};':\"|\\,.<>/?~-])+(.*)$"`.
 In this example all connections are `&&` (=AND) connections. Because behind the requirement check is a little parser you can also do more complex requirements with multiple conditions grouped and connected with AND and OR connections.
 You can do for example `vld:"max0 || ((min10 && max30) || equTest)"` for a string that has to be either empty, the string `Test` or between 10 and 30 characters long. And yes, the outer brackets are not needed 😉.
+
+`a => b` means "if `a` is fulfilled, `b` has to be fulfilled too". If `a` is not fulfilled, the requirement is fulfilled. `=>` binds weaker than `&&` and `||`, so `min1 && max5 => equ3 || equ4` is `(min1 && max5) => (equ3 || equ4)`. Use brackets to combine it with other conditions, eg. `(min3 => max5) && conb`. It is mostly used together with `rel` (see [Relations](#relations)).
 
 ### Condition types
 
@@ -207,13 +209,17 @@ Conditions have different usages per variable type:
 - `nco` - `!strings.Contains(string, condition)`, `!contains(array, condition)`, int/float ignored
 - `frm` - Checks if given comma seperated list contains value/every item in array/every key in map.
 - `nfr` - Checks if given comma seperated list does not contain value/every item in array/every key in map.
-- `rex` - `regexp.MatchString(condition, strconv.Itoa(int)/strconv.FormatFloat(float, 'f', 3, 64)/string)`, array ignored
+- `rex` - `regexp.MatchString(condition, strconv.Itoa(int)/strconv.FormatFloat(float, 'f', 3, 64)/string)`, every item of an array/every key of a map (eg. env names)
 - `ist` - Checks if string is of a certain format (e.g., `istuuid`, `istemail`, `istpassword`). Supported types: `uuid`, `unixmilli`, `timerfc3339`, `email`, `url`, `alpha`, `alphanum`, `numeric`, `hex`, `base64`, `json`, `jwt`, `ip`, `ipv4`, `ipv6`, `mac`, `password`.
 - `cmn` - Checks if at least `condition` inner fields of a struct are correct (eg. `cmn2`), only usable on struct fields.
 - `cmx` - Checks if at most `condition` inner fields of a struct are correct (eg. `cmx2`), only usable on struct fields.
+- `unq` - Checks that every item of a list is unique (`unq`) or that a field of every item in a list of structs is unique (eg. `unqname`).
+- `rel` - Checks the conditions in the brackets on another field (eg. `rel(delivery equshipping)`), see [Relations](#relations).
 - `fun` - Checks the value with a custom function. The function has to be added to the validator, so it does not work with the wrapped functions. It can be used beside other requirements like `min3 && funYourCheckFunction`. This also allows you to check unsupported types by only using `funYourCheckFunction`.
 
 A `null` value (e.g. `{"name": null}` in json or `name:` in yaml) counts as length/value `0` for `min` and `max`, so `max0` passes and `min1` fails. It is not equal to, does not contain, is not part of and does not match any condition, so `equ`, `con`, `frm`, `rex` and `ist` fail and `neq`, `nco` and `nfr` pass.
+
+All conditions except `fun`, `def`, `ist`, `cmn`, `cmx` and `unq` can compare with the value of another field instead of a fixed value by using `$` and the path of the field (eg. `min$earliest_day`), see [Relations](#relations). A value starting with `$` is therefore always a reference, put it in quotes (eg. `equ'$100'`) to use it as a fixed value.
 
 For con you need to put in a condition that is convertable to the underlying type of the arrary.
 Eg. for an array of int the condition must be convertable to int (bad: `vld:"conA"`, good: `vld:"con1"`).
@@ -243,6 +249,48 @@ type Request struct {
     } `json:"address" vld:"max0 || cmn2"`
 }
 ```
+
+## Relations
+
+Requirements can depend on other fields with `rel` and `$`.
+
+- `rel(<path> <conditions>)` is fulfilled if the field at `<path>` fulfills `<conditions>`. Combined with `=>` this is a conditional requirement: `rel(delivery equshipping) => min1` means "if `delivery` is `shipping`, this field is required".
+- `<condition>$<path>` compares with the value of the field at `<path>` instead of a fixed value, eg. `min$earliest_day`. With `frm` and `nfr` the referenced field can also be a list (eg. `frm$../items.name`) or a map, then its keys are used.
+
+A path is relative to the level of the validated field:
+
+- `name` - a field on the same level.
+- `../name` - a field one level up (repeatable, eg. `../../name`). Items of a list of structs are one level below the struct with the list.
+- `/name` - a field of the top level struct.
+- `name.inner` - an inner field. On a list of structs it collects the field of every item (eg. `items.name`).
+
+A missing field is `null` for `rel`, so `rel(other equyes)` is not fulfilled if `other` is missing. A missing field for `$` is an error.
+A field with `rel` or `$` in its requirement is also validated if its key is missing or if it is empty with `omitempty`, the value is `null` (or `""`) then. So `rel(delivery equshipping) => min1` fails for a missing key if `delivery` is `shipping`. Missing fields are not added to the validated values.
+References are resolved on the given input (not on validated or default values), so the order of the fields does not matter.
+`rel` and `$` need the other fields, so they only work with `Validate`, `ValidateAndUpdate`, `ValidateWithValidation` and the functions using them, but not with `ValidateValueWithParser` or `RunValidatorsOnConditionGroup`.
+
+```go
+type Order struct {
+    Delivery string `json:"delivery" vld:"frmpickup,shipping"`
+    // Required if the order is shipped.
+    Address string `json:"address,omitempty" vld:"rel(delivery equshipping) => min1"`
+    // At least one item, every name only once.
+    Items []struct {
+        Name string `json:"name" vld:"min1"`
+    } `json:"items" vld:"min1 && unqname"`
+    // Optional, but the gift has to be one of the ordered items (one level up).
+    Gift *struct {
+        Item string `json:"item" vld:"frm$../items.name"`
+    } `json:"gift,omitempty" vld:"-"`
+    EarliestDay int `json:"earliest_day" vld:"min1"`
+    // Not before the earliest day.
+    LatestDay int `json:"latest_day" vld:"min$earliest_day"`
+}
+```
+
+## Lists of structs
+
+The inner fields of every item are validated by their own tags. The requirement of the list itself is checked on the list, eg. `min1` for at least one item or `unqname` for unique names.
 
 ## Groups
 
@@ -307,6 +355,7 @@ To run benchmarks run `go test -bench . -count 100 > bench.txt` (with memory all
 - Validate json, yaml or form values by validations.
 - Validate and update a struct from `JsonMap`.
 - **Tag-based validation**: Define validation rules directly within struct tags using a concise syntax (e.g. `vld:"(min3 && ncotest) || max0"`). Use multiple custom tags in one struct for multiple validation situations. The dafault tag is `vld`.
+- **Relations**: Conditional requirements and comparisons with other fields, also on other levels (e.g. `vld:"rel(delivery equshipping) => min1"` or `vld:"min$earliest_day"`).
 - **Custom validation functions**: Extend the validation capabilities by registering and using your own custom validation logic. Use it beside other requirements like `min3 && funYourCheckFunction`. This also allows you to check unsupported types by only using `funYourCheckFunction`.
 - **Nested struct support**: Seamlessly validate complex data structures containing nested structs.
 - **Array validation**: Apply validation rules to elements within arrays and slices.

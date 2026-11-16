@@ -3,6 +3,7 @@ package validator
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"regexp"
 	"testing"
@@ -179,4 +180,115 @@ func BenchmarkLexing(b *testing.B) {
 			}
 		}
 	}
+}
+
+// BenchmarkValidateRelations measures a struct with rel, =>, $ references, unq and fun
+// (the service spec of validatorRelation_test.go) once its extraction is cached.
+func BenchmarkValidateRelations(b *testing.B) {
+	r := newRelValidator()
+	spec := validRelServiceSpec()
+	if err := r.Validate(spec); err != nil {
+		b.Fatalf("error validating %v", err)
+	}
+
+	b.ReportAllocs()
+	for b.Loop() {
+		if err := r.Validate(spec); err != nil {
+			b.Fatalf("error validating %v", err)
+		}
+	}
+}
+
+// BenchmarkManualRelations is the hand written equivalent of BenchmarkValidateRelations,
+// as the baseline for what the tags cost.
+func BenchmarkManualRelations(b *testing.B) {
+	spec := validRelServiceSpec()
+	envKey := regexp.MustCompile(`^[A-Z_][A-Z0-9_]*$`)
+	if err := manualRelRules(spec, envKey); err != nil {
+		b.Fatalf("error validating %v", err)
+	}
+
+	b.ReportAllocs()
+	for b.Loop() {
+		if err := manualRelRules(spec, envKey); err != nil {
+			b.Fatalf("error validating %v", err)
+		}
+	}
+}
+
+func manualRelRules(s *relServiceSpec, envKey *regexp.Regexp) error {
+	guestPath := func(p string) error {
+		if len(p) == 0 || p[0] != '/' {
+			return errors.New("path must be absolute")
+		}
+		return nil
+	}
+	switch s.Image.Type {
+	case "oci":
+		if s.Image.Ref == "" {
+			return errors.New("image ref is required for oci images")
+		}
+	case "go", "dockerfile":
+		if s.Image.Path == "" {
+			return errors.New("image path is required")
+		}
+	default:
+		return errors.New("invalid image type")
+	}
+	if a := s.Autoscale; a != nil {
+		if s.Stateful {
+			return errors.New("stateful services can not be autoscaled")
+		}
+		if a.MaxReplicas < a.MinReplicas {
+			return errors.New("max_replicas must not be lower than min_replicas")
+		}
+		if a.TargetCPUPercent == 0 && a.TargetMemoryPercent == 0 {
+			return errors.New("autoscale requires a cpu or memory target")
+		}
+	}
+	ports := map[int]bool{}
+	for _, p := range s.Ports {
+		if p.Port < 1 || p.Port > 65535 {
+			return errors.New("invalid port")
+		}
+		ports[p.Port] = true
+	}
+	if h := s.HealthCheck; h != nil && h.Type == "http" && h.Path == "" {
+		return errors.New("http health checks need a path")
+	}
+	if in := s.Ingress; in != nil && !ports[in.Port] {
+		return errors.New("ingress port is not a service port")
+	}
+	for k := range s.Env {
+		if !envKey.MatchString(k) {
+			return errors.New("invalid env name")
+		}
+	}
+	for _, k := range s.Secrets {
+		if !envKey.MatchString(k) {
+			return errors.New("invalid secret name")
+		}
+		if _, ok := s.Env[k]; ok {
+			return errors.New("secret collides with env")
+		}
+	}
+	if len(s.Volumes) > 0 && !s.Stateful {
+		return errors.New("volumes require a stateful service")
+	}
+	names := map[string]bool{}
+	for _, v := range s.Volumes {
+		if names[v.Name] {
+			return errors.New("duplicate volume")
+		}
+		names[v.Name] = true
+		if err := guestPath(v.MountPath); err != nil {
+			return err
+		}
+	}
+	for _, f := range s.Files {
+		if err := guestPath(f.Path); err != nil {
+			return err
+		}
+	}
+	return nil
 }

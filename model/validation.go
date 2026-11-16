@@ -15,6 +15,15 @@ type Validation struct {
 	InnerValidation []Validation
 	// Parsed AST representation of the requirement to avoid redundant parsing
 	RequirementAST *AstValue
+	// NoFieldUsage is set by GetValidationsFromStruct if neither the requirement nor any inner validation
+	// uses `rel` or a `$` reference. The validator then skips tracking the levels of the input.
+	// It is false for validations built by hand, which is always correct, just a bit slower.
+	NoFieldUsage bool
+}
+
+// UsesFields reports if the validation (or one of its inner validations) may use `rel` or a `$` reference.
+func (v *Validation) UsesFields() bool {
+	return !v.NoFieldUsage
 }
 
 // ValidatorMap is a map of validation keys to Validation objects.

@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -20,6 +21,12 @@ func (r *RootNode) ExtractDefault() string {
 
 // AstValue (=abstract syntax tree value) holds a Type ("Condition" or "Group") as well as a `ConditionType` and `ConditionValue`.
 // The ConditionType is a [model.ConditionType] and the ConditionValue is any string (numbers are also represented as string).
+//
+// A `rel` condition holds the path of the related field in Ref and the conditions
+// for the related field in ConditionGroup. A condition with a `$` value (eg. `min$min_replicas`)
+// holds the path of the referenced field in Ref, its value is resolved while validating.
+//
+// The AST is cached and shared between goroutines, it must not be modified while validating.
 type AstValue struct {
 	Type           AstValueType
 	ConditionType  ConditionType
@@ -28,6 +35,34 @@ type AstValue struct {
 	Operator       Operator
 	Start          int
 	End            int
+	// Ref is the path of the related (`rel`) or referenced (`$`) field.
+	Ref *FieldRef
+	// Regex is the compiled regular expression of a `rex` condition with a fixed value.
+	Regex *regexp.Regexp
+	// List is the split value of a `frm` or `nfr` condition with a fixed value.
+	List []string
+	// Number is the parsed value of a `min` or `max` condition, if HasNumber is set.
+	Number    float64
+	HasNumber bool
+	// UsesFields reports if the AST contains a `rel` condition or a `$` reference.
+	// It is only set on the root value by the parser.
+	UsesFields bool
+}
+
+// HasFieldUsage recursively checks if the AST value contains a `rel` condition or a `$` reference.
+func (r *AstValue) HasFieldUsage() bool {
+	if r == nil {
+		return false
+	}
+	for _, v := range r.ConditionGroup {
+		if v.Ref != nil {
+			return true
+		}
+		if v.Type == GROUP && v.HasFieldUsage() {
+			return true
+		}
+	}
+	return false
 }
 
 // ExtractDefault recursively searches the AST value for a 'DEF' condition and returns its value.
@@ -101,12 +136,21 @@ func (r AstValue) AstGroupToString() string {
 // If the AstValue has an Operator, it includes that in the string.
 // The resulting string is formatted as "<ConditionType>'<ConditionValue>' <Operator>" if the Operator is present,
 // or as "<ConditionType>'<ConditionValue>'" if the Operator is not present.
+// A `rel` condition is formatted as "rel(<path> <conditions>)" and a `$` reference as "<ConditionType>$<path>".
 func (r AstValue) AstConditionToString() string {
-	if len(r.Operator) > 0 {
-		return fmt.Sprintf("%v'%v' %v", r.ConditionType, r.ConditionValue, r.Operator)
-	} else {
-		return fmt.Sprintf("%v'%v'", r.ConditionType, r.ConditionValue)
+	var condition string
+	switch {
+	case r.ConditionType == RELATION && r.Ref != nil:
+		condition = fmt.Sprintf("rel(%v %v)", r.Ref.Raw, r.AstGroupToString())
+	case r.Ref != nil:
+		condition = fmt.Sprintf("%v$%v", r.ConditionType, r.Ref.Raw)
+	default:
+		condition = fmt.Sprintf("%v'%v'", r.ConditionType, r.ConditionValue)
 	}
+	if len(r.Operator) > 0 {
+		return condition + " " + string(r.Operator)
+	}
+	return condition
 }
 
 // Operator is the type for all available operators.
@@ -115,15 +159,17 @@ type Operator string
 // Available operators.
 const (
 	// Group states
-	AND Operator = "&&"
-	OR  Operator = "||"
+	AND     Operator = "&&"
+	OR      Operator = "||"
+	IMPLIES Operator = "=>"
 )
 
 // validOperator is a map that holds valid operators and their corresponding integer values.
 // This map is used to validate operators in the AST.
 var validOperator = map[Operator]int{
-	AND: 0,
-	OR:  1,
+	AND:     0,
+	OR:      1,
+	IMPLIES: 2,
 }
 
 // LookupOperator checks our validOperator map for the scanned operator.

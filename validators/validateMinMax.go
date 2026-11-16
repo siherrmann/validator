@@ -13,7 +13,7 @@ func ValidateMin(v any, ast *model.AstValue) error {
 	if err != nil {
 		return fmt.Errorf("invalid value for min validation: %v", err)
 	}
-	compare, err := helper.ConditionValueToT(check, ast.ConditionValue)
+	compare, err := minMaxCompare(check, ast)
 	if err != nil {
 		return err
 	}
@@ -29,7 +29,7 @@ func ValidateMax(v any, ast *model.AstValue) error {
 	if err != nil {
 		return fmt.Errorf("invalid value for max validation: %v", err)
 	}
-	compare, err := helper.ConditionValueToT(check, ast.ConditionValue)
+	compare, err := minMaxCompare(check, ast)
 	if err != nil {
 		return err
 	}
@@ -38,6 +38,15 @@ func ValidateMax(v any, ast *model.AstValue) error {
 		return fmt.Errorf("value greater than maximum condition %v", ast.ConditionValue)
 	}
 	return nil
+}
+
+// minMaxCompare returns the condition value of min and max as float64.
+// It uses the value parsed by the parser and only parses it, if the AST was built without the parser.
+func minMaxCompare(check float64, ast *model.AstValue) (float64, error) {
+	if ast.HasNumber {
+		return ast.Number, nil
+	}
+	return helper.ConditionValueToT(check, ast.ConditionValue)
 }
 
 // ValidateCorrectMin checks if at least the condition value of inner fields are correct.

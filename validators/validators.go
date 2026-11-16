@@ -151,3 +151,83 @@ func Regex(s, regex string) bool {
 	matched, _ := regexp.MatchString(regex, s)
 	return matched
 }
+
+// fromValues is From with the values of a referenced field, see ValidateFromValues.
+func fromValues(v any, from any, not bool) bool {
+	if v == nil {
+		// A null value is not part of any list
+		return not
+	}
+
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < rv.Len(); i++ {
+			if containsValue(from, rv.Index(i).Interface()) == not {
+				return false
+			}
+		}
+		return true
+	case reflect.Map:
+		iter := rv.MapRange()
+		for iter.Next() {
+			if containsValue(from, iter.Key().Interface()) == not {
+				return false
+			}
+		}
+		return true
+	default:
+		return containsValue(from, v) != not
+	}
+}
+
+// containsValue reports if the item is the value, an item of the list or a key of the map from.
+func containsValue(from any, item any) bool {
+	if values, ok := from.([]any); ok {
+		for _, value := range values {
+			if equalValue(item, value) {
+				return true
+			}
+		}
+		return false
+	}
+
+	rv := reflect.ValueOf(from)
+	switch rv.Kind() {
+	case reflect.Invalid:
+		return false
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < rv.Len(); i++ {
+			if equalValue(item, rv.Index(i).Interface()) {
+				return true
+			}
+		}
+		return false
+	case reflect.Map:
+		iter := rv.MapRange()
+		for iter.Next() {
+			if equalValue(item, iter.Key().Interface()) {
+				return true
+			}
+		}
+		return false
+	default:
+		return equalValue(item, from)
+	}
+}
+
+// equalValue compares two values, converting b to the type of a if the types differ.
+func equalValue(a any, b any) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	typeA := reflect.TypeOf(a)
+	if typeA == reflect.TypeOf(b) {
+		if typeA.Comparable() {
+			return a == b
+		}
+		return reflect.DeepEqual(a, b)
+	}
+	converted, err := helper.AnyToType(b, typeA)
+	return err == nil && reflect.DeepEqual(a, converted)
+}

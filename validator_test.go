@@ -2302,3 +2302,43 @@ func TestRunValidatorsOnConditionGroup(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateListOfStructsRequirement(t *testing.T) {
+	type Item struct {
+		Name string `json:"name" vld:"min1"`
+	}
+	type Request struct {
+		Items []Item   `json:"items" vld:"min1 && unqname"`
+		Tags  []string `json:"tags" vld:"unq"`
+	}
+
+	r := NewValidator()
+	assert.NoError(t, r.Validate(&Request{Items: []Item{{Name: "a"}, {Name: "b"}}, Tags: []string{"a"}}))
+
+	err := r.Validate(&Request{Items: []Item{}, Tags: []string{"a"}})
+	require.Error(t, err, "The requirement of a list of structs has to be checked")
+	assert.Contains(t, err.Error(), "field items invalid")
+
+	err = r.Validate(&Request{Items: []Item{{Name: "a"}, {Name: "a"}}})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not unique")
+
+	err = r.Validate(&Request{Items: []Item{{Name: "a"}}, Tags: []string{"a", "a"}})
+	require.Error(t, err, "A tag with only `unq` has to be validated")
+	assert.Contains(t, err.Error(), "field tags invalid")
+}
+
+func TestValidateOrShortCircuit(t *testing.T) {
+	r := NewValidator()
+	called := 0
+	r.AddValidationFunc(func(input any, astValue *model.AstValue) error {
+		called++
+		return nil
+	}, "count")
+
+	assert.NoError(t, r.ValidateValueWithParser("abc", &model.Validation{Requirement: "min1 || funcount"}))
+	assert.Equal(t, 0, called, "The second condition of a fulfilled OR group does not have to be checked")
+
+	assert.NoError(t, r.ValidateValueWithParser("abc", &model.Validation{Requirement: "max1 || funcount"}))
+	assert.Equal(t, 1, called)
+}

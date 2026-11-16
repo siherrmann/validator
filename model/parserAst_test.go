@@ -168,6 +168,11 @@ func TestLookupOperator(t *testing.T) {
 			expected: nil,
 		},
 		{
+			name:     "Valid IMPLIES operator",
+			operator: IMPLIES,
+			expected: nil,
+		},
+		{
 			name:     "Invalid operator",
 			operator: Operator("invalid"),
 			expected: fmt.Errorf("expected a valid operator, found: invalid"),
@@ -180,4 +185,27 @@ func TestLookupOperator(t *testing.T) {
 			assert.Equal(t, test.expected, valid, "Expected operator validity to match")
 		})
 	}
+}
+
+func TestHasFieldUsage(t *testing.T) {
+	ref := &FieldRef{Raw: "a", Path: []string{"a"}}
+	assert.False(t, (*AstValue)(nil).HasFieldUsage())
+	assert.False(t, (&AstValue{ConditionGroup: ConditionGroup{{Type: CONDITION, ConditionType: MIN_VALUE}}}).HasFieldUsage())
+	assert.True(t, (&AstValue{ConditionGroup: ConditionGroup{{Type: CONDITION, ConditionType: MIN_VALUE, Ref: ref}}}).HasFieldUsage())
+	assert.True(t, (&AstValue{ConditionGroup: ConditionGroup{{Type: GROUP, ConditionGroup: ConditionGroup{{Type: CONDITION, ConditionType: RELATION, Ref: ref}}}}}).HasFieldUsage())
+}
+
+func TestAstConditionToStringWithFields(t *testing.T) {
+	ref := &FieldRef{Raw: "../type", Up: 1, Path: []string{"type"}}
+	relation := AstValue{
+		Type:           CONDITION,
+		ConditionType:  RELATION,
+		Ref:            ref,
+		ConditionGroup: ConditionGroup{{Type: CONDITION, ConditionType: EQUAL, ConditionValue: "oci"}},
+		Operator:       IMPLIES,
+	}
+	assert.Equal(t, "rel(../type equ'oci') =>", relation.AstConditionToString())
+
+	reference := AstValue{Type: CONDITION, ConditionType: MIN_VALUE, Ref: ref}
+	assert.Equal(t, "min$../type", reference.AstConditionToString())
 }

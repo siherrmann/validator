@@ -7,10 +7,11 @@ import (
 )
 
 // validateAllocBudget is the ceiling asserted below for a Validate call once its
-// type's extraction is already cached. It sits comfortably above the ~23 allocs/op
+// type's extraction is already cached. It sits a little above the ~8 allocs/op
 // this repo measures today (see BenchmarkValidateCachedType) so the test only fails on
 // a real regression, not on incidental noise from an unrelated runtime change.
-const validateAllocBudget = 30
+// Before the condition values were precomputed by the parser it was ~23 allocs/op.
+const validateAllocBudget = 12
 
 // TestValidateAllocationBudgetWhenCached is the allocation-budget test called for by
 // this package's performance work: once a type's validations are cached,

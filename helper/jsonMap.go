@@ -29,6 +29,26 @@ func UnmapStructToJsonMap(structInput any, jsonMapToUpdate *map[string]any) erro
 	return nil
 }
 
+// unmapInline returns the JsonMap of an inline struct (or pointer to struct) field.
+// ok is false if the field is not a struct, a nil pointer has no fields.
+func unmapInline(field reflect.Value) (map[string]any, bool) {
+	if field.Kind() == reflect.Ptr {
+		if field.Type().Elem().Kind() != reflect.Struct {
+			return nil, false
+		}
+		if field.IsNil() {
+			return nil, true
+		}
+		field = field.Elem()
+	}
+	if field.Kind() != reflect.Struct {
+		return nil, false
+	}
+	inner := map[string]any{}
+	unmapStructValue(field, inner)
+	return inner, true
+}
+
 var textMarshalerType = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
 
 // unmapStructValue writes the exported fields of the struct value into the JsonMap.
@@ -43,15 +63,10 @@ func unmapStructValue(structValue reflect.Value, jsonMap map[string]any) {
 
 		fieldKey, _, isInline := FieldKey(fieldType)
 		if isInline {
-			inner := field
-			if inner.Kind() == reflect.Ptr {
-				if inner.IsNil() {
-					continue
+			if inner, ok := unmapInline(field); ok {
+				for k, v := range inner {
+					jsonMap[k] = v
 				}
-				inner = inner.Elem()
-			}
-			if inner.Kind() == reflect.Struct {
-				unmapStructValue(inner, jsonMap)
 				continue
 			}
 		}

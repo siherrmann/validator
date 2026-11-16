@@ -5,6 +5,7 @@ import (
 
 	"github.com/siherrmann/validator/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetValidationsFromStruct(t *testing.T) {
@@ -180,11 +181,12 @@ func TestGetValidationsFromStruct(t *testing.T) {
 			} else {
 				assert.NoError(t, err, "Expected no error when getting validations")
 
-				// Helper to clear ASTs for equality testing
+				// Helper to clear ASTs and derived flags for equality testing
 				var clearASTs func(vs []model.Validation)
 				clearASTs = func(vs []model.Validation) {
 					for i := range vs {
 						vs[i].RequirementAST = nil
+						vs[i].NoFieldUsage = false
 						clearASTs(vs[i].InnerValidation)
 					}
 				}
@@ -194,4 +196,27 @@ func TestGetValidationsFromStruct(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetValidationsFromStructFieldUsage(t *testing.T) {
+	type Inner struct {
+		Value int `json:"value" vld:"min$../min"`
+	}
+	type Plain struct {
+		Value int `json:"value" vld:"min1"`
+	}
+	type Request struct {
+		Min   int    `json:"min" vld:"min1"`
+		Name  string `json:"name" vld:"rel(min equ1) => min1"`
+		Inner Inner  `json:"inner" vld:"-"`
+		Plain Plain  `json:"plain" vld:"-"`
+	}
+
+	validations, err := GetValidationsFromStruct(&Request{}, model.VLD)
+	require.NoError(t, err)
+	usage := map[string]bool{}
+	for _, v := range validations {
+		usage[v.Key] = v.UsesFields()
+	}
+	assert.Equal(t, map[string]bool{"min": false, "name": true, "inner": true, "plain": false}, usage)
 }

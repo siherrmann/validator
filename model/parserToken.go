@@ -33,6 +33,7 @@ const (
 	LexerConditionType        TokenType = "CONDITION_TYPE"
 	LexerConditionValue       TokenType = "CONDITION_VALUE"
 	LexerConditionValueString TokenType = "CONDITION_VALUE_STRING"
+	LexerFieldPath            TokenType = "FIELD_PATH"
 
 	// Operators
 	LexerOperator TokenType = "OPERATOR"
