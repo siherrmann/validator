@@ -71,6 +71,16 @@ func TestUnmarshalJsonToJsonMap(t *testing.T) {
 		assert.Error(t, err, "Expected error when unmarshaling invalid JSON")
 		assert.Contains(t, err.Error(), "error unmarshaling:", "Expected error to contain JSON parsing error")
 	})
+
+	t.Run("Duplicate keys", func(t *testing.T) {
+		_, err := UnmarshalJsonToJsonMap([]byte(`{"key":"a","key":"b"}`))
+		assert.ErrorContains(t, err, "duplicate object member name")
+	})
+
+	t.Run("Invalid UTF-8", func(t *testing.T) {
+		_, err := UnmarshalJsonToJsonMap([]byte("{\"key\":\"\xff\"}"))
+		assert.ErrorContains(t, err, "invalid UTF-8")
+	})
 }
 
 func TestUnmarshalYamlToJsonMap(t *testing.T) {

@@ -287,7 +287,7 @@ func (r *Validator) validateField(ctx context.Context, jsonInput map[string]any,
 			err = r.validateValue(ctx, jsonValue, validation, sc)
 		}
 	case model.Array:
-		if helper.IsArray(jsonValue) && len(validation.InnerValidation) > 0 {
+		if helper.IsArray(jsonValue) && len(validation.Inner()) > 0 {
 			jsonArray, ok := jsonValue.([]any)
 			if !ok {
 				return nil, false, fmt.Errorf("field %v must be of type array, was %T", validation.Key, jsonValue)
@@ -308,7 +308,7 @@ func (r *Validator) validateField(ctx context.Context, jsonInput map[string]any,
 					return nil, false, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
 				}
 
-				validatedInnerMap, err := r.validateWithScope(ctx, jsonValueInnerMap, validation.InnerValidation, sc)
+				validatedInnerMap, err := r.validateWithScope(ctx, jsonValueInnerMap, validation.Inner(), sc)
 				if err != nil {
 					return nil, false, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
 				}
@@ -323,7 +323,7 @@ func (r *Validator) validateField(ctx context.Context, jsonInput map[string]any,
 			err = r.validateValue(ctx, jsonValue, validation, sc)
 		} else if jsonValue == nil {
 			err = r.validateValue(ctx, jsonValue, validation, sc)
-		} else if len(validation.InnerValidation) == 0 {
+		} else if len(validation.Inner()) == 0 {
 			// A lone value (e.g. a single form value) is treated as a one-element list.
 			jsonValue = []any{jsonValue}
 			err = r.validateValue(ctx, jsonValue, validation, sc)
@@ -366,7 +366,7 @@ func (r *Validator) validateStruct(ctx context.Context, jsonValueMap map[string]
 	}
 
 	if !astValue.HasCondition(model.ConditionType.IsRequirement) {
-		return r.validateWithScope(ctx, jsonValueMap, validation.InnerValidation, sc)
+		return r.validateWithScope(ctx, jsonValueMap, validation.Inner(), sc)
 	}
 
 	if !astValue.HasCondition(model.ConditionType.IsCorrect) {
@@ -376,10 +376,10 @@ func (r *Validator) validateStruct(ctx context.Context, jsonValueMap map[string]
 		} else if len(jsonValueMap) == 0 {
 			return map[string]any{}, nil
 		}
-		return r.validateWithScope(ctx, jsonValueMap, validation.InnerValidation, sc)
+		return r.validateWithScope(ctx, jsonValueMap, validation.Inner(), sc)
 	}
 
-	validated, innerErr := r.validateWithScope(ctx, jsonValueMap, validation.InnerValidation, sc)
+	validated, innerErr := r.validateWithScope(ctx, jsonValueMap, validation.Inner(), sc)
 	var fieldErrors model.FieldErrors
 	if innerErr != nil && !errors.As(innerErr, &fieldErrors) {
 		return nil, innerErr

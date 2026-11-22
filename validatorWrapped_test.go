@@ -64,7 +64,7 @@ func TestWrappedUnmapOrUnmarshalAndValidate(t *testing.T) {
 	var s testStruct
 
 	err := UnmapOrUnmarshalAndValidate(req, &s)
-	assert.NoError(t, err, "Expected no error on unmap or unmarshal and validate")
+	assert.NoError(t, err, "Expected no error on unmap or unmarshal validate and update")
 	assert.Equal(t, "apple", s.Name, "Expected name to be 'apple'")
 	assert.Equal(t, 2, s.Age, "Expected age to be 2")
 }
@@ -79,7 +79,7 @@ func TestWrappedUnmapAndValidate(t *testing.T) {
 	require.NoError(t, err, "Expected no error creating request")
 
 	err = UnmapAndValidate(req, &s)
-	assert.NoError(t, err, "Expected no error on unmap and validate")
+	assert.NoError(t, err, "Expected no error on unmap validate and update")
 	assert.Equal(t, "apple", s.Name, "Expected name to be 'apple'")
 	assert.Equal(t, 2, s.Age, "Expected age to be 2")
 }
@@ -92,54 +92,12 @@ func TestWrappedUnmarshalAndValidate(t *testing.T) {
 	require.NoError(t, err, "Expected no error creating request")
 
 	err = UnmarshalAndValidate(req, &s)
-	assert.NoError(t, err, "Expected no error on unmarshal and validate")
-	assert.Equal(t, "apple", s.Name, "Expected name to be 'apple'")
-	assert.Equal(t, 2, s.Age, "Expected age to be 2")
-}
-
-func TestWrappedUnmapOrUnmarshalValidateAndUpdate(t *testing.T) {
-	form := url.Values{}
-	form.Set("name", "apple")
-	form.Set("age", "2")
-	req, _ := http.NewRequest("POST", "/", bytes.NewBufferString(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	var s testStruct
-
-	err := UnmapOrUnmarshalValidateAndUpdate(req, &s)
-	assert.NoError(t, err, "Expected no error on unmap or unmarshal validate and update")
-	assert.Equal(t, "apple", s.Name, "Expected name to be 'apple'")
-	assert.Equal(t, 2, s.Age, "Expected age to be 2")
-}
-
-func TestWrappedUnmapValidateAndUpdate(t *testing.T) {
-	values := url.Values{}
-	values.Set("name", "apple")
-	values.Set("age", "2")
-	var s testStruct
-	req, err := http.NewRequest("POST", "/", bytes.NewBufferString(values.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	require.NoError(t, err, "Expected no error creating request")
-
-	err = UnmapValidateAndUpdate(req, &s)
-	assert.NoError(t, err, "Expected no error on unmap validate and update")
-	assert.Equal(t, "apple", s.Name, "Expected name to be 'apple'")
-	assert.Equal(t, 2, s.Age, "Expected age to be 2")
-}
-
-func TestWrappedUnmarshalValidateAndUpdate(t *testing.T) {
-	data := []byte(`{"name":"apple","age":2}`)
-	var s testStruct
-	req, err := http.NewRequest("POST", "/", bytes.NewBuffer(data))
-	req.Header.Set("Content-Type", "application/json")
-	require.NoError(t, err, "Expected no error creating request")
-
-	err = UnmarshalValidateAndUpdate(req, &s)
 	assert.NoError(t, err, "Expected no error on unmarshal validate and update")
 	assert.Equal(t, "apple", s.Name, "Expected name to be 'apple'")
 	assert.Equal(t, 2, s.Age, "Expected age to be 2")
 }
 
-func TestWrappedUnmapOrUnmarshalValidateAndUpdateWithValidation(t *testing.T) {
+func TestWrappedUnmapOrUnmarshalAndValidateWithValidation(t *testing.T) {
 	form := url.Values{}
 	form.Set("name", "apple")
 	form.Set("age", "2")
@@ -152,13 +110,13 @@ func TestWrappedUnmapOrUnmarshalValidateAndUpdateWithValidation(t *testing.T) {
 		{Key: "age", Requirement: "min2"},
 	}
 
-	err := UnmapOrUnmarshalValidateAndUpdateWithValidation(req, &mapToUpdate, validations)
+	err := UnmapOrUnmarshalAndValidateWithValidation(req, &mapToUpdate, validations)
 	assert.NoError(t, err, "Expected no error on unmap or unmarshal validate and update with validation")
 	assert.Equal(t, "apple", mapToUpdate["name"], "Expected name to be 'apple'")
 	assert.Equal(t, float64(2), mapToUpdate["age"], "Expected age to be 2")
 }
 
-func TestWrappedUnmapValidateAndUpdateWithValidation(t *testing.T) {
+func TestWrappedUnmapAndValidateWithValidation(t *testing.T) {
 	values := url.Values{}
 	values.Set("name", "apple")
 	values.Set("age", "2")
@@ -171,13 +129,13 @@ func TestWrappedUnmapValidateAndUpdateWithValidation(t *testing.T) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	require.NoError(t, err, "Expected no error creating request")
 
-	err = UnmapValidateAndUpdateWithValidation(req, &mapToUpdate, validations)
+	err = UnmapAndValidateWithValidation(req, &mapToUpdate, validations)
 	assert.NoError(t, err, "Expected no error on unmap validate and update with validation")
 	assert.Equal(t, "apple", mapToUpdate["name"], "Expected name to be 'apple'")
 	assert.Equal(t, float64(2), mapToUpdate["age"], "Expected age to be 2")
 }
 
-func TestWrappedUnmarshalValidateAndUpdateWithValidation(t *testing.T) {
+func TestWrappedUnmarshalAndValidateWithValidation(t *testing.T) {
 	data := []byte(`{"name":"apple","age":2}`)
 	mapToUpdate := map[string]any{}
 	validations := []model.Validation{
@@ -188,23 +146,23 @@ func TestWrappedUnmarshalValidateAndUpdateWithValidation(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	require.NoError(t, err, "Expected no error creating request")
 
-	err = UnmarshalValidateAndUpdateWithValidation(req, &mapToUpdate, validations)
+	err = UnmarshalAndValidateWithValidation(req, &mapToUpdate, validations)
 	assert.NoError(t, err, "Expected no error on unmarshal validate and update with validation")
 	assert.Equal(t, "apple", mapToUpdate["name"], "Expected name to be 'apple'")
 	assert.Equal(t, float64(2), mapToUpdate["age"], "Expected age to be 2")
 }
 
-func TestWrappedUnmarshalYamlValidateAndUpdate(t *testing.T) {
+func TestWrappedUnmarshalYamlAndValidate(t *testing.T) {
 	data := []byte("name: apple\nage: 2\n")
 	var s testStruct
 
-	err := UnmarshalYamlValidateAndUpdate(data, &s)
+	err := UnmarshalYamlAndValidate(data, &s)
 	assert.NoError(t, err, "Expected no error on unmarshal yaml validate and update")
 	assert.Equal(t, "apple", s.Name, "Expected name to be 'apple'")
 	assert.Equal(t, 2, s.Age, "Expected age to be 2")
 }
 
-func TestWrappedUnmarshalYamlValidateAndUpdateWithValidation(t *testing.T) {
+func TestWrappedUnmarshalYamlAndValidateWithValidation(t *testing.T) {
 	data := []byte("name: apple\nage: 2\n")
 	mapToUpdate := map[string]any{}
 	validations := []model.Validation{
@@ -212,7 +170,7 @@ func TestWrappedUnmarshalYamlValidateAndUpdateWithValidation(t *testing.T) {
 		{Key: "age", Requirement: "min2"},
 	}
 
-	err := UnmarshalYamlValidateAndUpdateWithValidation(data, &mapToUpdate, validations)
+	err := UnmarshalYamlAndValidateWithValidation(data, &mapToUpdate, validations)
 	assert.NoError(t, err, "Expected no error on unmarshal yaml validate and update with validation")
 	assert.Equal(t, "apple", mapToUpdate["name"], "Expected name to be 'apple'")
 	assert.Equal(t, 2, mapToUpdate["age"], "Expected age to be 2")
@@ -251,16 +209,16 @@ func TestWrappedValidateAndUpdateWithValidationContext(t *testing.T) {
 	assert.Equal(t, "u1", result["owner"])
 }
 
-func TestWrappedUnmarshalYamlValidateAndUpdateContext(t *testing.T) {
+func TestWrappedUnmarshalYamlAndValidateContext(t *testing.T) {
 	ctx := Inject(context.Background(), "user_id", "u1")
 	s := &wrappedInjectedStruct{}
-	require.NoError(t, UnmarshalYamlValidateAndUpdateContext(ctx, []byte("owner: u1\n"), s))
+	require.NoError(t, UnmarshalYamlAndValidateContext(ctx, []byte("owner: u1\n"), s))
 	assert.Equal(t, "u1", s.Owner)
 }
 
-func TestWrappedUnmarshalYamlValidateAndUpdateWithValidationContext(t *testing.T) {
+func TestWrappedUnmarshalYamlAndValidateWithValidationContext(t *testing.T) {
 	ctx := Inject(context.Background(), "user_id", "u1")
 	result := map[string]any{}
-	require.NoError(t, UnmarshalYamlValidateAndUpdateWithValidationContext(ctx, []byte("owner: u1\n"), &result, wrappedInjectedValidations))
+	require.NoError(t, UnmarshalYamlAndValidateWithValidationContext(ctx, []byte("owner: u1\n"), &result, wrappedInjectedValidations))
 	assert.Equal(t, "u1", result["owner"])
 }

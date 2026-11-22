@@ -2,7 +2,7 @@ package helper
 
 import (
 	"encoding"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"reflect"
 	"strconv"

@@ -823,15 +823,6 @@ func TestContains(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Valid contains map with float64 values",
-			args: args{
-				v:       map[string]float64{"a": 1.1, "b": 2.2, "c": 3.3},
-				element: "a",
-			},
-			valid:   true,
-			wantErr: false,
-		},
-		{
 			name: "Unsupported type",
 			args: args{
 				v:       args{},

@@ -219,6 +219,38 @@ func TestGetValidationsFromStruct(t *testing.T) {
 		}
 		assert.Equal(t, map[string]bool{"min": false, "name": true, "inner": true, "plain": false}, usage)
 	})
+
+	t.Run("Embedded structs", func(t *testing.T) {
+		type Base struct {
+			ID string `json:"id" vld:"min1"`
+		}
+		type Request struct {
+			Base
+			Name string `json:"name" vld:"min1"`
+		}
+
+		validations, err := GetValidationsFromStruct(&Request{}, model.VLD)
+		require.NoError(t, err)
+		require.Len(t, validations, 2)
+		assert.Equal(t, "id", validations[0].Key, "Expected fields of an embedded struct on the level of the struct")
+		assert.Equal(t, "name", validations[1].Key)
+	})
+
+	t.Run("Recursive types", func(t *testing.T) {
+		validations, err := GetValidationsFromStruct(&extractNode{}, model.VLD)
+		require.NoError(t, err)
+		require.Len(t, validations, 3)
+
+		children := validations[1]
+		assert.Equal(t, "children", children.Key)
+		assert.Nil(t, children.InnerValidation)
+		require.NotNil(t, children.InnerValidationRef)
+		assert.Same(t, &validations[0], &children.Inner()[0], "Expected a reference to the validations of the struct")
+
+		assert.True(t, validations[0].UsesFields())
+		assert.True(t, children.UsesFields(), "Expected field usage through the reference")
+		assert.True(t, validations[2].UsesFields(), "Expected field usage through the cycle")
+	})
 }
 
 func TestGetValidationFromStructField(t *testing.T) {
@@ -292,4 +324,14 @@ func TestGetValidationFromStructField(t *testing.T) {
 		_, err := extract("Invalid")
 		assert.Error(t, err)
 	})
+}
+
+type extractNode struct {
+	Value    int             `json:"value" vld:"rel(children min1) => min1"`
+	Children []extractNode   `json:"children" vld:"-"`
+	Parent   *extractWrapper `json:"parent" vld:"-"`
+}
+
+type extractWrapper struct {
+	Node *extractNode `json:"node" vld:"-"`
 }

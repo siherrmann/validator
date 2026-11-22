@@ -7,8 +7,9 @@ import (
 
 // FieldKey resolves the map key and tag options of a struct field.
 // The key is taken from the json tag, falls back to the yaml tag and then to the field name.
-// A tag name of "-" or "" keeps the field name as key.
+// A tag name of "-" or "" keeps the field name as key, StructModelOf leaves out fields tagged with `json:"-"`.
 // The options omitempty and inline are read from the same tag the key is resolved from.
+// `embed` (the name of the option in encoding/json/v2) is the same as `inline`.
 func FieldKey(fieldType reflect.StructField) (key string, omitEmpty bool, inline bool) {
 	key = fieldType.Name
 
@@ -32,7 +33,7 @@ func FieldKey(fieldType reflect.StructField) (key string, omitEmpty bool, inline
 		switch option {
 		case "omitempty":
 			omitEmpty = true
-		case "inline":
+		case "inline", "embed":
 			inline = true
 		}
 	}

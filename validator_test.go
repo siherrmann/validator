@@ -349,6 +349,37 @@ func TestValidate(t *testing.T) {
 		assert.Contains(t, err.Error(), "field code invalid")
 	})
 
+	t.Run("Embedded struct", func(t *testing.T) {
+		type Base struct {
+			ID string `json:"id" vld:"min3"`
+		}
+		type Request struct {
+			*Base
+			Name string `json:"name" vld:"min1"`
+		}
+
+		r := NewValidator()
+		assert.NoError(t, r.Validate(&Request{Base: &Base{ID: "abc"}, Name: "n"}))
+		assert.ErrorContains(t, r.Validate(&Request{Base: &Base{ID: "a"}, Name: "n"}), "field id invalid")
+		assert.ErrorContains(t, r.Validate(&Request{Name: "n"}), "json id key not in map", "Expected fields of a nil embedded pointer to be missing")
+	})
+
+	t.Run("Recursive struct", func(t *testing.T) {
+		type Node struct {
+			Name     string `json:"name" vld:"min1"`
+			Children []Node `json:"children" vld:"-"`
+			Next     *Node  `json:"next" vld:"-"`
+		}
+
+		r := NewValidator()
+		valid := &Node{Name: "a", Children: []Node{{Name: "b", Children: []Node{{Name: "c"}}}}, Next: &Node{Name: "d"}}
+		assert.NoError(t, r.Validate(valid))
+
+		invalid := &Node{Name: "a", Children: []Node{{Name: "b", Children: []Node{{Name: ""}}}}}
+		assert.ErrorContains(t, r.Validate(invalid), "field children invalid")
+		assert.ErrorContains(t, r.Validate(&Node{Name: "a", Next: &Node{}}), "field next invalid")
+	})
+
 	t.Run("Requirement of a list of structs", func(t *testing.T) {
 		type Item struct {
 			Name string `json:"name" vld:"min1"`
@@ -762,6 +793,38 @@ func TestValidateAndUpdate(t *testing.T) {
 		assert.Equal(t, time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC), testStruct.CreatedAt.UTC(), "Expected created_at to be updated")
 	})
 
+	t.Run("Embedded struct", func(t *testing.T) {
+		type Base struct {
+			ID string `json:"id" vld:"min1"`
+		}
+		type Request struct {
+			*Base
+			Name string `json:"name" vld:"min1"`
+		}
+
+		result := &Request{}
+		require.NoError(t, r.ValidateAndUpdate(map[string]any{"id": "1", "name": "n"}, result))
+		require.NotNil(t, result.Base)
+		assert.Equal(t, "1", result.ID)
+		assert.ErrorContains(t, r.ValidateAndUpdate(map[string]any{"name": "n"}, &Request{}), "json id key not in map")
+	})
+
+	t.Run("Recursive struct", func(t *testing.T) {
+		type Node struct {
+			Name     string `json:"name" vld:"min1"`
+			Children []Node `json:"children" vld:"-"`
+		}
+
+		result := &Node{}
+		input := map[string]any{"name": "a", "children": []any{map[string]any{"name": "b", "children": []any{}}}}
+		require.NoError(t, r.ValidateAndUpdate(input, result))
+		require.Len(t, result.Children, 1)
+		assert.Equal(t, "b", result.Children[0].Name)
+
+		input = map[string]any{"name": "a", "children": []any{map[string]any{"name": "", "children": []any{}}}}
+		assert.ErrorContains(t, r.ValidateAndUpdate(input, &Node{}), "field children invalid")
+	})
+
 	t.Run("Valid struct with time.Time from unix", func(t *testing.T) {
 		testStruct := &struct {
 			CreatedAt time.Time `json:"created_at" vld:"-"`
@@ -997,7 +1060,7 @@ func TestValidateWithValidation(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "Invalid duplicate key",
+			name: "Invalid duplicate key with different requirements",
 			args: args{
 				jsonMap: map[string]any{
 					"fruit": "apple",

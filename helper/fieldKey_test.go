@@ -14,6 +14,7 @@ func TestFieldKey(t *testing.T) {
 		JsonOmit     string `json:"json_omit,omitempty"`
 		JsonDash     string `json:"-"`
 		JsonInline   string `json:",inline"`
+		JsonEmbed    string `json:",embed"`
 		YamlTag      string `yaml:"yaml_tag"`
 		YamlOptions  string `yaml:"yaml_options,omitempty,inline"`
 		JsonOverYaml string `json:"json_key" yaml:"yaml_key,omitempty"`
@@ -30,6 +31,7 @@ func TestFieldKey(t *testing.T) {
 		{"JsonOmit", "json_omit", true, false},
 		{"JsonDash", "JsonDash", false, false},
 		{"JsonInline", "JsonInline", false, true},
+		{"JsonEmbed", "JsonEmbed", false, true},
 		{"YamlTag", "yaml_tag", false, false},
 		{"YamlOptions", "yaml_options", true, true},
 		{"JsonOverYaml", "json_key", false, false},

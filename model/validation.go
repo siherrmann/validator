@@ -13,6 +13,10 @@ type Validation struct {
 	OmitEmpty   bool
 	// Inner Struct validation
 	InnerValidation []Validation
+	// InnerValidationRef is set by GetValidationsFromStruct instead of InnerValidation for a field
+	// whose type refers back to a struct that contains it (eg. `Children []Node` in Node).
+	// It points to the validations of that struct, so recursive types do not need endless validations.
+	InnerValidationRef *[]Validation
 	// Parsed AST representation of the requirement to avoid redundant parsing
 	RequirementAST *AstValue
 	// NoFieldUsage is set by GetValidationsFromStruct if neither the requirement nor any inner validation
@@ -24,6 +28,14 @@ type Validation struct {
 // UsesFields reports if the validation (or one of its inner validations) may use `rel` or a `$` reference.
 func (v *Validation) UsesFields() bool {
 	return !v.NoFieldUsage
+}
+
+// Inner returns the inner validations of a struct field or of the items of a list of structs.
+func (v *Validation) Inner() []Validation {
+	if v.InnerValidationRef != nil {
+		return *v.InnerValidationRef
+	}
+	return v.InnerValidation
 }
 
 // ValidatorMap is a map of validation keys to Validation objects.

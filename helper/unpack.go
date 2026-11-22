@@ -1,7 +1,7 @@
 package helper
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"io"
 	"net/http"
@@ -120,7 +120,7 @@ func UnmapUrlValuesToJsonMap(values url.Values) (map[string]any, error) {
 			} else {
 				valToSet = value
 			}
-			
+
 			if strings.Contains(k, ".") {
 				setNestedDotValue(mapOut, strings.Split(k, "."), valToSet)
 			} else {

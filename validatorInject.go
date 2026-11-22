@@ -18,7 +18,7 @@ type injectedKey struct{}
 // The values belong to the context, so they only exist for the validation calls with this context
 // (eg. a single request). The given context is not changed, so Inject is safe for concurrent use.
 //
-// The unpack functions (eg. UnmarshalValidateAndUpdate) use the context of the request,
+// The unpack functions (eg. UnmarshalAndValidate) use the context of the request,
 // all other functions have a Context variant (eg. ValidateContext).
 func Inject(ctx context.Context, key string, value any) context.Context {
 	if ctx == nil {

@@ -49,10 +49,10 @@ nested:
 json_key: from json tag
 `
 
-func TestUnmarshalYamlValidateAndUpdate(t *testing.T) {
+func TestUnmarshalYamlAndValidate(t *testing.T) {
 	t.Run("Valid yaml", func(t *testing.T) {
 		config := &yamlConfig{}
-		err := NewValidator().UnmarshalYamlValidateAndUpdate([]byte(validYamlConfig), config)
+		err := NewValidator().UnmarshalYamlAndValidate([]byte(validYamlConfig), config)
 		require.NoError(t, err, "Expected no error but got one")
 
 		assert.Equal(t, uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"), config.ID, "Expected id to be updated")
@@ -68,32 +68,32 @@ func TestUnmarshalYamlValidateAndUpdate(t *testing.T) {
 	})
 
 	t.Run("Invalid value", func(t *testing.T) {
-		err := NewValidator().UnmarshalYamlValidateAndUpdate([]byte("id: 550e8400-e29b-41d4-a716-446655440000\nname: ab\n"), &yamlConfig{})
+		err := NewValidator().UnmarshalYamlAndValidate([]byte("id: 550e8400-e29b-41d4-a716-446655440000\nname: ab\n"), &yamlConfig{})
 		assert.Error(t, err, "Expected an error but got none")
 		assert.Contains(t, err.Error(), "field name invalid", "Expected error for name")
 	})
 
 	t.Run("Invalid inner value", func(t *testing.T) {
 		input := "id: 550e8400-e29b-41d4-a716-446655440000\nname: service\nport: 80\nratio: 1\nitems:\n  - name: first\n    count: 0\n"
-		err := NewValidator().UnmarshalYamlValidateAndUpdate([]byte(input), &yamlConfig{})
+		err := NewValidator().UnmarshalYamlAndValidate([]byte(input), &yamlConfig{})
 		assert.Error(t, err, "Expected an error but got none")
 		assert.Contains(t, err.Error(), "field items invalid", "Expected error for items")
 	})
 
 	t.Run("Invalid uuid", func(t *testing.T) {
-		err := NewValidator().UnmarshalYamlValidateAndUpdate([]byte("id: not-a-uuid\n"), &yamlConfig{})
+		err := NewValidator().UnmarshalYamlAndValidate([]byte("id: not-a-uuid\n"), &yamlConfig{})
 		assert.Error(t, err, "Expected an error but got none")
 		assert.Contains(t, err.Error(), "value is not a valid uuid", "Expected error for id")
 	})
 
 	t.Run("Invalid yaml", func(t *testing.T) {
-		err := NewValidator().UnmarshalYamlValidateAndUpdate([]byte("name: [unclosed\n"), &yamlConfig{})
+		err := NewValidator().UnmarshalYamlAndValidate([]byte("name: [unclosed\n"), &yamlConfig{})
 		assert.Error(t, err, "Expected an error but got none")
 		assert.Contains(t, err.Error(), "error unmarshaling yaml", "Expected unmarshal error")
 	})
 }
 
-func TestUnmarshalYamlValidateAndUpdateContext(t *testing.T) {
+func TestUnmarshalYamlAndValidateContext(t *testing.T) {
 	type Request struct {
 		Owner string `yaml:"owner" vld:"equ${user_id}"`
 	}
@@ -101,12 +101,12 @@ func TestUnmarshalYamlValidateAndUpdateContext(t *testing.T) {
 
 	r := NewValidator()
 	result := &Request{}
-	require.NoError(t, r.UnmarshalYamlValidateAndUpdateContext(ctx, []byte("owner: u1\n"), result))
+	require.NoError(t, r.UnmarshalYamlAndValidateContext(ctx, []byte("owner: u1\n"), result))
 	assert.Equal(t, "u1", result.Owner)
-	assert.Error(t, r.UnmarshalYamlValidateAndUpdateContext(ctx, []byte("owner: u2\n"), &Request{}))
+	assert.Error(t, r.UnmarshalYamlAndValidateContext(ctx, []byte("owner: u2\n"), &Request{}))
 }
 
-func TestUnmarshalYamlValidateAndUpdateWithValidation(t *testing.T) {
+func TestUnmarshalYamlAndValidateWithValidation(t *testing.T) {
 	validations := []model.Validation{
 		{Key: "name", Type: model.String, Requirement: "equapple"},
 		{Key: "age", Type: model.Int, Requirement: "min2"},
@@ -114,27 +114,27 @@ func TestUnmarshalYamlValidateAndUpdateWithValidation(t *testing.T) {
 
 	t.Run("Valid yaml", func(t *testing.T) {
 		mapToUpdate := map[string]any{}
-		err := NewValidator().UnmarshalYamlValidateAndUpdateWithValidation([]byte("name: apple\nage: 3\n"), &mapToUpdate, validations)
+		err := NewValidator().UnmarshalYamlAndValidateWithValidation([]byte("name: apple\nage: 3\n"), &mapToUpdate, validations)
 		assert.NoError(t, err, "Expected no error but got one")
 		assert.Equal(t, map[string]any{"name": "apple", "age": 3}, mapToUpdate, "Expected map to be updated")
 	})
 
 	t.Run("Invalid yaml value", func(t *testing.T) {
 		mapToUpdate := map[string]any{}
-		err := NewValidator().UnmarshalYamlValidateAndUpdateWithValidation([]byte("name: apple\nage: 1\n"), &mapToUpdate, validations)
+		err := NewValidator().UnmarshalYamlAndValidateWithValidation([]byte("name: apple\nage: 1\n"), &mapToUpdate, validations)
 		assert.Error(t, err, "Expected an error but got none")
 		assert.Contains(t, err.Error(), "field age invalid", "Expected error for age")
 		assert.Empty(t, mapToUpdate, "Expected map not to be updated")
 	})
 }
 
-func TestUnmarshalYamlValidateAndUpdateWithValidationContext(t *testing.T) {
+func TestUnmarshalYamlAndValidateWithValidationContext(t *testing.T) {
 	validations := []model.Validation{{Key: "owner", Type: model.String, Requirement: "equ${user_id}"}}
 	ctx := Inject(context.Background(), "user_id", "u1")
 
 	r := NewValidator()
 	result := map[string]any{}
-	require.NoError(t, r.UnmarshalYamlValidateAndUpdateWithValidationContext(ctx, []byte("owner: u1\n"), &result, validations))
+	require.NoError(t, r.UnmarshalYamlAndValidateWithValidationContext(ctx, []byte("owner: u1\n"), &result, validations))
 	assert.Equal(t, "u1", result["owner"])
-	assert.Error(t, r.UnmarshalYamlValidateAndUpdateWithValidationContext(ctx, []byte("owner: u2\n"), &map[string]any{}, validations))
+	assert.Error(t, r.UnmarshalYamlAndValidateWithValidationContext(ctx, []byte("owner: u2\n"), &map[string]any{}, validations))
 }

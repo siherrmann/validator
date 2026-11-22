@@ -51,65 +51,44 @@ func UnmapAndValidate(request *http.Request, structToUpdate any, tagType ...stri
 
 // UnmarshalAndValidate is the wrapper function for the UnmarshalAndValidate method of the Validator struct.
 // More details can be found in the UnmarshalAndValidate method.
-func UnmarshalAndValidate(request *http.Request, v any, tagType ...string) error {
+func UnmarshalAndValidate(request *http.Request, structToUpdate any, tagType ...string) error {
 	r := NewValidator()
-	return r.UnmarshalAndValidate(request, v, tagType...)
+	return r.UnmarshalAndValidate(request, structToUpdate, tagType...)
 }
 
-// UnmapOrUnmarshalValidateAndUpdate is the wrapper function for the UnmapOrUnmarshalValidateAndUpdate method of the Validator struct.
-// More details can be found in the UnmapOrUnmarshalValidateAndUpdate method.
-func UnmapOrUnmarshalValidateAndUpdate(request *http.Request, structToUpdate any, tagType ...string) error {
+// UnmapOrUnmarshalAndValidateWithValidation is the wrapper function for the UnmapOrUnmarshalAndValidateWithValidation method of the Validator struct.
+// More details can be found in the UnmapOrUnmarshalAndValidateWithValidation method.
+func UnmapOrUnmarshalAndValidateWithValidation(request *http.Request, mapToUpdate *map[string]any, validations []model.Validation) error {
 	r := NewValidator()
-	return r.UnmapOrUnmarshalValidateAndUpdate(request, structToUpdate, tagType...)
+	return r.UnmapOrUnmarshalAndValidateWithValidation(request, mapToUpdate, validations)
 }
 
-// UnmapValidateAndUpdate is the wrapper function for the UnmapValidateAndUpdate method of the Validator struct.
-// More details can be found in the UnmapValidateAndUpdate method.
-func UnmapValidateAndUpdate(request *http.Request, structToUpdate any, tagType ...string) error {
+// UnmapAndValidateWithValidation is the wrapper function for the UnmapAndValidateWithValidation method of the Validator struct.
+// More details can be found in the UnmapAndValidateWithValidation method.
+func UnmapAndValidateWithValidation(request *http.Request, mapToUpdate *map[string]any, validations []model.Validation) error {
 	r := NewValidator()
-	return r.UnmapValidateAndUpdate(request, structToUpdate, tagType...)
+	return r.UnmapAndValidateWithValidation(request, mapToUpdate, validations)
 }
 
-// UnmarshalValidateAndUpdate is the wrapper function for the UnmarshalValidateAndUpdate method of the Validator struct.
-// More details can be found in the UnmarshalValidateAndUpdate method.
-func UnmarshalValidateAndUpdate(request *http.Request, structToUpdate any, tagType ...string) error {
+// UnmarshalAndValidateWithValidation is the wrapper function for the UnmarshalAndValidateWithValidation method of the Validator struct.
+// More details can be found in the UnmarshalAndValidateWithValidation method.
+func UnmarshalAndValidateWithValidation(request *http.Request, mapToUpdate *map[string]any, validations []model.Validation) error {
 	r := NewValidator()
-	return r.UnmarshalValidateAndUpdate(request, structToUpdate, tagType...)
+	return r.UnmarshalAndValidateWithValidation(request, mapToUpdate, validations)
 }
 
-// UnmapOrUnmarshalValidateAndUpdateWithValidation is the wrapper function for the UnmapOrUnmarshalValidateAndUpdateWithValidation method of the Validator struct.
-// More details can be found in the UnmapOrUnmarshalValidateAndUpdateWithValidation method.
-func UnmapOrUnmarshalValidateAndUpdateWithValidation(request *http.Request, mapToUpdate *map[string]any, validations []model.Validation) error {
+// UnmarshalYamlAndValidate is the wrapper function for the UnmarshalYamlAndValidate method of the Validator struct.
+// More details can be found in the UnmarshalYamlAndValidate method.
+func UnmarshalYamlAndValidate(yamlInput []byte, structToUpdate any, tagType ...string) error {
 	r := NewValidator()
-	return r.UnmapOrUnmarshalValidateAndUpdateWithValidation(request, mapToUpdate, validations)
+	return r.UnmarshalYamlAndValidate(yamlInput, structToUpdate, tagType...)
 }
 
-// UnmapValidateAndUpdateWithValidation is the wrapper function for the UnmapValidateAndUpdateWithValidation method of the Validator struct.
-// More details can be found in the UnmapValidateAndUpdateWithValidation method.
-func UnmapValidateAndUpdateWithValidation(request *http.Request, mapToUpdate *map[string]any, validations []model.Validation) error {
+// UnmarshalYamlAndValidateWithValidation is the wrapper function for the UnmarshalYamlAndValidateWithValidation method of the Validator struct.
+// More details can be found in the UnmarshalYamlAndValidateWithValidation method.
+func UnmarshalYamlAndValidateWithValidation(yamlInput []byte, mapToUpdate *map[string]any, validations []model.Validation) error {
 	r := NewValidator()
-	return r.UnmapValidateAndUpdateWithValidation(request, mapToUpdate, validations)
-}
-
-// UnmarshalValidateAndUpdateWithValidation is the wrapper function for the UnmarshalValidateAndUpdateWithValidation method of the Validator struct.
-// More details can be found in the UnmarshalValidateAndUpdateWithValidation method.
-func UnmarshalValidateAndUpdateWithValidation(request *http.Request, mapToUpdate *map[string]any, validations []model.Validation) error {
-	r := NewValidator()
-	return r.UnmarshalValidateAndUpdateWithValidation(request, mapToUpdate, validations)
-}
-
-// UnmarshalYamlValidateAndUpdate is the wrapper function for the UnmarshalYamlValidateAndUpdate method of the Validator struct.
-// More details can be found in the UnmarshalYamlValidateAndUpdate method.
-func UnmarshalYamlValidateAndUpdate(yamlInput []byte, structToUpdate any, tagType ...string) error {
-	r := NewValidator()
-	return r.UnmarshalYamlValidateAndUpdate(yamlInput, structToUpdate, tagType...)
-}
-
-// UnmarshalYamlValidateAndUpdateWithValidation is the wrapper function for the UnmarshalYamlValidateAndUpdateWithValidation method of the Validator struct.
-// More details can be found in the UnmarshalYamlValidateAndUpdateWithValidation method.
-func UnmarshalYamlValidateAndUpdateWithValidation(yamlInput []byte, mapToUpdate *map[string]any, validations []model.Validation) error {
-	r := NewValidator()
-	return r.UnmarshalYamlValidateAndUpdateWithValidation(yamlInput, mapToUpdate, validations)
+	return r.UnmarshalYamlAndValidateWithValidation(yamlInput, mapToUpdate, validations)
 }
 
 // ValidateContext is the wrapper function for the ValidateContext method of the Validator struct.
@@ -140,16 +119,16 @@ func ValidateAndUpdateWithValidationContext(ctx context.Context, jsonInput map[s
 	return r.ValidateAndUpdateWithValidationContext(ctx, jsonInput, mapToUpdate, validations)
 }
 
-// UnmarshalYamlValidateAndUpdateContext is the wrapper function for the UnmarshalYamlValidateAndUpdateContext method of the Validator struct.
-// More details can be found in the UnmarshalYamlValidateAndUpdateContext method.
-func UnmarshalYamlValidateAndUpdateContext(ctx context.Context, yamlInput []byte, structToUpdate any, tagType ...string) error {
+// UnmarshalYamlAndValidateContext is the wrapper function for the UnmarshalYamlAndValidateContext method of the Validator struct.
+// More details can be found in the UnmarshalYamlAndValidateContext method.
+func UnmarshalYamlAndValidateContext(ctx context.Context, yamlInput []byte, structToUpdate any, tagType ...string) error {
 	r := NewValidator()
-	return r.UnmarshalYamlValidateAndUpdateContext(ctx, yamlInput, structToUpdate, tagType...)
+	return r.UnmarshalYamlAndValidateContext(ctx, yamlInput, structToUpdate, tagType...)
 }
 
-// UnmarshalYamlValidateAndUpdateWithValidationContext is the wrapper function for the UnmarshalYamlValidateAndUpdateWithValidationContext method of the Validator struct.
-// More details can be found in the UnmarshalYamlValidateAndUpdateWithValidationContext method.
-func UnmarshalYamlValidateAndUpdateWithValidationContext(ctx context.Context, yamlInput []byte, mapToUpdate *map[string]any, validations []model.Validation) error {
+// UnmarshalYamlAndValidateWithValidationContext is the wrapper function for the UnmarshalYamlAndValidateWithValidationContext method of the Validator struct.
+// More details can be found in the UnmarshalYamlAndValidateWithValidationContext method.
+func UnmarshalYamlAndValidateWithValidationContext(ctx context.Context, yamlInput []byte, mapToUpdate *map[string]any, validations []model.Validation) error {
 	r := NewValidator()
-	return r.UnmarshalYamlValidateAndUpdateWithValidationContext(ctx, yamlInput, mapToUpdate, validations)
+	return r.UnmarshalYamlAndValidateWithValidationContext(ctx, yamlInput, mapToUpdate, validations)
 }

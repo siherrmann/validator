@@ -2,7 +2,7 @@ package validator
 
 import (
 	"bytes"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"net/http"
 	"regexp"

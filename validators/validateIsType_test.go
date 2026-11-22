@@ -48,6 +48,8 @@ func TestValidateIsType(t *testing.T) {
 
 		{"valid json", `{"key":"value"}`, "json", false},
 		{"invalid json", `{key:"value"}`, "json", true},
+		{"json with duplicate keys", `{"key":"a","key":"b"}`, "json", true},
+		{"json with invalid utf8", "{\"key\":\"\xff\"}", "json", true},
 
 		{"valid jwt", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c", "jwt", false},
 		{"invalid jwt", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ", "jwt", true},

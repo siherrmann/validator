@@ -1,7 +1,7 @@
 package helper
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"net/url"
 	"reflect"
 	"testing"
@@ -162,6 +162,28 @@ func TestUnmapStructToJsonMap(t *testing.T) {
 		assert.Equal(t, now, result["time"], "Expected time to be kept as is")
 		assert.Equal(t, "d", result["code"], "Expected inline struct to be flattened")
 		assert.NotContains(t, result, "unexported", "Expected unexported field to be skipped")
+	})
+
+	t.Run("Embedded structs and ignored fields", func(t *testing.T) {
+		type Address struct {
+			City string `json:"city"`
+		}
+		type Base struct {
+			ID string `json:"id"`
+		}
+		type TestStruct struct {
+			Base
+			*Address
+			Secret string `json:"-"`
+		}
+		result := map[string]any{}
+
+		require.NoError(t, UnmapStructToJsonMap(&TestStruct{Base: Base{ID: "1"}, Secret: "s"}, &result))
+		assert.Equal(t, map[string]any{"id": "1"}, result, "Expected fields of a nil embedded pointer to be missing")
+
+		result = map[string]any{}
+		require.NoError(t, UnmapStructToJsonMap(&TestStruct{Address: &Address{City: "Berlin"}}, &result))
+		assert.Equal(t, map[string]any{"id": "", "city": "Berlin"}, result)
 	})
 
 	t.Run("Invalid input - not a pointer", func(t *testing.T) {
@@ -743,5 +765,48 @@ func TestMapJsonMapToStruct(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, "testKind", result.Inner.Kind)
+	})
+	t.Run("Embedded structs and ignored fields", func(t *testing.T) {
+		type Address struct {
+			City string `json:"city"`
+		}
+		type Base struct {
+			ID string `json:"id"`
+		}
+		type TestStruct struct {
+			Base
+			*Address
+			Secret string `json:"-"`
+		}
+
+		var result TestStruct
+		require.NoError(t, MapJsonMapToStruct(map[string]any{"id": "1", "Secret": "s"}, &result))
+		assert.Equal(t, "1", result.ID)
+		assert.Nil(t, result.Address, "Expected a nil embedded pointer to stay nil without its keys")
+		assert.Empty(t, result.Secret, "Expected a field with json:\"-\" not to be written")
+
+		require.NoError(t, MapJsonMapToStruct(map[string]any{"city": "Berlin"}, &result))
+		require.NotNil(t, result.Address)
+		assert.Equal(t, "Berlin", result.City)
+		assert.Equal(t, "1", result.ID, "Expected missing keys not to change the struct")
+	})
+
+	t.Run("Fields decoded with encoding/json", func(t *testing.T) {
+		type TestStruct struct {
+			Raw     rawJSON  `json:"raw"`
+			Pointer *rawJSON `json:"pointer"`
+			Number  int      `json:"number,string"`
+		}
+
+		var result TestStruct
+		err := MapJsonMapToStruct(map[string]any{"raw": map[string]any{"a": 1.0}, "pointer": "p", "number": "42"}, &result)
+		require.NoError(t, err)
+		assert.Equal(t, rawJSON(`{"a":1}`), result.Raw)
+		require.NotNil(t, result.Pointer)
+		assert.Equal(t, rawJSON(`"p"`), *result.Pointer)
+		assert.Equal(t, 42, result.Number)
+
+		err = MapJsonMapToStruct(map[string]any{"number": 42.0}, &result)
+		assert.ErrorContains(t, err, "json key: number", "Expected the json options of the field to be used")
 	})
 }

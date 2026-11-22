@@ -38,7 +38,7 @@ func HandleError(w http.ResponseWriter, r *http.Request) {
 	// and updates the `newError` variable. You could use that for creating a new instance
 	// of error with all needed parameters.
 	var newError Error
-	err := validator.UnmarshalValidateAndUpdate(r, &newError)
+	err := validator.UnmarshalAndValidate(r, &newError)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("error validating new errror: %v", err), http.StatusBadRequest)
 		return
@@ -47,7 +47,7 @@ func HandleError(w http.ResponseWriter, r *http.Request) {
 	// For updating an error you could use the `upd` tag (including goups) to make sure
 	// that at least one of the values is updated and if so is valid.
 	var exisitingErrorFromDb Error
-	err = validator.UnmarshalValidateAndUpdate(r, &exisitingErrorFromDb, "upd")
+	err = validator.UnmarshalAndValidate(r, &exisitingErrorFromDb, "upd")
 	if err != nil {
 		http.Error(w, fmt.Sprintf("error validating error update: %v", err), http.StatusBadRequest)
 		return

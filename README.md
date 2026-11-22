@@ -8,19 +8,19 @@ Validator for structs and json maps to validate fields by tag.
 
 # 💡 Goal of this package
 
-The goal of the validator package is to provide a fast, simple validation tool that can validate existing structs and validate url values and json bodys to update an empty struct with these values if they are valid.
+The goal of the validator package is to provide a fast, simple validation tool that can validate existing structs and validate url values, json or yaml to update a struct with these values if they are valid.
 
 Main focus is centralisation of validation to one object. You can obviously do one request object for each request type (which is sometimes still needed), but with this package you can do even something like that:
 
 ```go
 type User struct {
-    ID     int    `json:"id" del:"min1"`
-    Name   string `json:"name" cre:"min1" upd:"min1, gr1min1"`
-    Adress string `json:"adress" cre:"min1" upd:"min1, gr1min1"`
+    ID      int    `json:"id" del:"min1"`
+    Name    string `json:"name" cre:"min1" upd:"min1, gr1min1"`
+    Address string `json:"address" cre:"min1" upd:"min1, gr1min1"`
 }
 ```
 
-You can see the 3 different tags (`cre`, `upd`, `del`). With these tags you can use the same object in 3 different handlers with 3 different validations. In this example for creation you need name and adress, for an update you need at least one of name or adress, and for deletion you need an id greater 0.
+You can see the 3 different tags (`cre`, `upd`, `del`). With these tags you can use the same object in 3 different handlers with 3 different validations. In this example for creation you need name and address, for an update you need at least one of name or address, and for deletion you need an id greater 0.
 
 ---
 
@@ -32,11 +32,13 @@ To integrate the validator package into your Go project, use the standard go get
 go get github.com/siherrmann/validator
 ```
 
+The validator needs Go 1.27 or newer, because it uses `encoding/json/v2`. In Go 1.27 the package is still behind the `jsonv2` experiment, which is enabled by default, so it does not build with `GOEXPERIMENT=nojsonv2`.
+
 ---
 
 # 🚀 Getting started
 
-To begin validating your structs, you either first create a new `Validator` instance and then invoke its `Validate` method on your target struct or use the wrapper function.
+To begin validating your structs, you either first create a new `Validator` instance and then invoke its `Validate` method with a pointer to your struct or use the wrapper function.
 
 Here's a simple example demonstrating how to validate a User struct:
 
@@ -55,13 +57,13 @@ user := User{
 
 // Example with validator
 v := validator.NewValidator()
-err = v.Validate(user)
+err := v.Validate(&user)
 if err != nil {
     fmt.Println("Validation failed for user:", err)
 }
 
 // Example with wrapper functions (uses a new validator instance internally)
-err = Validate(user)
+err = validator.Validate(&user)
 if err != nil {
     fmt.Println("Validation failed for user:", err)
 }
@@ -73,12 +75,12 @@ In these examples:
 - `vld:"rex^[^@]+@[^@]+\\.[^@]+$"`: Validates Email against a regular expression pattern.
 - `vld:"min18"`: Checks that the integer field Age has a minimum value of 18.
 
-If you want to directly validate bytes and update for example the `User` struct if the values are valid you can use `UnmapOrUnmarshalValidateAndUpdate`.
+If you want to validate a request (json body or form values) and update for example the `User` struct only if the values are valid, you can use `UnmapOrUnmarshalAndValidate`.
 
 ```go
 func CreateUser(w http.ResponseWriter, r *http.Request) {
     user := &User{}
-    err := v.UnmapOrUnmarshalValidateAndUpdate(r, user)
+    err := v.UnmapOrUnmarshalAndValidate(r, user)
     if err != nil {
         fmt.Println("Validation failed for new user:", err)
     }
@@ -98,7 +100,7 @@ type User struct {
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
     user := &User{}
-    err := v.UnmapOrUnmarshalValidateAndUpdate(r, user, "create")
+    err := v.UnmapOrUnmarshalAndValidate(r, user, "create")
     if err != nil {
         fmt.Println("Validation failed for creating user:", err)
     }
@@ -107,7 +109,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
     user := &User{}
-    err := v.UnmapOrUnmarshalValidateAndUpdate(r, user, "update")
+    err := v.UnmapOrUnmarshalAndValidate(r, user, "update")
     if err != nil {
         fmt.Println("Validation failed for updating user:", err)
     }
@@ -116,7 +118,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
     user := &User{}
-    err := v.UnmapOrUnmarshalValidateAndUpdate(r, user, "delete")
+    err := v.UnmapOrUnmarshalAndValidate(r, user, "delete")
     if err != nil {
         fmt.Println("Validation failed for deleting user:", err)
     }
@@ -125,7 +127,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 func GetUser(w http.ResponseWriter, r *http.Request) {
     user := &User{}
-    err := v.UnmapOrUnmarshalValidateAndUpdate(r, user, "ger")
+    err := v.UnmapOrUnmarshalAndValidate(r, user, "get")
     if err != nil {
         fmt.Println("Validation failed for getting user:", err)
     }
@@ -133,7 +135,7 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-You can also validate yaml (for example a config file) and update a struct with `UnmarshalYamlValidateAndUpdate`. To update a map by an array of `Validation` instead use `UnmarshalYamlValidateAndUpdateWithValidation`.
+You can also validate yaml (for example a config file) and update a struct with `UnmarshalYamlAndValidate`. To update a map by an array of `Validation` instead use `UnmarshalYamlAndValidateWithValidation`.
 
 ```go
 type Config struct {
@@ -147,7 +149,7 @@ if err != nil {
 }
 
 config := &Config{}
-err = v.UnmarshalYamlValidateAndUpdate(yamlInput, config)
+err = v.UnmarshalYamlAndValidate(yamlInput, config)
 if err != nil {
     fmt.Println("Validation failed for config:", err)
 }
@@ -157,16 +159,26 @@ if err != nil {
 
 # Validation
 
-`Validate` validates a given struct by `vld` or custom tags. `ValidateAndUpdate` does update the given struct with the given json after validating the json. `UnmarshalValidateAndUpdate` and similar functions are unpacking something (request body or url values), then validating the input and updating the given struct. `ValidateAndUpdateWithValidation` gives you the ability to update a map with the values from a json map by using an array of `Validation` (which is the equivalent for tags in a struct).
+`Validate` validates a given struct by `vld` or custom tags. `ValidateAndUpdate` validates a json map and updates the given struct with the validated values. `UnmarshalAndValidate` and similar functions unpack the input (json body, form values or yaml), validate it and then update the given struct, so the struct is only changed if the input is valid. `ValidateWithValidation` and `ValidateAndUpdateWithValidation` do the same for a map by using an array of `Validation` (which is the equivalent for tags in a struct).
 
 You can add a validate tag with the syntax `vld:"[requirement], [groups]"`.
-Groups are seperated by a space (eg. `gr1min1 gr2max1`).
-Conditions and operators in a requirement are seperated by a space (eg. `max0 || (min10 && max30)`).
+Groups are separated by a space (eg. `gr1min1 gr2max1`).
+Conditions and operators in a requirement are separated by a space (eg. `max0 || (min10 && max30)`).
 
 All fields that you want to validate in the struct need a `vld` tag (or custom tag if specified).
 If you don't want to validate the field you can add `vld:"-"`. If you then use an update function it does update it without validating.
 
-The key of a field is taken from the `json` tag, falls back to the `yaml` tag and then to the field name. The options `omitempty` and `inline` are read from the same tag.
+The key of a field is taken from the `json` tag, falls back to the `yaml` tag and then to the field name. The option `omitempty` is read from the same tag. Fields tagged with `json:"-"` (or `yaml:"-"` without a `json` tag) are ignored, they are never validated or updated.
+
+Embedded structs (also behind a pointer) without a name in the tag are flattened like in `encoding/json`, the same as fields with the option `inline` or `embed` (the name of the option in `encoding/json/v2`). Their fields are read, validated and updated on the level of the parent. If several fields have the same key, the shallowest one wins. At the same depth a field with a name in the tag wins, otherwise all of them are ignored. A nil embedded pointer is created on update if one of its fields is set, when validating a struct its fields are missing. Recursive types (eg. `Children []Node` in `Node`) are supported.
+
+All functions use the same rules to read, validate and update a struct, so a struct behaves the same for json, yaml, form values and `Validate`. Values are converted the same way everywhere (eg. `"5"` into an `int` or a unix timestamp into a `time.Time`). Only fields whose type has an own `UnmarshalJSON` or whose `json` tag has the option `string` or `format:` are set with `encoding/json`. The json is decoded before that, so numbers above 2^53 have already lost precision.
+
+JSON is parsed with `encoding/json/v2`, which is strict:
+
+- Duplicate keys (eg. `{"name":"a","name":"b"}`) and invalid UTF-8 are rejected with an error instead of using the last value or replacing invalid characters. So the validated value is always the value every other JSON parser sees. This also applies to `istjson`.
+- Keys are matched case-sensitive. `{"NAME":"a"}` does not set a field with the key `name`.
+- A `null` sets the field to its zero value.
 
 Types that can be unmarshaled from text (they implement `encoding.TextUnmarshaler`, e.g. `uuid.UUID` or `net.IP`) are validated as their string representation, also as pointers. So `istuuid` works on a `uuid.UUID` field and `min`/`max` check the length of the string (36 for a uuid). On update the string is parsed into the field type. Structs like `time.Time` are not affected by this. Keep in mind that the nil uuid (`00000000-0000-0000-0000-000000000000`) is a valid uuid, you can exclude it with `neq00000000-0000-0000-0000-000000000000`.
 
@@ -207,10 +219,11 @@ Conditions have different usages per variable type:
 - `max` - `int/float <= condition`, `len(strings.TrimSpace(string)/array/map) <= condition`, number of keys of a struct `<= condition`
 - `con` - `strings.Contains(string, condition)`, `contains(array, condition)`, int/float ignored
 - `nco` - `!strings.Contains(string, condition)`, `!contains(array, condition)`, int/float ignored
-- `frm` - Checks if given comma seperated list contains value/every item in array/every key in map.
-- `nfr` - Checks if given comma seperated list does not contain value/every item in array/every key in map.
-- `rex` - `regexp.MatchString(condition, strconv.Itoa(int)/strconv.FormatFloat(float, 'f', 3, 64)/string)`, every item of an array/every key of a map (eg. env names)
+- `frm` - Checks if given comma separated list contains value/every item in array/every key in map.
+- `nfr` - Checks if given comma separated list does not contain value/every item in array/every key in map.
+- `rex` - `regexp.MatchString(condition, string)`, every item of an array/every key of a map (eg. env names). Numbers and bools are converted to a string first (`fmt.Sprintf("%d")` for int, `fmt.Sprintf("%v")` for float, eg. `3.5`).
 - `ist` - Checks if string is of a certain format (e.g., `istuuid`, `istemail`, `istpassword`). Supported types: `uuid`, `unixmilli`, `timerfc3339`, `email`, `url`, `alpha`, `alphanum`, `numeric`, `hex`, `base64`, `json`, `jwt`, `ip`, `ipv4`, `ipv6`, `mac`, `password`.
+- `def` - Default value, used if the key is missing or the value is invalid (eg. `equapple defunassigned`). On update the default is set in the struct.
 - `cmn` - Checks if at least `condition` inner fields of a struct are correct (eg. `cmn2`), only usable on struct fields.
 - `cmx` - Checks if at most `condition` inner fields of a struct are correct (eg. `cmx2`), only usable on struct fields.
 - `unq` - Checks that every item of a list is unique (`unq`) or that a field of every item in a list of structs is unique (eg. `unqname`).
@@ -221,10 +234,9 @@ A `null` value (e.g. `{"name": null}` in json or `name:` in yaml) counts as leng
 
 All conditions except `fun`, `def`, `ist`, `cmn`, `cmx` and `unq` can compare with the value of another field instead of a fixed value by using `$` and the path of the field (eg. `min$earliest_day`), see [Relations](#relations). With `${name}` they compare with a value injected for the validation call instead (eg. `equ${api_key}`), see [Injected values](#injected-values). A value starting with `$` is therefore always a reference, put it in quotes (eg. `equ'$100'`) to use it as a fixed value.
 
-For con you need to put in a condition that is convertable to the underlying type of the arrary.
-Eg. for an array of int the condition must be convertable to int (bad: `vld:"conA"`, good: `vld:"con1"`).
+For `con` you need to put in a condition that is convertible to the underlying type of the array.
+Eg. for an array of int the condition must be convertible to int (bad: `vld:"conA"`, good: `vld:"con1"`).
 
-In the case of rex the int and float input will get converted to a string (`strconv.Itoa(int)` and `fmt.Sprintf("%f", f)`).
 If you want to check more complex cases you can obviously replace `equ`, `neq`, `min`, `max` and `con` with one regular expression.
 
 ## Structs
@@ -297,7 +309,7 @@ ctx := validator.Inject(r.Context(), "user_id", userID)
 ctx = validator.Inject(ctx, "role", role)
 
 // The unpack functions use the context of the request.
-err := v.UnmarshalValidateAndUpdate(r.WithContext(ctx), &request)
+err := v.UnmarshalAndValidate(r.WithContext(ctx), &request)
 
 // All other functions have a Context variant (eg. ValidateContext, ValidateAndUpdateContext, ValidateWithValidationContext).
 err = v.ValidateContext(ctx, &request)
@@ -327,7 +339,7 @@ The inner fields of every item are validated by their own tags. The requirement 
 
 ## Groups
 
-You also have the posibillity to add groups. So if you want to check on an update, that at least one field is updated, you can add all fields to a group `upd:"min1, gr1min1"`.
+You also have the possibility to add groups. So if you want to check on an update, that at least one field is updated, you can add all fields to a group `upd:"min1, gr1min1"`.
 Usable conditions for groups are `min` and `max`.
 
 A small code example would be:
@@ -354,7 +366,7 @@ The validator provides built-in security through tag-based field filtering. **On
 
 ## Tag Behavior
 
-When using `ValidateAndUpdate` or similar functions with a custom tag (e.g., `"upd"`), fields are handled as follows:
+This applies to all functions that update a struct (`ValidateAndUpdate`, `UnmarshalAndValidate` and the other unpack functions). With a custom tag (e.g., `"upd"`), fields are handled as follows:
 
 ```go
 type User struct {
@@ -410,7 +422,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
     ctx = validator.Inject(ctx, "signing_secret", accountSecret(r))
 
     document := &UpdateDocument{}
-    if err := v.UnmarshalValidateAndUpdate(r.WithContext(ctx), document); err != nil {
+    if err := v.UnmarshalAndValidate(r.WithContext(ctx), document); err != nil {
         // The error does not contain the injected user id, role or secret.
         http.Error(w, err.Error(), http.StatusBadRequest)
         return
@@ -428,7 +440,7 @@ To run the tests run `go test ./...`.
 
 ## Benchmark
 
-To run benchmarks run `go test -bench . -count 100 > bench.txt` (with memory allocation would be `go test -bench . -benchmem -count 100 > bench.txt` but they are 0). To see the results in a nice way after the run install `go install golang.org/x/perf/cmd/benchstat@latest` and log the results to the console with `benchstat bench.txt`.
+To run benchmarks run `go test -run '^$' -bench . -benchmem -count 10 > bench.txt`. To see the results in a nice way after the run install `go install golang.org/x/perf/cmd/benchstat@latest` and log the results to the console with `benchstat bench.txt`. To compare two versions, run the benchmarks for both into two files and use `benchstat old.txt new.txt`.
 
 ---
 
@@ -437,11 +449,11 @@ To run benchmarks run `go test -bench . -count 100 > bench.txt` (with memory all
 - Validate json, yaml or form values by struct tag.
 - Validate json, yaml or form values by validations.
 - Validate and update a struct from `JsonMap`.
-- **Tag-based validation**: Define validation rules directly within struct tags using a concise syntax (e.g. `vld:"(min3 && ncotest) || max0"`). Use multiple custom tags in one struct for multiple validation situations. The dafault tag is `vld`.
+- **Tag-based validation**: Define validation rules directly within struct tags using a concise syntax (e.g. `vld:"(min3 && ncotest) || max0"`). Use multiple custom tags in one struct for multiple validation situations. The default tag is `vld`.
 - **Relations**: Conditional requirements and comparisons with other fields, also on other levels (e.g. `vld:"rel(delivery equshipping) => min1"` or `vld:"min$earliest_day"`).
 - **Injected values**: Validate against values of the current request like the user, the role or a secret (e.g. `vld:"rel(${role} equadmin) || equ${user_id}"`), safe for concurrent requests and without the values in error messages.
 - **Custom validation functions**: Extend the validation capabilities by registering and using your own custom validation logic. Use it beside other requirements like `min3 && funYourCheckFunction`. This also allows you to check unsupported types by only using `funYourCheckFunction`.
-- **Nested struct support**: Seamlessly validate complex data structures containing nested structs.
+- **Nested struct support**: Seamlessly validate complex data structures containing nested, embedded and recursive structs.
 - **Array validation**: Apply validation rules to elements within arrays and slices.
 - **Grouped validations**: Organize validation rules into logical groups for more granular control.
-- **Advanced logical conditions**: Implement complex validation scenarios using logical operators (e.g., AND, OR) within your tags.
+- **Advanced logical conditions**: Implement complex validation scenarios using logical operators (AND, OR and IMPLIES) within your tags.

@@ -11,35 +11,24 @@ import (
 )
 
 // GetValidationsFromStruct extracts validation rules from a struct based on the provided tag type.
-// It iterates over the struct fields, checks for the specified tag type, and constructs Validation.
+// It iterates over the fields of the StructModel of the struct (see helper.StructModelOf),
+// so fields of embedded and inline structs are extracted on the level of the struct.
+//
+// A field whose type refers back to a struct that contains it (eg. `Children []Node` in Node)
+// gets an InnerValidationRef to the validations of that struct instead of InnerValidation.
 func GetValidationsFromStruct(in any, tagType string) ([]model.Validation, error) {
 	err := helper.CheckValidPointerToStruct(in)
 	if err != nil {
 		return nil, err
 	}
 
-	validations := []model.Validation{}
-
-	structFull := reflect.ValueOf(in).Elem()
-	for i := 0; i < structFull.Type().NumField(); i++ {
-		field := structFull.Field(i)
-		fieldType := structFull.Type().Field(i)
-
-		validation, err := GetValidationFromStructField(tagType, field, fieldType)
-		if err != nil {
-			return nil, err
-		} else if validation == nil {
-			continue
-		}
-
-		_, _, isInline := helper.FieldKey(fieldType)
-		if isInline {
-			validations = append(validations, validation.InnerValidation...)
-		} else {
-			if len(validation.Requirement) > 0 || len(validation.InnerValidation) > 0 {
-				validations = append(validations, *validation)
-			}
-		}
+	e := &extractor{tagType: tagType, building: map[reflect.Type]*[]model.Validation{}}
+	validations, err := e.structValidations(reflect.TypeOf(in).Elem())
+	if err != nil {
+		return nil, err
+	}
+	if e.hasRef {
+		markFieldUsage(validations)
 	}
 	return validations, nil
 }
@@ -48,13 +37,62 @@ func GetValidationsFromStruct(in any, tagType string) ([]model.Validation, error
 // It checks the field's tag for the specified tag type and constructs a Validation object.
 // The key is taken from the json tag, falls back to the yaml tag and then to the field name.
 func GetValidationFromStructField(tagType string, fieldValue reflect.Value, fieldType reflect.StructField) (*model.Validation, error) {
-	validation := &model.Validation{}
-	validation.Key, validation.OmitEmpty, _ = helper.FieldKey(fieldType)
-	validation.Type = model.ReflectTypeToValidatorType(fieldValue.Type())
-	validation.Requirement = "-"
+	key, omitEmpty, _ := helper.FieldKey(fieldType)
+	e := &extractor{tagType: tagType, building: map[reflect.Type]*[]model.Validation{}}
+	validation, err := e.fieldValidation(fieldType, fieldValue.Type(), key, omitEmpty)
+	if err != nil || validation == nil {
+		return validation, err
+	}
+	if e.hasRef {
+		validations := []model.Validation{*validation}
+		markFieldUsage(validations)
+		validation = &validations[0]
+	}
+	return validation, nil
+}
+
+// extractor holds the state of a single extraction.
+type extractor struct {
+	tagType string
+	// building holds the struct types that are extracted at the moment, with a pointer
+	// to their validations, which is filled when the extraction of the struct is done.
+	building map[reflect.Type]*[]model.Validation
+	// hasRef is set if an InnerValidationRef was set, NoFieldUsage then has to be checked again.
+	hasRef bool
+}
+
+// structValidations extracts the validations of all fields of the struct type.
+func (e *extractor) structValidations(structType reflect.Type) ([]model.Validation, error) {
+	ref := new([]model.Validation)
+	e.building[structType] = ref
+	defer delete(e.building, structType)
+
+	validations := []model.Validation{}
+	for _, field := range helper.StructModelOf(structType).Fields {
+		validation, err := e.fieldValidation(field.Field, field.Field.Type, field.Key, field.OmitEmpty)
+		if err != nil {
+			return nil, err
+		} else if validation == nil {
+			continue
+		}
+		validations = append(validations, *validation)
+	}
+
+	*ref = validations
+	return validations, nil
+}
+
+// fieldValidation extracts the validation of a field of the given type, it is nil if the field has no tag.
+func (e *extractor) fieldValidation(fieldType reflect.StructField, valueType reflect.Type, key string, omitEmpty bool) (*model.Validation, error) {
+	validation := &model.Validation{
+		Key:         key,
+		OmitEmpty:   omitEmpty,
+		Type:        model.ReflectTypeToValidatorType(valueType),
+		Requirement: "-",
+	}
 
 	tagIndex := 0
-	tagSplit := strings.Split(fieldType.Tag.Get(string(tagType)), ", ")
+	tagSplit := strings.Split(fieldType.Tag.Get(e.tagType), ", ")
 
 	if len(tagSplit) > tagIndex {
 		// Ignore if tag is empty, we do not want to validate this field at all
@@ -82,32 +120,78 @@ func GetValidationFromStructField(tagType string, fieldValue reflect.Value, fiel
 		}
 	}
 
-	if helper.IsArrayOfStruct(fieldValue.Interface()) {
-		innerStruct := reflect.New(fieldValue.Type().Elem()).Interface()
-		innerValidation, err := GetValidationsFromStruct(innerStruct, string(tagType))
-		if err != nil {
-			return nil, fmt.Errorf("error getting inner validation from array: %v", err)
+	if innerType, ok := innerStructType(valueType); ok {
+		if ref, building := e.building[innerType]; building {
+			validation.InnerValidationRef = ref
+			e.hasRef = true
+		} else {
+			innerValidation, err := e.structValidations(innerType)
+			if err != nil {
+				return nil, fmt.Errorf("error getting inner validation from %v: %v", valueType, err)
+			}
+			validation.InnerValidation = innerValidation
 		}
-		validation.InnerValidation = append(validation.InnerValidation, innerValidation...)
-	} else if helper.IsStruct(fieldValue.Interface()) || (fieldValue.Type().Kind() == reflect.Ptr && fieldValue.Type().Elem().Kind() == reflect.Struct) {
-		fieldTypeElem := fieldValue.Type()
-		if fieldTypeElem.Kind() == reflect.Ptr {
-			fieldTypeElem = fieldTypeElem.Elem()
-		}
-		innerStruct := reflect.New(fieldTypeElem).Interface()
-		innerValidation, err := GetValidationsFromStruct(innerStruct, string(tagType))
-		if err != nil {
-			return nil, fmt.Errorf("error getting inner validation from struct: %v", err)
-		}
-		validation.InnerValidation = append(validation.InnerValidation, innerValidation...)
 	}
 
-	validation.NoFieldUsage = validation.RequirementAST == nil || !validation.RequirementAST.UsesFields
+	validation.NoFieldUsage = !requirementOrInnerUsesFields(validation)
+	return validation, nil
+}
+
+// innerStructType returns the struct type of a struct, pointer to struct or slice/array of structs.
+func innerStructType(valueType reflect.Type) (reflect.Type, bool) {
+	switch valueType.Kind() {
+	case reflect.Slice, reflect.Array:
+		valueType = valueType.Elem()
+		return valueType, valueType.Kind() == reflect.Struct
+	case reflect.Ptr:
+		valueType = valueType.Elem()
+	}
+	return valueType, valueType.Kind() == reflect.Struct
+}
+
+// requirementOrInnerUsesFields reports if the requirement of the validation or one of its inner validations
+// uses `rel` or a `$` reference. An InnerValidationRef counts as not using fields here, see markFieldUsage.
+func requirementOrInnerUsesFields(validation *model.Validation) bool {
+	if validation.RequirementAST != nil && validation.RequirementAST.UsesFields {
+		return true
+	}
 	for i := range validation.InnerValidation {
 		if validation.InnerValidation[i].UsesFields() {
-			validation.NoFieldUsage = false
+			return true
 		}
 	}
+	return false
+}
 
-	return validation, nil
+// markFieldUsage sets NoFieldUsage to false for all validations whose inner validations use fields
+// through an InnerValidationRef. It repeats until nothing changes, because a reference can be part of a cycle.
+func markFieldUsage(validations []model.Validation) {
+	for markFieldUsageOnce(validations, map[*model.Validation]bool{}) {
+	}
+}
+
+func markFieldUsageOnce(validations []model.Validation, seen map[*model.Validation]bool) (changed bool) {
+	if len(validations) == 0 || seen[&validations[0]] {
+		return false
+	}
+	seen[&validations[0]] = true
+
+	for i := range validations {
+		validation := &validations[i]
+		inner := validation.Inner()
+		if markFieldUsageOnce(inner, seen) {
+			changed = true
+		}
+		if !validation.NoFieldUsage {
+			continue
+		}
+		for j := range inner {
+			if inner[j].UsesFields() {
+				validation.NoFieldUsage = false
+				changed = true
+				break
+			}
+		}
+	}
+	return changed
 }

@@ -2,7 +2,7 @@ package validators
 
 import (
 	"encoding/base64"
-	"encoding/json"
+	"encoding/json/jsontext"
 	"fmt"
 	"net"
 	"net/url"
@@ -77,7 +77,7 @@ func ValidateIsType(v any, ast *model.AstValue) error {
 			return fmt.Errorf("value is not a valid base64 string")
 		}
 	case "json":
-		if !json.Valid([]byte(s)) {
+		if !jsontext.Value(s).IsValid() {
 			return fmt.Errorf("value is not a valid json")
 		}
 	case "jwt":

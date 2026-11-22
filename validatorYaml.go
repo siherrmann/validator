@@ -8,19 +8,19 @@ import (
 	"github.com/siherrmann/validator/model"
 )
 
-// UnmarshalYamlValidateAndUpdate unmarshals given yaml ([]byte) into a JsonMap.
+// UnmarshalYamlAndValidate unmarshals given yaml ([]byte) into a JsonMap.
 // It validates the map by the tagType of the given struct and updates the struct.
 // It returns an error if the unmarshaling, validation or update fails.
 //
 // The keys are taken from the json tag, fall back to the yaml tag and then to the field name.
 // For more information look at ValidateAndUpdate.
-func (r *Validator) UnmarshalYamlValidateAndUpdate(yamlInput []byte, structToUpdate any, tagType ...string) error {
-	return r.UnmarshalYamlValidateAndUpdateContext(context.Background(), yamlInput, structToUpdate, tagType...)
+func (r *Validator) UnmarshalYamlAndValidate(yamlInput []byte, structToUpdate any, tagType ...string) error {
+	return r.UnmarshalYamlAndValidateContext(context.Background(), yamlInput, structToUpdate, tagType...)
 }
 
-// UnmarshalYamlValidateAndUpdateContext is UnmarshalYamlValidateAndUpdate with the context of the validation call,
+// UnmarshalYamlAndValidateContext is UnmarshalYamlAndValidate with the context of the validation call,
 // which holds the values injected with [Inject].
-func (r *Validator) UnmarshalYamlValidateAndUpdateContext(ctx context.Context, yamlInput []byte, structToUpdate any, tagType ...string) error {
+func (r *Validator) UnmarshalYamlAndValidateContext(ctx context.Context, yamlInput []byte, structToUpdate any, tagType ...string) error {
 	mapOut, err := helper.UnmarshalYamlToJsonMap(yamlInput)
 	if err != nil {
 		return fmt.Errorf("error unmarshaling yaml: %v", err)
@@ -34,16 +34,16 @@ func (r *Validator) UnmarshalYamlValidateAndUpdateContext(ctx context.Context, y
 	return nil
 }
 
-// UnmarshalYamlValidateAndUpdateWithValidation unmarshals given yaml ([]byte) into a JsonMap.
+// UnmarshalYamlAndValidateWithValidation unmarshals given yaml ([]byte) into a JsonMap.
 // It validates the map by the given validations and updates the given map.
 // It returns an error if the unmarshaling, validation or update fails.
-func (r *Validator) UnmarshalYamlValidateAndUpdateWithValidation(yamlInput []byte, mapToUpdate *map[string]any, validations []model.Validation) error {
-	return r.UnmarshalYamlValidateAndUpdateWithValidationContext(context.Background(), yamlInput, mapToUpdate, validations)
+func (r *Validator) UnmarshalYamlAndValidateWithValidation(yamlInput []byte, mapToUpdate *map[string]any, validations []model.Validation) error {
+	return r.UnmarshalYamlAndValidateWithValidationContext(context.Background(), yamlInput, mapToUpdate, validations)
 }
 
-// UnmarshalYamlValidateAndUpdateWithValidationContext is UnmarshalYamlValidateAndUpdateWithValidation
+// UnmarshalYamlAndValidateWithValidationContext is UnmarshalYamlAndValidateWithValidation
 // with the context of the validation call, which holds the values injected with [Inject].
-func (r *Validator) UnmarshalYamlValidateAndUpdateWithValidationContext(ctx context.Context, yamlInput []byte, mapToUpdate *map[string]any, validations []model.Validation) error {
+func (r *Validator) UnmarshalYamlAndValidateWithValidationContext(ctx context.Context, yamlInput []byte, mapToUpdate *map[string]any, validations []model.Validation) error {
 	mapOut, err := helper.UnmarshalYamlToJsonMap(yamlInput)
 	if err != nil {
 		return fmt.Errorf("error unmarshaling yaml: %v", err)
