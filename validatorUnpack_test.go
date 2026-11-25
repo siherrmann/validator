@@ -2,8 +2,13 @@ package validator
 
 import (
 	"bytes"
+	"errors"
+	"io"
+	"mime/multipart"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -47,77 +52,6 @@ func newInjectedRequest(t *testing.T, body string) *http.Request {
 
 type injectedRequest struct {
 	Key string `json:"key" vld:"equ${api_key}"`
-}
-
-func TestUnmapOrUnmarshalAndValidate(t *testing.T) {
-	v := newValidator()
-	ts := &testStruct{}
-
-	t.Run("Valid with form values", func(t *testing.T) {
-		form := url.Values{}
-		form.Set("name", "apple")
-		form.Set("age", "2")
-		req, _ := http.NewRequest("POST", "/", bytes.NewBuffer(nil))
-		req.Form = form
-
-		err := v.UnmapOrUnmarshalAndValidate(req, ts)
-		assert.NoError(t, err, "Expected no error on unmap or unmarshal validate and update")
-	})
-
-	t.Run("Invalid with form values", func(t *testing.T) {
-		form := url.Values{}
-		form.Set("name", "banana")
-		form.Set("age", "1")
-		req, _ := http.NewRequest("POST", "/", bytes.NewBuffer(nil))
-		req.Form = form
-
-		err := v.UnmapOrUnmarshalAndValidate(req, ts)
-		assert.Error(t, err, "Expected error on unmap or unmarshal validate and update")
-		assert.Contains(t, err.Error(), "error updating struct", "Expected error to contain validation error")
-	})
-
-	t.Run("Valid with one form value for slice fields", func(t *testing.T) {
-		ts := &testSliceStruct{}
-		req, _ := http.NewRequest("POST", "/", bytes.NewBuffer(nil))
-		req.Form = url.Values{"tool": {"miner"}, "tools": {"miner"}, "ids": {"7"}, "kinds": {"miner"}}
-
-		err := v.UnmapOrUnmarshalAndValidate(req, ts)
-		assert.NoError(t, err, "Expected no error on unmap or unmarshal validate and update")
-		assert.Equal(t, &testSliceStruct{Tool: "miner", Tools: []string{"miner"}, IDs: []int{7}, Kinds: []testKind{"miner"}}, ts)
-	})
-
-	t.Run("Valid with two form values for slice fields", func(t *testing.T) {
-		ts := &testSliceStruct{}
-		req, _ := http.NewRequest("POST", "/", bytes.NewBuffer(nil))
-		req.Form = url.Values{"tool": {"miner"}, "tools": {"miner", "run"}, "ids": {"7", "8"}, "kinds": {"miner", "run"}}
-
-		err := v.UnmapOrUnmarshalAndValidate(req, ts)
-		assert.NoError(t, err, "Expected no error on unmap or unmarshal validate and update")
-		assert.Equal(t, &testSliceStruct{Tool: "miner", Tools: []string{"miner", "run"}, IDs: []int{7, 8}, Kinds: []testKind{"miner", "run"}}, ts)
-	})
-
-	t.Run("Invalid with non-convertible form value for slice field", func(t *testing.T) {
-		req, _ := http.NewRequest("POST", "/", bytes.NewBuffer(nil))
-		req.Form = url.Values{"ids": {"abc"}}
-
-		err := v.UnmapOrUnmarshalAndValidate(req, &testSliceStruct{})
-		assert.Error(t, err, "Expected error on unmap or unmarshal validate and update")
-	})
-
-	t.Run("Valid with request body", func(t *testing.T) {
-		req, _ := http.NewRequest("POST", "/", bytes.NewBufferString(`{"name":"apple","age":2}`))
-
-		err := v.UnmapOrUnmarshalAndValidate(req, ts)
-		assert.NoError(t, err, "Expected no error on unmap or unmarshal validate and update")
-	})
-
-	t.Run("Invalid with request body", func(t *testing.T) {
-		req, _ := http.NewRequest("POST", "/", bytes.NewBufferString(`{"name":"banana","age":1}`))
-
-		err := v.UnmapOrUnmarshalAndValidate(req, ts)
-		assert.Error(t, err, "Expected error on unmap or unmarshal validate and update")
-		assert.Contains(t, err.Error(), "error updating struct", "Expected error to contain validation error")
-	})
 }
 
 func TestUnmarshalAndValidate(t *testing.T) {
@@ -298,6 +232,12 @@ func TestUnmapAndValidate(t *testing.T) {
 		assert.NoError(t, err, "Expected no error on unmap validate and update")
 	})
 
+	t.Run("Multipart form values", func(t *testing.T) {
+		result := &testStruct{}
+		require.NoError(t, v.UnmapAndValidate(newMultipartRequest(t, map[string]string{"name": "apple", "age": "2"}), result))
+		assert.Equal(t, testStruct{Name: "apple", Age: 2}, *result)
+	})
+
 	t.Run("Invalid form values", func(t *testing.T) {
 		form := url.Values{}
 		form.Set("name", "banana")
@@ -391,53 +331,6 @@ func TestUnmapAndValidate(t *testing.T) {
 	})
 }
 
-func TestUnmapOrUnmarshalAndValidateWithValidation(t *testing.T) {
-	v := newValidator()
-	validations := []model.Validation{
-		{Key: "name", Requirement: "equapple"},
-		{Key: "age", Requirement: "min2"},
-	}
-	mapToUpdate := &map[string]any{}
-
-	t.Run("Valid with form values", func(t *testing.T) {
-		form := url.Values{}
-		form.Set("name", "apple")
-		form.Set("age", "2")
-		req, _ := http.NewRequest("POST", "/", bytes.NewBuffer(nil))
-		req.Form = form
-
-		err := v.UnmapOrUnmarshalAndValidateWithValidation(req, mapToUpdate, validations)
-		assert.NoError(t, err, "Expected no error on unmap or unmarshal validate and update with validation")
-	})
-
-	t.Run("Invalid with form values", func(t *testing.T) {
-		form := url.Values{}
-		form.Set("name", "banana")
-		form.Set("age", "1")
-		req, _ := http.NewRequest("POST", "/", bytes.NewBuffer(nil))
-		req.Form = form
-
-		err := v.UnmapOrUnmarshalAndValidateWithValidation(req, mapToUpdate, validations)
-		assert.Error(t, err, "Expected error on unmap or unmarshal validate and update with validation")
-		assert.Contains(t, err.Error(), "error updating struct", "Expected error to contain validation error")
-	})
-
-	t.Run("Valid with request body", func(t *testing.T) {
-		req, _ := http.NewRequest("POST", "/", bytes.NewBufferString(`{"name":"apple","age":2}`))
-
-		err := v.UnmapOrUnmarshalAndValidateWithValidation(req, mapToUpdate, validations)
-		assert.NoError(t, err, "Expected no error on unmap or unmarshal validate and update with validation")
-	})
-
-	t.Run("Invalid with request body", func(t *testing.T) {
-		req, _ := http.NewRequest("POST", "/", bytes.NewBufferString(`{"name":"banana","age":1}`))
-
-		err := v.UnmapOrUnmarshalAndValidateWithValidation(req, mapToUpdate, validations)
-		assert.Error(t, err, "Expected error on unmap or unmarshal validate and update with validation")
-		assert.Contains(t, err.Error(), "error updating struct", "Expected error to contain validation error")
-	})
-}
-
 func TestUnmarshalAndValidateWithValidation(t *testing.T) {
 	v := newValidator()
 	validations := []model.Validation{
@@ -510,5 +403,200 @@ func TestUnmapAndValidateWithValidation(t *testing.T) {
 		err = v.UnmapAndValidateWithValidation(req, mapToUpdate, validations)
 		assert.Error(t, err, "Expected error on unmap validate and update with validation")
 		assert.Contains(t, err.Error(), "error updating struct", "Expected error to contain validation error")
+	})
+}
+
+func newMultipartRequest(t *testing.T, values map[string]string) *http.Request {
+	t.Helper()
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	for key, value := range values {
+		require.NoError(t, writer.WriteField(key, value))
+	}
+	fileWriter, err := writer.CreateFormFile("file", "file.txt")
+	require.NoError(t, err)
+	_, err = fileWriter.Write([]byte("ignored"))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	request, err := http.NewRequest(http.MethodPost, "/", body)
+	require.NoError(t, err)
+	request.Header.Set("Content-Type", writer.FormDataContentType())
+	return request
+}
+
+func newBodyRequest(t *testing.T, contentType string, body string) *http.Request {
+	t.Helper()
+	request, err := http.NewRequest(http.MethodPost, "/", bytes.NewBufferString(body))
+	require.NoError(t, err)
+	if contentType != "" {
+		request.Header.Set("Content-Type", contentType)
+	}
+	return request
+}
+
+func TestUnpackAndValidate(t *testing.T) {
+	v := newValidator()
+	expected := testStruct{Name: "apple", Age: 2}
+
+	for name, request := range map[string]func(t *testing.T) *http.Request{
+		"Url encoded form": func(t *testing.T) *http.Request {
+			return newBodyRequest(t, "application/x-www-form-urlencoded", "name=apple&age=2")
+		},
+		"Url encoded form with query": func(t *testing.T) *http.Request {
+			req := newBodyRequest(t, "application/x-www-form-urlencoded", "name=apple")
+			req.URL.RawQuery = "age=2"
+			return req
+		},
+		"Multipart form": func(t *testing.T) *http.Request {
+			return newMultipartRequest(t, map[string]string{"name": "apple", "age": "2"})
+		},
+		"JSON": func(t *testing.T) *http.Request {
+			return newBodyRequest(t, "application/json", `{"name":"apple","age":2}`)
+		},
+		"JSON with charset and query": func(t *testing.T) *http.Request {
+			req := newBodyRequest(t, "application/json; charset=utf-8", `{"name":"apple","age":2}`)
+			req.URL.RawQuery = "name=banana"
+			return req
+		},
+		"JSON suffix": func(t *testing.T) *http.Request {
+			return newBodyRequest(t, "application/merge-patch+json", `{"name":"apple","age":2}`)
+		},
+		"YAML": func(t *testing.T) *http.Request {
+			return newBodyRequest(t, "application/yaml", "name: apple\nage: 2\n")
+		},
+		"YAML with x-yaml": func(t *testing.T) *http.Request {
+			return newBodyRequest(t, "application/x-yaml", "name: apple\nage: 2\n")
+		},
+		"YAML with text/yaml": func(t *testing.T) *http.Request {
+			return newBodyRequest(t, "text/yaml", "name: apple\nage: 2\n")
+		},
+		"Query without Content-Type and body": func(t *testing.T) *http.Request {
+			req, err := http.NewRequest(http.MethodGet, "/?name=apple&age=2", nil)
+			require.NoError(t, err)
+			return req
+		},
+		"JSON without Content-Type": func(t *testing.T) *http.Request {
+			req := newBodyRequest(t, "", `{"name":"apple","age":2}`)
+			req.URL.RawQuery = "name=banana"
+			return req
+		},
+		"JSON without Content-Type of unknown length": func(t *testing.T) *http.Request {
+			req, err := http.NewRequest(http.MethodPost, "/", io.NopCloser(strings.NewReader(`{"name":"apple","age":2}`)))
+			require.NoError(t, err)
+			return req
+		},
+		"Form values set on the request": func(t *testing.T) *http.Request {
+			req, err := http.NewRequest(http.MethodPost, "/", http.NoBody)
+			require.NoError(t, err)
+			req.Form = url.Values{"name": {"apple"}, "age": {"2"}}
+			return req
+		},
+		"Query with empty body of unknown length": func(t *testing.T) *http.Request {
+			req, err := http.NewRequest(http.MethodGet, "/?name=apple&age=2", io.NopCloser(strings.NewReader("")))
+			require.NoError(t, err)
+			return req
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			result := &testStruct{}
+			require.NoError(t, v.UnpackAndValidate(request(t), result))
+			assert.Equal(t, expected, *result)
+		})
+	}
+
+	t.Run("Unsupported media type", func(t *testing.T) {
+		for name, request := range map[string]*http.Request{
+			"Other Content-Type":          newBodyRequest(t, "text/plain", `{"name":"apple","age":2}`),
+			"Invalid Content-Type":        newBodyRequest(t, "application/json; charset", `{"name":"apple","age":2}`),
+			"Form without the right type": newBodyRequest(t, "text/x-www-form-urlencoded", "name=apple&age=2"),
+		} {
+			err := v.UnpackAndValidate(request, &testStruct{})
+			assert.ErrorIs(t, err, ErrUnsupportedMediaType, name)
+			assert.NotErrorIs(t, err, ErrMalformedInput, name)
+		}
+	})
+
+	t.Run("Malformed input", func(t *testing.T) {
+		for name, request := range map[string]*http.Request{
+			"JSON":                      newBodyRequest(t, "application/json", `{"name":`),
+			"Empty JSON":                newBodyRequest(t, "application/json", ""),
+			"Form without Content-Type": newBodyRequest(t, "", "name=apple&age=2"),
+			"YAML":                      newBodyRequest(t, "application/yaml", "name: [apple"),
+			"Query":                     newBodyRequest(t, "application/x-www-form-urlencoded", "name=%zz"),
+		} {
+			err := v.UnpackAndValidate(request, &testStruct{})
+			assert.ErrorIs(t, err, ErrMalformedInput, name)
+			var fieldErrors model.FieldErrors
+			assert.False(t, errors.As(err, &fieldErrors), name)
+		}
+	})
+
+	t.Run("Body larger than allowed", func(t *testing.T) {
+		recorder := httptest.NewRecorder()
+		req := newBodyRequest(t, "application/json", `{"name":"apple","age":2}`)
+		req.Body = http.MaxBytesReader(recorder, req.Body, 5)
+
+		err := v.UnpackAndValidate(req, &testStruct{})
+		assert.ErrorIs(t, err, ErrMalformedInput)
+		var maxBytesError *http.MaxBytesError
+		assert.ErrorAs(t, err, &maxBytesError)
+	})
+
+	t.Run("Invalid values", func(t *testing.T) {
+		err := v.UnpackAndValidate(newBodyRequest(t, "application/json", `{"name":"banana","age":2}`), &testStruct{})
+		var fieldErrors model.FieldErrors
+		require.ErrorAs(t, err, &fieldErrors)
+		assert.Len(t, fieldErrors, 1)
+		assert.NotErrorIs(t, err, ErrMalformedInput)
+		assert.NotErrorIs(t, err, ErrUnsupportedMediaType)
+	})
+
+	t.Run("Values injected into the request context", func(t *testing.T) {
+		result := &injectedRequest{}
+		require.NoError(t, v.UnpackAndValidate(newInjectedRequest(t, `{"key":"s3cr3t"}`), result))
+		assert.Equal(t, "s3cr3t", result.Key)
+	})
+
+	t.Run("Nil request", func(t *testing.T) {
+		assert.Error(t, v.UnpackAndValidate(nil, &testStruct{}))
+	})
+}
+
+func TestUnpackAndValidateWithValidation(t *testing.T) {
+	v := newValidator()
+	validations := []model.Validation{
+		{Key: "name", Type: model.String, Requirement: "equapple"},
+		{Key: "age", Type: model.Int, Requirement: "min2"},
+	}
+
+	t.Run("Valid", func(t *testing.T) {
+		for name, request := range map[string]*http.Request{
+			"Form": newBodyRequest(t, "application/x-www-form-urlencoded", "name=apple&age=2"),
+			"JSON": newBodyRequest(t, "application/json", `{"name":"apple","age":2}`),
+			"YAML": newBodyRequest(t, "application/yaml", "name: apple\nage: 2\n"),
+		} {
+			mapToUpdate := map[string]any{}
+			require.NoError(t, v.UnpackAndValidateWithValidation(request, &mapToUpdate, validations), name)
+			assert.Equal(t, map[string]any{"name": "apple", "age": 2}, mapToUpdate, name)
+		}
+	})
+
+	t.Run("Invalid", func(t *testing.T) {
+		mapToUpdate := map[string]any{}
+		err := v.UnpackAndValidateWithValidation(newBodyRequest(t, "application/json", `{"name":"banana","age":2}`), &mapToUpdate, validations)
+		var fieldErrors model.FieldErrors
+		assert.ErrorAs(t, err, &fieldErrors)
+		assert.Empty(t, mapToUpdate)
+	})
+
+	t.Run("Unsupported media type", func(t *testing.T) {
+		err := v.UnpackAndValidateWithValidation(newBodyRequest(t, "text/csv", "name,age"), &map[string]any{}, validations)
+		assert.ErrorIs(t, err, ErrUnsupportedMediaType)
+	})
+
+	t.Run("Malformed input", func(t *testing.T) {
+		err := v.UnpackAndValidateWithValidation(newBodyRequest(t, "application/json", "{"), &map[string]any{}, validations)
+		assert.ErrorIs(t, err, ErrMalformedInput)
 	})
 }

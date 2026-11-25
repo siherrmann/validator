@@ -268,6 +268,210 @@ func TestParseValidation(t *testing.T) {
 			expected: "",
 			wantErr:  true,
 		},
+		{
+			name:     "Groups after the requirement are not part of it",
+			input:    `min1`,
+			expected: `min'1'`,
+			wantErr:  false,
+		},
+		{
+			name:     "Default",
+			input:    `equapple || defunassigned`,
+			expected: `equ'apple' || def'unassigned'`,
+			wantErr:  false,
+		},
+		{
+			name:     "Frm list",
+			input:    `frma,b,c`,
+			expected: `frm'a,b,c'`,
+			wantErr:  false,
+		},
+		{
+			name:     "Frm list with spaces in quotes",
+			input:    `frm'a b,c'`,
+			expected: `frm'a b,c'`,
+			wantErr:  false,
+		},
+		{
+			name:     "Regex with braces",
+			input:    `rex^(.*[A-Z])+(.*)$`,
+			expected: `rex'^(.*[A-Z])+(.*)$'`,
+			wantErr:  false,
+		},
+		{
+			name:     "Regex with braces in a group",
+			input:    `(rex^(a|b)$ || max0) && min1`,
+			expected: `(rex'^(a|b)$' || max'0') && min'1'`,
+			wantErr:  false,
+		},
+		{
+			name:     "Regex starting with a brace",
+			input:    `rex(a|b)`,
+			expected: `rex'(a|b)'`,
+			wantErr:  false,
+		},
+		{
+			name:     "Regex with special characters",
+			input:    `rex^(.*[\x60!@#$%^&*()_+={};':\"|\\,.<>/?~-])+(.*)$`,
+			expected: `rex'^(.*[\x60!@#$%^&*()_+={};':\"|\\,.<>/?~-])+(.*)$'`,
+			wantErr:  false,
+		},
+		{
+			name:     "Quoted regex",
+			input:    `rex'^a b$'`,
+			expected: `rex'^a b$'`,
+			wantErr:  false,
+		},
+		{
+			name:     "Negative numbers",
+			input:    `min-5 && max-1.5`,
+			expected: `min'-5' && max'-1.5'`,
+			wantErr:  false,
+		},
+		{
+			name:     "Operator without spaces",
+			input:    `min1 &&max2`,
+			expected: `min'1' && max'2'`,
+			wantErr:  false,
+		},
+		{
+			name:     "Is type",
+			input:    `istuuid`,
+			expected: `ist'uuid'`,
+			wantErr:  false,
+		},
+		{
+			name:     "Correct min and max",
+			input:    `cmn1 && cmx2`,
+			expected: `cmn'1' && cmx'2'`,
+			wantErr:  false,
+		},
+		{
+			name:     "Function",
+			input:    `min3 && funcheck`,
+			expected: `min'3' && fun'check'`,
+			wantErr:  false,
+		},
+		{
+			name:     "Value with space",
+			input:    `min 5`,
+			expected: `min'5'`,
+			wantErr:  false,
+		},
+		{
+			name:     "Trailing AND",
+			input:    `min1 &&`,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Trailing OR",
+			input:    `min1 || `,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Trailing operator in group",
+			input:    `(min1 &&) || max2`,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Trailing operator in relation",
+			input:    `rel(a equ1 &&) => min1`,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Leading operator",
+			input:    `&& min1`,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Two operators",
+			input:    `min1 && || max2`,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Three character operator",
+			input:    `min1 &&& max2`,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Non-numeric min",
+			input:    `minabc`,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Non-numeric max",
+			input:    `max'abc'`,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Operator without space after value",
+			input:    `min1&&max2`,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Non-numeric cmn",
+			input:    `cmnx`,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Unknown ist type",
+			input:    `istuuidd`,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Closing brace without opening brace",
+			input:    `max1)`,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Closing brace in the middle",
+			input:    `min1 ) ( max2`,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Opening brace without closing brace",
+			input:    `(min1`,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Empty group",
+			input:    `()`,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Empty requirement with conditions",
+			input:    `- min1`,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Unknown condition type",
+			input:    `abc1`,
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "Unknown condition type with uppercase",
+			input:    `Min1`,
+			expected: "",
+			wantErr:  true,
+		},
 	}
 
 	for _, test := range tests {
@@ -307,6 +511,11 @@ func TestParseValidation(t *testing.T) {
 		condition := root.RootValue.ConditionGroup[0]
 		assert.False(t, condition.HasNumber)
 		assert.Equal(t, []string{"other"}, condition.Ref.Path)
+	})
+
+	t.Run("Error message names the requirement", func(t *testing.T) {
+		_, err := NewParser().ParseValidation("min1 &&")
+		assert.EqualError(t, err, `invalid requirement "min1 &&": error parsing group, expected a condition after &&`)
 	})
 
 	t.Run("Field usage is set on the root", func(t *testing.T) {

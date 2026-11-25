@@ -4,38 +4,95 @@ import (
 	"encoding/json/v2"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
 )
 
+// MultipartMaxMemory is the number of bytes of a multipart form that are kept in memory,
+// the rest of the files is stored in temporary files (see http.Request.ParseMultipartForm).
+// It is the same as the default of net/http.
+const MultipartMaxMemory = 32 << 20
+
+// UnmarshalRequestToJsonMap unmarshals the json body of the request into a JsonMap.
+// An error while reading the body (eg. *http.MaxBytesError) is wrapped.
 func UnmarshalRequestToJsonMap(request *http.Request) (map[string]any, error) {
-	if request == nil {
-		return nil, fmt.Errorf("request is nil")
-	}
-
-	bodyBytes, err := io.ReadAll(request.Body)
+	bodyBytes, err := readRequestBody(request)
 	if err != nil {
-		return nil, fmt.Errorf("error reading request body: %v", err)
+		return nil, err
 	}
-	defer request.Body.Close()
-
 	return UnmarshalJsonToJsonMap(bodyBytes)
 }
 
+// UnmarshalYamlRequestToJsonMap unmarshals the yaml body of the request into a JsonMap, see UnmarshalYamlToJsonMap.
+// An error while reading the body (eg. *http.MaxBytesError) is wrapped.
+func UnmarshalYamlRequestToJsonMap(request *http.Request) (map[string]any, error) {
+	bodyBytes, err := readRequestBody(request)
+	if err != nil {
+		return nil, err
+	}
+	return UnmarshalYamlToJsonMap(bodyBytes)
+}
+
+func readRequestBody(request *http.Request) ([]byte, error) {
+	if request == nil {
+		return nil, fmt.Errorf("request is nil")
+	}
+	if request.Body == nil {
+		return nil, nil
+	}
+	defer request.Body.Close()
+
+	bodyBytes, err := io.ReadAll(request.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading request body: %w", err)
+	}
+	return bodyBytes, nil
+}
+
+// UnmapRequestToJsonMap unmaps the form values of the request (the query and,
+// for a url encoded or multipart form, the body) into a JsonMap. Files of a multipart form are ignored.
+// An error while reading the body (eg. *http.MaxBytesError) is wrapped.
 func UnmapRequestToJsonMap(request *http.Request) (map[string]any, error) {
 	if request == nil {
 		return nil, fmt.Errorf("request is nil")
 	}
 
-	err := request.ParseForm()
+	var err error
+	if IsMediaType(request, "multipart/form-data") {
+		err = request.ParseMultipartForm(MultipartMaxMemory)
+	} else {
+		err = request.ParseForm()
+	}
 	if err != nil {
-		return nil, fmt.Errorf("error parsing form: %v", err)
+		return nil, fmt.Errorf("error parsing form: %w", err)
 	}
 
 	return UnmapUrlValuesToJsonMap(request.Form)
+}
+
+// MediaType returns the media type of the Content-Type header of the request without parameters
+// (eg. `application/json` for `application/json; charset=utf-8`). It is empty if there is no Content-Type.
+func MediaType(request *http.Request) (string, error) {
+	contentType := request.Header.Get("Content-Type")
+	if contentType == "" {
+		return "", nil
+	}
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return "", fmt.Errorf("invalid Content-Type %q: %v", contentType, err)
+	}
+	return mediaType, nil
+}
+
+// IsMediaType reports if the Content-Type of the request is one of the given media types.
+func IsMediaType(request *http.Request, mediaTypes ...string) bool {
+	mediaType, err := MediaType(request)
+	return err == nil && slices.Contains(mediaTypes, mediaType)
 }
 
 func UnmarshalJsonToJsonMap(jsonInput []byte) (map[string]any, error) {

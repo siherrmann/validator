@@ -2,7 +2,9 @@ package helper
 
 import (
 	"bytes"
+	"mime/multipart"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
@@ -29,6 +31,72 @@ func TestUnmarshalRequestToJsonMap(t *testing.T) {
 		assert.Error(t, err, "Expected error unmarshaling invalid JSON request")
 		assert.Contains(t, err.Error(), "request is nil", "Expected error to contain nil error")
 	})
+
+	t.Run("Read error is wrapped", func(t *testing.T) {
+		req, err := http.NewRequest("POST", "/", bytes.NewBufferString(`{"name":"apple"}`))
+		require.NoError(t, err)
+		req.Body = http.MaxBytesReader(httptest.NewRecorder(), req.Body, 3)
+
+		_, err = UnmarshalRequestToJsonMap(req)
+		var maxBytesError *http.MaxBytesError
+		assert.ErrorAs(t, err, &maxBytesError)
+	})
+}
+
+func TestUnmarshalYamlRequestToJsonMap(t *testing.T) {
+	t.Run("Valid yaml request", func(t *testing.T) {
+		req, err := http.NewRequest("POST", "/", bytes.NewBufferString("name: apple\nage: 2\n"))
+		require.NoError(t, err)
+
+		mapOut, err := UnmarshalYamlRequestToJsonMap(req)
+		require.NoError(t, err)
+		assert.Equal(t, map[string]any{"name": "apple", "age": 2}, mapOut)
+	})
+
+	t.Run("Invalid yaml", func(t *testing.T) {
+		req, err := http.NewRequest("POST", "/", bytes.NewBufferString("name: [apple"))
+		require.NoError(t, err)
+
+		_, err = UnmarshalYamlRequestToJsonMap(req)
+		assert.Error(t, err)
+	})
+
+	t.Run("Invalid request", func(t *testing.T) {
+		_, err := UnmarshalYamlRequestToJsonMap(nil)
+		assert.ErrorContains(t, err, "request is nil")
+	})
+}
+
+func TestMediaType(t *testing.T) {
+	for contentType, expected := range map[string]string{
+		"":                                  "",
+		"application/json":                  "application/json",
+		"Application/JSON; charset=utf-8":   "application/json",
+		"multipart/form-data; boundary=abc": "multipart/form-data",
+	} {
+		req, err := http.NewRequest("POST", "/", nil)
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", contentType)
+
+		mediaType, err := MediaType(req)
+		require.NoError(t, err, contentType)
+		assert.Equal(t, expected, mediaType, contentType)
+	}
+
+	req, err := http.NewRequest("POST", "/", nil)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json; charset")
+	_, err = MediaType(req)
+	assert.Error(t, err, "Expected an error for an invalid Content-Type")
+}
+
+func TestIsMediaType(t *testing.T) {
+	req, err := http.NewRequest("POST", "/", nil)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	assert.True(t, IsMediaType(req, "text/yaml", "application/json"))
+	assert.False(t, IsMediaType(req, "text/yaml"))
 }
 
 func TestUnmapRequestToJsonMap(t *testing.T) {
@@ -44,6 +112,20 @@ func TestUnmapRequestToJsonMap(t *testing.T) {
 		assert.NoError(t, err, "Expected no error unmapping request to JsonMap")
 		assert.Equal(t, "apple", mapOut["name"], "Expected name to be 'apple'")
 		assert.Equal(t, float64(2), mapOut["age"], "Expected age to be 2")
+	})
+
+	t.Run("Multipart form request", func(t *testing.T) {
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		require.NoError(t, writer.WriteField("name", "apple"))
+		require.NoError(t, writer.Close())
+		req, err := http.NewRequest("POST", "/?age=2", body)
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+
+		mapOut, err := UnmapRequestToJsonMap(req)
+		require.NoError(t, err)
+		assert.Equal(t, map[string]any{"name": "apple", "age": float64(2)}, mapOut)
 	})
 
 	t.Run("Invalid request", func(t *testing.T) {

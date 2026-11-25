@@ -105,4 +105,14 @@ func TestValidateIsType(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("All valid types are known", func(t *testing.T) {
+		for isType := range model.ValidIsTypes {
+			err := ValidateIsType("", &model.AstValue{ConditionValue: isType})
+			if err != nil {
+				assert.NotContains(t, err.Error(), "unknown type check", isType)
+			}
+		}
+		assert.ErrorContains(t, ValidateIsType("", &model.AstValue{ConditionValue: "unknown"}), "unknown type check")
+	})
 }

@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -41,12 +40,11 @@ func (p *Parser) ParseValidation(validation string) (model.RootNode, error) {
 	var rootNode model.RootNode
 
 	val := p.parseGroup(true)
-	if val == nil || len(p.Errors()) > 0 {
-		p.parseError(fmt.Sprintf(
-			"error parsing validation, expected a value, got: %v:",
-			p.currentToken.Literal,
-		))
-		return model.RootNode{RootValue: &model.AstValue{}}, errors.New(p.Errors())
+	if val == nil || len(p.errors) > 0 {
+		if len(p.errors) == 0 {
+			p.parseError(fmt.Sprintf("error parsing validation, expected a value, got: %v", p.currentToken.Literal))
+		}
+		return model.RootNode{RootValue: &model.AstValue{}}, fmt.Errorf("invalid requirement %q: %s", validation, p.Errors())
 	}
 	val.UsesFields = val.HasFieldUsage()
 	rootNode.RootValue = val
@@ -106,6 +104,10 @@ func (p *Parser) parseGroupFrom(root bool, open bool) *model.AstValue {
 				group.Start = p.currentToken.Start
 				grpState = model.GrpOpen
 			} else if p.currentTokenTypeIs(model.LexerEmptyRequirement) {
+				if root && p.peekToken.Type != model.LexerEOF {
+					p.parseError(fmt.Sprintf("error parsing validation, `-` can not be combined with other conditions, got: %s", p.peekToken.Literal))
+					return nil
+				}
 				group.Type = model.EMPTY
 				group.Start = p.currentToken.Start
 				group.End = p.currentToken.End
@@ -120,6 +122,15 @@ func (p *Parser) parseGroupFrom(root bool, open bool) *model.AstValue {
 			}
 		case model.GrpOpen:
 			if p.currentTokenTypeIs(model.LexerRightBrace) {
+				if root {
+					p.parseError("error parsing group, got `)` without an opening `(`")
+					return nil
+				} else if len(group.ConditionGroup) == 0 {
+					p.parseError("error parsing group, expected a condition in `()`")
+					return nil
+				} else if !p.lastConditionComplete(group) {
+					return nil
+				}
 				group.End = p.currentToken.End
 				p.nextToken()
 				grpState = model.GrpEnd
@@ -136,6 +147,10 @@ func (p *Parser) parseGroupFrom(root bool, open bool) *model.AstValue {
 					group.ConditionGroup[len(group.ConditionGroup)-2].Operator = model.AND
 				}
 			} else if p.currentTokenTypeIs(model.LexerOperator) && len(group.ConditionGroup) > 0 {
+				if last := group.ConditionGroup[len(group.ConditionGroup)-1]; len(last.Operator) > 0 {
+					p.parseError(fmt.Sprintf("error parsing group, expected a condition after %v, got: %s", last.Operator, p.currentToken.Literal))
+					return nil
+				}
 				operator := p.parseOperator()
 				group.ConditionGroup[len(group.ConditionGroup)-1].Operator = operator
 				p.nextToken()
@@ -151,16 +166,13 @@ func (p *Parser) parseGroupFrom(root bool, open bool) *model.AstValue {
 	}
 
 	if p.currentTokenTypeIs(model.LexerEOF) && grpState == model.GrpOpen && !root {
-		p.parseError(fmt.Sprintf(
-			"error parsing group, expected right brace, got end of line after: %s",
-			p.lexer.lastTokenType,
-		))
+		p.parseError("error parsing group, expected `)` at the end of the requirement")
 		return nil
 	}
 
 	group.End = p.currentToken.Start
 
-	if len(p.errors) > 0 {
+	if len(p.errors) > 0 || (len(group.ConditionGroup) > 0 && !p.lastConditionComplete(group)) {
 		return nil
 	}
 	if err := normalizeImplication(group); err != nil {
@@ -169,6 +181,15 @@ func (p *Parser) parseGroupFrom(root bool, open bool) *model.AstValue {
 	}
 
 	return group
+}
+
+// lastConditionComplete reports a parse error if the last value of the group ends with an operator (eg. `min1 &&`).
+func (p *Parser) lastConditionComplete(group *model.AstValue) bool {
+	if last := group.ConditionGroup[len(group.ConditionGroup)-1]; len(last.Operator) > 0 {
+		p.parseError(fmt.Sprintf("error parsing group, expected a condition after %v", last.Operator))
+		return false
+	}
+	return true
 }
 
 // normalizeImplication restructures a group with an implication (`=>`) into exactly two values:
@@ -325,6 +346,8 @@ func (p *Parser) parseReference(condition *model.AstValue) {
 // precomputeConditionValue prepares the fixed value of a condition once while parsing,
 // so it does not have to be done on every validation:
 // `rex` is compiled, `frm` and `nfr` are split and `min` and `max` are parsed to a number.
+// Values that can never be valid are reported as parse error: a `min`, `max`, `cmn` or `cmx`
+// value that is not a number, an invalid regex and an unknown `ist` type.
 func (p *Parser) precomputeConditionValue(condition *model.AstValue) {
 	switch condition.ConditionType {
 	case model.REGX:
@@ -339,9 +362,20 @@ func (p *Parser) precomputeConditionValue(condition *model.AstValue) {
 			condition.List = strings.Split(condition.ConditionValue, ",")
 		}
 	case model.MIN_VALUE, model.MAX_VALUE:
-		if number, err := strconv.ParseFloat(condition.ConditionValue, 64); err == nil {
-			condition.Number = number
-			condition.HasNumber = true
+		number, err := strconv.ParseFloat(condition.ConditionValue, 64)
+		if err != nil {
+			p.parseError(fmt.Sprintf("error parsing condition %v, value %s is not a number", condition.ConditionType, condition.ConditionValue))
+			return
+		}
+		condition.Number = number
+		condition.HasNumber = true
+	case model.CORRECT_MIN, model.CORRECT_MAX:
+		if _, err := strconv.Atoi(condition.ConditionValue); err != nil {
+			p.parseError(fmt.Sprintf("error parsing condition %v, value %s is not an integer", condition.ConditionType, condition.ConditionValue))
+		}
+	case model.IS_TYPE:
+		if _, ok := model.ValidIsTypes[condition.ConditionValue]; !ok {
+			p.parseError(fmt.Sprintf("error parsing condition ist, unknown type %s", condition.ConditionValue))
 		}
 	}
 }

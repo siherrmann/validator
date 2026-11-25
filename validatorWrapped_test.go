@@ -55,18 +55,19 @@ func TestWrappedValidateAndUpdateWithValidation(t *testing.T) {
 	assert.Equal(t, 2, mapToUpdate["age"], "Expected age to be 2")
 }
 
-func TestWrappedUnmapOrUnmarshalAndValidate(t *testing.T) {
-	form := url.Values{}
-	form.Set("name", "apple")
-	form.Set("age", "2")
-	req, _ := http.NewRequest("POST", "/", bytes.NewBufferString(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+func TestWrappedUnpackAndValidate(t *testing.T) {
 	var s testStruct
+	err := UnpackAndValidate(newBodyRequest(t, "application/json", `{"name":"apple","age":2}`), &s)
+	assert.NoError(t, err, "Expected no error on unpack and validate")
+	assert.Equal(t, testStruct{Name: "apple", Age: 2}, s)
+}
 
-	err := UnmapOrUnmarshalAndValidate(req, &s)
-	assert.NoError(t, err, "Expected no error on unmap or unmarshal validate and update")
-	assert.Equal(t, "apple", s.Name, "Expected name to be 'apple'")
-	assert.Equal(t, 2, s.Age, "Expected age to be 2")
+func TestWrappedUnpackAndValidateWithValidation(t *testing.T) {
+	validations := []model.Validation{{Key: "name", Type: model.String, Requirement: "equapple"}}
+	mapToUpdate := map[string]any{}
+	err := UnpackAndValidateWithValidation(newBodyRequest(t, "application/x-www-form-urlencoded", "name=apple"), &mapToUpdate, validations)
+	assert.NoError(t, err, "Expected no error on unpack and validate with validation")
+	assert.Equal(t, map[string]any{"name": "apple"}, mapToUpdate)
 }
 
 func TestWrappedUnmapAndValidate(t *testing.T) {
@@ -95,25 +96,6 @@ func TestWrappedUnmarshalAndValidate(t *testing.T) {
 	assert.NoError(t, err, "Expected no error on unmarshal validate and update")
 	assert.Equal(t, "apple", s.Name, "Expected name to be 'apple'")
 	assert.Equal(t, 2, s.Age, "Expected age to be 2")
-}
-
-func TestWrappedUnmapOrUnmarshalAndValidateWithValidation(t *testing.T) {
-	form := url.Values{}
-	form.Set("name", "apple")
-	form.Set("age", "2")
-	req, _ := http.NewRequest("POST", "/", bytes.NewBufferString(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	mapToUpdate := map[string]any{}
-	validations := []model.Validation{
-		{Key: "name", Requirement: "equapple"},
-		{Key: "age", Requirement: "min2"},
-	}
-
-	err := UnmapOrUnmarshalAndValidateWithValidation(req, &mapToUpdate, validations)
-	assert.NoError(t, err, "Expected no error on unmap or unmarshal validate and update with validation")
-	assert.Equal(t, "apple", mapToUpdate["name"], "Expected name to be 'apple'")
-	assert.Equal(t, float64(2), mapToUpdate["age"], "Expected age to be 2")
 }
 
 func TestWrappedUnmapAndValidateWithValidation(t *testing.T) {

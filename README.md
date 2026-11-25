@@ -75,12 +75,12 @@ In these examples:
 - `vld:"rex^[^@]+@[^@]+\\.[^@]+$"`: Validates Email against a regular expression pattern.
 - `vld:"min18"`: Checks that the integer field Age has a minimum value of 18.
 
-If you want to validate a request (json body or form values) and update for example the `User` struct only if the values are valid, you can use `UnmapOrUnmarshalAndValidate`.
+If you want to validate a request (form values, json or yaml body) and update for example the `User` struct only if the values are valid, you can use `UnpackAndValidate`. It reads the input chosen by the `Content-Type` of the request, see [Requests](#requests).
 
 ```go
 func CreateUser(w http.ResponseWriter, r *http.Request) {
     user := &User{}
-    err := v.UnmapOrUnmarshalAndValidate(r, user)
+    err := v.UnpackAndValidate(r, user)
     if err != nil {
         fmt.Println("Validation failed for new user:", err)
     }
@@ -100,7 +100,7 @@ type User struct {
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
     user := &User{}
-    err := v.UnmapOrUnmarshalAndValidate(r, user, "create")
+    err := v.UnpackAndValidate(r, user, "create")
     if err != nil {
         fmt.Println("Validation failed for creating user:", err)
     }
@@ -109,7 +109,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
     user := &User{}
-    err := v.UnmapOrUnmarshalAndValidate(r, user, "update")
+    err := v.UnpackAndValidate(r, user, "update")
     if err != nil {
         fmt.Println("Validation failed for updating user:", err)
     }
@@ -118,7 +118,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
     user := &User{}
-    err := v.UnmapOrUnmarshalAndValidate(r, user, "delete")
+    err := v.UnpackAndValidate(r, user, "delete")
     if err != nil {
         fmt.Println("Validation failed for deleting user:", err)
     }
@@ -127,7 +127,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 func GetUser(w http.ResponseWriter, r *http.Request) {
     user := &User{}
-    err := v.UnmapOrUnmarshalAndValidate(r, user, "get")
+    err := v.UnpackAndValidate(r, user, "get")
     if err != nil {
         fmt.Println("Validation failed for getting user:", err)
     }
@@ -159,14 +159,14 @@ if err != nil {
 
 # Validation
 
-`Validate` validates a given struct by `vld` or custom tags. `ValidateAndUpdate` validates a json map and updates the given struct with the validated values. `UnmarshalAndValidate` and similar functions unpack the input (json body, form values or yaml), validate it and then update the given struct, so the struct is only changed if the input is valid. `ValidateWithValidation` and `ValidateAndUpdateWithValidation` do the same for a map by using an array of `Validation` (which is the equivalent for tags in a struct).
+`Validate` validates a given struct by `vld` or custom tags. `ValidateAndUpdate` validates a json map and updates the given struct with the validated values. `UnpackAndValidate` and similar functions unpack the input (json body, form values or yaml), validate it and then update the given struct, so the struct is only changed if the input is valid. `ValidateWithValidation` and `ValidateAndUpdateWithValidation` do the same for a map by using an array of `Validation` (which is the equivalent for tags in a struct).
 
 You can add a validate tag with the syntax `vld:"[requirement], [groups]"`.
 Groups are separated by a space (eg. `gr1min1 gr2max1`).
 Conditions and operators in a requirement are separated by a space (eg. `max0 || (min10 && max30)`).
 
 All fields that you want to validate in the struct need a `vld` tag (or custom tag if specified).
-If you don't want to validate the field you can add `vld:"-"`. If you then use an update function it does update it without validating.
+If you don't want to validate the field you can add `vld:"-"`. If you then use an update function it does update it without validating. This also applies to a struct (also behind a pointer or in a list) without any `vld` tag in it, the whole value is taken over. A struct with tags is validated by them, see [Structs](#structs).
 
 The key of a field is taken from the `json` tag, falls back to the `yaml` tag and then to the field name. The option `omitempty` is read from the same tag. Fields tagged with `json:"-"` (or `yaml:"-"` without a `json` tag) are ignored, they are never validated or updated.
 
@@ -181,6 +181,41 @@ JSON is parsed with `encoding/json/v2`, which is strict:
 - A `null` sets the field to its zero value.
 
 Types that can be unmarshaled from text (they implement `encoding.TextUnmarshaler`, e.g. `uuid.UUID` or `net.IP`) are validated as their string representation, also as pointers. So `istuuid` works on a `uuid.UUID` field and `min`/`max` check the length of the string (36 for a uuid). On update the string is parsed into the field type. Structs like `time.Time` are not affected by this. Keep in mind that the nil uuid (`00000000-0000-0000-0000-000000000000`) is a valid uuid, you can exclude it with `neq00000000-0000-0000-0000-000000000000`.
+
+## Requests
+
+`UnpackAndValidate` reads the input of a request by its `Content-Type`:
+
+| Content-Type | Input |
+| --- | --- |
+| `application/x-www-form-urlencoded`, `multipart/form-data` | The form values and the query (files are ignored), like `UnmapAndValidate`. |
+| `application/json` (also with parameters like `charset` and types with the suffix `+json`) | The json body, like `UnmarshalAndValidate`. |
+| `application/yaml`, `application/x-yaml`, `text/yaml` | The yaml body. |
+| None | The json body or, if the body is empty, the query. |
+
+Any other `Content-Type` returns `validator.ErrUnsupportedMediaType`. Input that can not be read or parsed (eg. invalid json) returns `validator.ErrMalformedInput`, this is the same for all unpack functions. All other errors are errors of the validation, invalid fields are returned as `model.FieldErrors`. All errors are wrapped, so check them with `errors.Is` and `errors.As`:
+
+```go
+func CreateUser(w http.ResponseWriter, r *http.Request) {
+    r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+    user := &User{}
+    err := v.UnpackAndValidate(r, user)
+    var maxBytesError *http.MaxBytesError
+    switch {
+    case errors.Is(err, validator.ErrUnsupportedMediaType):
+        http.Error(w, err.Error(), http.StatusUnsupportedMediaType)
+    case errors.As(err, &maxBytesError):
+        http.Error(w, err.Error(), http.StatusRequestEntityTooLarge)
+    case errors.Is(err, validator.ErrMalformedInput):
+        http.Error(w, err.Error(), http.StatusBadRequest)
+    case err != nil:
+        http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+    }
+    ...
+}
+```
+
+The body is read only once and only as far as the reader allows, so it can be limited with `http.MaxBytesReader`. To update a map by an array of `Validation` use `UnpackAndValidateWithValidation`.
 
 ## Form values and slices
 
@@ -205,6 +240,8 @@ A complex example for a password check (min length 8, max length 30, at least on
 `vld:"min8 max30 rex^(.*[A-Z])+(.*)$ rex^(.*[a-z])+(.*)$ rex^(.*\\d)+(.*)$ rex^(.*[\x60!@#$%^&*()_+={};':\"|\\,.<>/?~-])+(.*)$"`.
 In this example all connections are `&&` (=AND) connections. Because behind the requirement check is a little parser you can also do more complex requirements with multiple conditions grouped and connected with AND and OR connections.
 You can do for example `vld:"max0 || ((min10 && max30) || equTest)"` for a string that has to be either empty, the string `Test` or between 10 and 30 characters long. And yes, the outer brackets are not needed 😉.
+
+A requirement is checked when the validations of a struct are extracted (on the first call for a struct type), an invalid requirement returns an error with the field and the requirement (eg. `error parsing validation of field age: invalid requirement "min1 &&": ...`). Invalid are for example an operator without a condition after it (`min1 &&`, `min1 && || max2`) or before it (`&& min1`), an unknown operator (`&&&`) or condition type, braces that are not closed or not opened (`(min1`, `max1)`) or empty (`()`), `-` with other conditions, a value of `min`, `max`, `cmn` or `cmx` that is not a number (eg. `minabc`), an unknown `ist` type and an invalid regex. A value of `equ` or `neq` has to be a number on an int or float field and on a list or map (where the length is compared). Operators have to be separated from the values by a space (`min1&&max2` is `min` with the value `1&&max2`), braces inside a value are part of it if they are closed in the value (eg. `rex^(a|b)$`).
 
 `a => b` means "if `a` is fulfilled, `b` has to be fulfilled too". If `a` is not fulfilled, the requirement is fulfilled. `=>` binds weaker than `&&` and `||`, so `min1 && max5 => equ3 || equ4` is `(min1 && max5) => (equ3 || equ4)`. Use brackets to combine it with other conditions, eg. `(min3 => max5) && conb`. It is mostly used together with `rel` (see [Relations](#relations)).
 
@@ -243,7 +280,7 @@ If you want to check more complex cases you can obviously replace `equ`, `neq`, 
 
 The inner fields of a struct field are validated by their own tags. The requirement of the struct field itself works like this:
 
-- Without a requirement (eg. `vld:"-"`) all inner fields have to be valid.
+- Without a requirement (eg. `vld:"-"`) all inner fields have to be valid. Only fields with a tag are updated. A struct without any tag (also not in its inner structs) is taken over as it is.
 - With a requirement, it is checked on the struct itself, so `min` and `max` check the number of given keys. If the struct is empty (`{}` or `null`) and fulfills the requirement, the inner fields are not validated. If it is not empty, the inner fields have to be valid. A missing key is still an error, like for every other field.
 - With `cmn` or `cmx` in the requirement, invalid inner fields are allowed. A field counts as correct if it is given (or has a default) and fulfills its own requirement. Invalid fields are left out, so on update they keep their current value.
 
@@ -362,7 +399,7 @@ One of `Message` and `UnderlyingException` is required on creation.
 
 # 🔒 Security
 
-The validator provides built-in security through tag-based field filtering. **Only fields with the specified validation tag will be updated**, protecting sensitive fields from unauthorized modification. This tag filtering also works recursively for nested structs and arrays of structs.
+The validator provides built-in security through tag-based field filtering. **Only fields with the specified validation tag will be updated**, protecting sensitive fields from unauthorized modification. This tag filtering also works recursively for nested structs and arrays of structs. A struct field with `vld:"-"` whose type has no tag at all (also not in its inner structs) is taken over as a whole, like a field of a basic type, so do not use `vld:"-"` on structs with sensitive fields that should not be set.
 
 ## Tag Behavior
 
@@ -446,7 +483,7 @@ To run benchmarks run `go test -run '^$' -bench . -benchmem -count 10 > bench.tx
 
 # ⭐ Features
 
-- Validate json, yaml or form values by struct tag.
+- Validate json, yaml or form values by struct tag, chosen by the `Content-Type` of a request.
 - Validate json, yaml or form values by validations.
 - Validate and update a struct from `JsonMap`.
 - **Tag-based validation**: Define validation rules directly within struct tags using a concise syntax (e.g. `vld:"(min3 && ncotest) || max0"`). Use multiple custom tags in one struct for multiple validation situations. The default tag is `vld`.

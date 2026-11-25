@@ -251,6 +251,75 @@ func TestGetValidationsFromStruct(t *testing.T) {
 		assert.True(t, children.UsesFields(), "Expected field usage through the reference")
 		assert.True(t, validations[2].UsesFields(), "Expected field usage through the cycle")
 	})
+
+	t.Run("Struct without tags has no inner validations", func(t *testing.T) {
+		type Untagged struct {
+			Name string `json:"name"`
+		}
+		type DeepTagged struct {
+			Inner struct {
+				Name string `json:"name" vld:"min1"`
+			} `json:"inner"`
+		}
+		type Request struct {
+			Untagged   Untagged     `json:"untagged" vld:"-"`
+			Pointer    *Untagged    `json:"pointer" vld:"-"`
+			List       []Untagged   `json:"list" vld:"-"`
+			DeepTagged []DeepTagged `json:"deep_tagged" vld:"-"`
+		}
+
+		validations, err := GetValidationsFromStruct(&Request{}, model.VLD)
+		require.NoError(t, err)
+		require.Len(t, validations, 4)
+		assert.Nil(t, validations[0].Inner())
+		assert.Nil(t, validations[1].Inner())
+		assert.Nil(t, validations[2].Inner())
+		assert.NotNil(t, validations[3].Inner(), "Expected inner validations if an inner struct has tags")
+		assert.Empty(t, validations[3].Inner())
+	})
+
+	t.Run("Number conditions on number fields", func(t *testing.T) {
+		valid := []any{
+			&struct {
+				Int  int      `vld:"equ1 || neq-2"`
+				Flt  float64  `vld:"equ1.5"`
+				List []string `vld:"equ2"`
+				Str  string   `vld:"equabc"`
+				Rel  int      `vld:"rel(Str equabc) => equ1"`
+				Ref  int      `vld:"equ$Int"`
+			}{},
+		}
+		for _, v := range valid {
+			_, err := GetValidationsFromStruct(v, model.VLD)
+			assert.NoError(t, err)
+		}
+
+		for name, v := range map[string]any{
+			"Int": &struct {
+				A int `vld:"equabc"`
+			}{},
+			"Float": &struct {
+				A float64 `vld:"min1 && (neq1 || neqx)"`
+			}{},
+			"List": &struct {
+				A []int `vld:"equ1.5"`
+			}{},
+			"Map": &struct {
+				A map[string]int `vld:"neqx"`
+			}{},
+		} {
+			_, err := GetValidationsFromStruct(v, model.VLD)
+			assert.ErrorContains(t, err, "is not a number", name)
+			assert.ErrorContains(t, err, "field A", name)
+		}
+	})
+
+	t.Run("Invalid requirement", func(t *testing.T) {
+		_, err := GetValidationsFromStruct(&struct {
+			A string `vld:"min1 &&"`
+		}{}, model.VLD)
+		assert.ErrorContains(t, err, `error parsing validation of field A: invalid requirement "min1 &&"`)
+	})
 }
 
 func TestGetValidationFromStructField(t *testing.T) {

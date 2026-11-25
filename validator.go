@@ -84,7 +84,7 @@ func (r *Validator) ValidateContext(ctx context.Context, v any, tagType ...strin
 
 	_, err = r.ValidateWithValidationContext(ctx, jsonMap, validations)
 	if err != nil {
-		return fmt.Errorf("error validating struct: %v", err)
+		return fmt.Errorf("error validating struct: %w", err)
 	}
 
 	return nil
@@ -114,7 +114,7 @@ func (r *Validator) ValidateAndUpdateContext(ctx context.Context, jsonInput map[
 
 	validatedMap, err := r.ValidateWithValidationContext(ctx, jsonInput, validations)
 	if err != nil {
-		return fmt.Errorf("error validating struct: %v", err)
+		return fmt.Errorf("error validating struct: %w", err)
 	}
 
 	err = helper.MapJsonMapToStruct(validatedMap, structToUpdate)
@@ -137,7 +137,7 @@ func (r *Validator) ValidateAndUpdateWithValidation(jsonInput map[string]any, ma
 func (r *Validator) ValidateAndUpdateWithValidationContext(ctx context.Context, jsonInput map[string]any, mapToUpdate *map[string]any, validations []model.Validation) error {
 	validatedValues, err := r.ValidateWithValidationContext(ctx, jsonInput, validations)
 	if err != nil {
-		return fmt.Errorf("error validating json map: %v", err)
+		return fmt.Errorf("error validating json map: %w", err)
 	}
 
 	for k, v := range validatedValues {
@@ -278,7 +278,8 @@ func (r *Validator) validateField(ctx context.Context, jsonInput map[string]any,
 	var err error
 	switch validation.Type {
 	case model.Struct:
-		if jsonValueMap, ok := jsonValue.(map[string]any); ok {
+		// Without inner validations (eg. a struct without tags) the value is taken as it is.
+		if jsonValueMap, ok := jsonValue.(map[string]any); ok && validation.Inner() != nil {
 			jsonValue, err = r.validateStruct(ctx, jsonValueMap, validation, sc)
 			if err != nil {
 				return nil, false, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
@@ -287,7 +288,7 @@ func (r *Validator) validateField(ctx context.Context, jsonInput map[string]any,
 			err = r.validateValue(ctx, jsonValue, validation, sc)
 		}
 	case model.Array:
-		if helper.IsArray(jsonValue) && len(validation.Inner()) > 0 {
+		if helper.IsArray(jsonValue) && validation.Inner() != nil {
 			jsonArray, ok := jsonValue.([]any)
 			if !ok {
 				return nil, false, fmt.Errorf("field %v must be of type array, was %T", validation.Key, jsonValue)
@@ -323,7 +324,7 @@ func (r *Validator) validateField(ctx context.Context, jsonInput map[string]any,
 			err = r.validateValue(ctx, jsonValue, validation, sc)
 		} else if jsonValue == nil {
 			err = r.validateValue(ctx, jsonValue, validation, sc)
-		} else if len(validation.Inner()) == 0 {
+		} else if validation.Inner() == nil {
 			// A lone value (e.g. a single form value) is treated as a one-element list.
 			jsonValue = []any{jsonValue}
 			err = r.validateValue(ctx, jsonValue, validation, sc)

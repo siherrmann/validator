@@ -48,11 +48,16 @@ func (l *Lexer) readChar() {
 func (l *Lexer) NextToken() model.Token {
 	var t model.Token
 
-	l.skipWhitespace()
+	skipped := l.skipWhitespace()
 
 	// `rel(` is followed by a field path instead of a condition type.
 	relPending, pathNext := l.relPending, l.pathNext
 	l.relPending, l.pathNext = false, false
+
+	// A value directly after the condition type can start with `-` or `(` (eg. `min-5` or `rex(a|b)$`).
+	if (l.char == '-' || l.char == '(') && !skipped && !relPending && l.lastTokenType == model.LexerConditionType {
+		return l.conditionValueToken()
+	}
 	if pathNext && l.char != 0 && l.char != '(' && l.char != ')' {
 		t.Literal = l.readFieldPath()
 
@@ -82,6 +87,8 @@ func (l *Lexer) NextToken() model.Token {
 
 		t.Type = model.LexerOperator
 		l.lastTokenType = model.LexerOperator
+		// readOperator already moved behind the operator.
+		return t
 	case '\'':
 		t.Literal = l.readString()
 
@@ -100,15 +107,7 @@ func (l *Lexer) NextToken() model.Token {
 		l.lastTokenType = model.LexerEOF
 	default:
 		if l.lastTokenType == model.LexerConditionType {
-			t.Literal = l.readConditionValue()
-
-			t.Line = l.line
-			t.Start = l.position
-			t.End = l.position
-
-			t.Type = model.LexerConditionValue
-			l.lastTokenType = model.LexerConditionValue
-			return t
+			return l.conditionValueToken()
 		} else if isLetter(l.char) {
 			t.Literal = l.readConditionType()
 
@@ -129,13 +128,24 @@ func (l *Lexer) NextToken() model.Token {
 	return t
 }
 
-func (l *Lexer) skipWhitespace() {
+// conditionValueToken reads a condition value token.
+func (l *Lexer) conditionValueToken() model.Token {
+	t := model.Token{Literal: l.readConditionValue(), Line: l.line, Start: l.position, End: l.position, Type: model.LexerConditionValue}
+	l.lastTokenType = model.LexerConditionValue
+	return t
+}
+
+// skipWhitespace skips whitespace and reports if there was any.
+func (l *Lexer) skipWhitespace() bool {
+	skipped := false
 	for l.char == ' ' || l.char == '\t' || l.char == '\n' || l.char == '\r' {
 		if l.char == '\n' {
 			l.line++
 		}
 		l.readChar()
+		skipped = true
 	}
+	return skipped
 }
 
 // newToken builds a single-character token. literal is sliced by the caller from
@@ -203,13 +213,26 @@ func (l *Lexer) readConditionType() string {
 }
 
 // readConditionValue sets a start position and reads through characters
-// until any kind of whitespace to get a condition value (unvalidated).
+// until any kind of whitespace or a closing brace to get a condition value (unvalidated).
+// Braces opened in the value are part of it (eg. `rex^(a|b)+$`), so only a `)` without
+// an opening `(` in the value ends it, which is the closing brace of a group.
 func (l *Lexer) readConditionValue() string {
 	position := l.position
-	for l.char != ' ' && l.char != '\t' && l.char != '\n' && l.char != '\r' && l.char != ')' && l.char != 0 {
+	depth := 0
+	for {
+		switch l.char {
+		case ' ', '\t', '\n', '\r', 0:
+			return l.Input[position:l.position]
+		case '(':
+			depth++
+		case ')':
+			if depth == 0 {
+				return l.Input[position:l.position]
+			}
+			depth--
+		}
 		l.readChar()
 	}
-	return l.Input[position:l.position]
 }
 
 // readFieldPath sets a start position and reads through characters

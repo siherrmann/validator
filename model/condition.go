@@ -49,6 +49,27 @@ var ValidConditionTypes = map[ConditionType]int{
 	UNIQUE:       16,
 }
 
+// ValidIsTypes holds the types that can be checked with `ist` (eg. `istuuid`).
+var ValidIsTypes = map[string]struct{}{
+	"uuid":        {},
+	"unixmilli":   {},
+	"timerfc3339": {},
+	"email":       {},
+	"url":         {},
+	"alpha":       {},
+	"alphanum":    {},
+	"numeric":     {},
+	"hex":         {},
+	"base64":      {},
+	"json":        {},
+	"jwt":         {},
+	"ip":          {},
+	"ipv4":        {},
+	"ipv6":        {},
+	"mac":         {},
+	"password":    {},
+}
+
 // IsRequirement reports if the condition type is an actual check (not none or default).
 func (c ConditionType) IsRequirement() bool {
 	return c != NONE && c != DEF

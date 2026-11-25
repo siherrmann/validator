@@ -11,7 +11,9 @@ type Validation struct {
 	Groups      []*Group
 	Default     string
 	OmitEmpty   bool
-	// Inner Struct validation
+	// InnerValidation holds the validations of the inner fields of a struct field or of the items of a list of structs.
+	// If it is nil (and InnerValidationRef too), the value is not validated inside, but taken as it is
+	// (eg. for a struct without any tag). If it is empty, all inner fields are left out.
 	InnerValidation []Validation
 	// InnerValidationRef is set by GetValidationsFromStruct instead of InnerValidation for a field
 	// whose type refers back to a struct that contains it (eg. `Children []Node` in Node).

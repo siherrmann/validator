@@ -106,7 +106,11 @@ func (e *extractor) fieldValidation(fieldType reflect.StructField, valueType ref
 		p := parser.NewParser()
 		root, err := p.ParseValidation(validation.Requirement)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing validation: %v", err)
+			return nil, fmt.Errorf("error parsing validation of field %v: %w", key, err)
+		}
+		err = checkNumberConditions(root.RootValue, validation.Type)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing validation of field %v: %w", key, err)
 		}
 		validation.Default = root.ExtractDefault()
 		validation.RequirementAST = root.RootValue
@@ -124,7 +128,7 @@ func (e *extractor) fieldValidation(fieldType reflect.StructField, valueType ref
 		if ref, building := e.building[innerType]; building {
 			validation.InnerValidationRef = ref
 			e.hasRef = true
-		} else {
+		} else if hasTag(innerType, e.tagType, map[reflect.Type]bool{}) {
 			innerValidation, err := e.structValidations(innerType)
 			if err != nil {
 				return nil, fmt.Errorf("error getting inner validation from %v: %v", valueType, err)
@@ -135,6 +139,52 @@ func (e *extractor) fieldValidation(fieldType reflect.StructField, valueType ref
 
 	validation.NoFieldUsage = !requirementOrInnerUsesFields(validation)
 	return validation, nil
+}
+
+// hasTag reports if a field of the struct type or of one of its inner structs has the tag.
+// A struct without any tag has no inner validations, its value is taken as it is.
+func hasTag(structType reflect.Type, tagType string, seen map[reflect.Type]bool) bool {
+	seen[structType] = true
+	for _, field := range helper.StructModelOf(structType).Fields {
+		if field.Field.Tag.Get(tagType) != "" {
+			return true
+		}
+		if innerType, ok := innerStructType(field.Field.Type); ok && !seen[innerType] && hasTag(innerType, tagType, seen) {
+			return true
+		}
+	}
+	return false
+}
+
+// checkNumberConditions returns an error if an `equ` or `neq` condition of an int or float field
+// (or of a list or map, where the length is compared) has a value that can not be converted to a number.
+// Conditions on other fields (`rel`) and references (`$`) are only known while validating.
+func checkNumberConditions(astValue *model.AstValue, validatorType model.ValidatorType) error {
+	var numberType reflect.Type
+	switch validatorType {
+	case model.Int, model.Array, model.Map:
+		numberType = reflect.TypeOf(0)
+	case model.Float:
+		numberType = reflect.TypeOf(0.0)
+	default:
+		return nil
+	}
+
+	for _, v := range astValue.ConditionGroup {
+		switch {
+		case v.Type == model.GROUP:
+			if err := checkNumberConditions(v, validatorType); err != nil {
+				return err
+			}
+		case v.Ref != nil || (v.ConditionType != model.EQUAL && v.ConditionType != model.NOT_EQUAL):
+			continue
+		default:
+			if _, err := helper.AnyToType(v.ConditionValue, numberType); err != nil {
+				return fmt.Errorf("condition %v%v on a field of type %v, value %v is not a number", v.ConditionType, v.ConditionValue, validatorType, v.ConditionValue)
+			}
+		}
+	}
+	return nil
 }
 
 // innerStructType returns the struct type of a struct, pointer to struct or slice/array of structs.

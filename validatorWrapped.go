@@ -35,11 +35,18 @@ func ValidateAndUpdateWithValidation(jsonInput map[string]any, mapToUpdate *map[
 	return r.ValidateAndUpdateWithValidation(jsonInput, mapToUpdate, validations)
 }
 
-// UnmapOrUnmarshalAndValidate is the wrapper function for the UnmapOrUnmarshalAndValidate method of the Validator struct.
-// More details can be found in the UnmapOrUnmarshalAndValidate method.
-func UnmapOrUnmarshalAndValidate(request *http.Request, structToUpdate any, tagType ...string) error {
+// UnpackAndValidate is the wrapper function for the UnpackAndValidate method of the Validator struct.
+// More details can be found in the UnpackAndValidate method.
+func UnpackAndValidate(request *http.Request, structToUpdate any, tagType ...string) error {
 	r := NewValidator()
-	return r.UnmapOrUnmarshalAndValidate(request, structToUpdate, tagType...)
+	return r.UnpackAndValidate(request, structToUpdate, tagType...)
+}
+
+// UnpackAndValidateWithValidation is the wrapper function for the UnpackAndValidateWithValidation method of the Validator struct.
+// More details can be found in the UnpackAndValidateWithValidation method.
+func UnpackAndValidateWithValidation(request *http.Request, mapToUpdate *map[string]any, validations []model.Validation) error {
+	r := NewValidator()
+	return r.UnpackAndValidateWithValidation(request, mapToUpdate, validations)
 }
 
 // UnmapAndValidate is the wrapper function for the UnmapAndValidate method of the Validator struct.
@@ -54,13 +61,6 @@ func UnmapAndValidate(request *http.Request, structToUpdate any, tagType ...stri
 func UnmarshalAndValidate(request *http.Request, structToUpdate any, tagType ...string) error {
 	r := NewValidator()
 	return r.UnmarshalAndValidate(request, structToUpdate, tagType...)
-}
-
-// UnmapOrUnmarshalAndValidateWithValidation is the wrapper function for the UnmapOrUnmarshalAndValidateWithValidation method of the Validator struct.
-// More details can be found in the UnmapOrUnmarshalAndValidateWithValidation method.
-func UnmapOrUnmarshalAndValidateWithValidation(request *http.Request, mapToUpdate *map[string]any, validations []model.Validation) error {
-	r := NewValidator()
-	return r.UnmapOrUnmarshalAndValidateWithValidation(request, mapToUpdate, validations)
 }
 
 // UnmapAndValidateWithValidation is the wrapper function for the UnmapAndValidateWithValidation method of the Validator struct.

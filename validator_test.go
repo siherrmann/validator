@@ -404,6 +404,21 @@ func TestValidate(t *testing.T) {
 		require.Error(t, err, "A tag with only `unq` has to be validated")
 		assert.Contains(t, err.Error(), "field tags invalid")
 	})
+
+	t.Run("Struct without tags", func(t *testing.T) {
+		type Address struct {
+			City string `json:"city"`
+		}
+		type Request struct {
+			Address  Address  `json:"address" vld:"-"`
+			Pointer  *Address `json:"pointer" vld:"-"`
+			Required Address  `json:"required" vld:"min1"`
+		}
+
+		r := NewValidator()
+		assert.NoError(t, r.Validate(&Request{Pointer: &Address{}, Required: Address{City: "Berlin"}}))
+		assert.NoError(t, r.Validate(&Request{Required: Address{}}), "Expected the requirement to count the keys of the struct")
+	})
 }
 
 func TestValidateContext(t *testing.T) {
@@ -832,6 +847,75 @@ func TestValidateAndUpdate(t *testing.T) {
 		err := r.ValidateAndUpdate(map[string]any{"created_at": "1735776000"}, testStruct)
 		assert.NoError(t, err, "Expected no error but got one")
 		assert.Equal(t, int64(1735776000), testStruct.CreatedAt.Unix(), "Expected created_at to be updated from unix")
+	})
+
+	t.Run("Struct without tags is taken as it is", func(t *testing.T) {
+		type Address struct {
+			City string `json:"city"`
+			Zip  int    `json:"zip"`
+		}
+		type Request struct {
+			Address  Address   `json:"address" vld:"-"`
+			Pointer  *Address  `json:"pointer" vld:"-"`
+			List     []Address `json:"list" vld:"-"`
+			Required Address   `json:"required" vld:"min1"`
+		}
+
+		address := map[string]any{"city": "Berlin", "zip": 10115}
+		input := map[string]any{"address": address, "pointer": address, "list": []any{address, address}, "required": address}
+		result := &Request{}
+		require.NoError(t, r.ValidateAndUpdate(input, result))
+
+		expected := Address{City: "Berlin", Zip: 10115}
+		assert.Equal(t, expected, result.Address)
+		require.NotNil(t, result.Pointer)
+		assert.Equal(t, expected, *result.Pointer)
+		assert.Equal(t, []Address{expected, expected}, result.List)
+		assert.Equal(t, expected, result.Required)
+
+		input["required"] = map[string]any{}
+		assert.ErrorContains(t, r.ValidateAndUpdate(input, &Request{}), "field required invalid", "Expected the requirement to be checked on the struct")
+	})
+
+	t.Run("Struct with tags is validated", func(t *testing.T) {
+		type Address struct {
+			City   string `json:"city" vld:"min1"`
+			Secret string `json:"secret"`
+		}
+		type Request struct {
+			Address Address   `json:"address" vld:"-"`
+			List    []Address `json:"list" vld:"-"`
+		}
+
+		address := map[string]any{"city": "Berlin", "secret": "s"}
+		result := &Request{}
+		require.NoError(t, r.ValidateAndUpdate(map[string]any{"address": address, "list": []any{address}}, result))
+		assert.Equal(t, Address{City: "Berlin"}, result.Address, "Expected fields without tag not to be updated")
+		assert.Equal(t, []Address{{City: "Berlin"}}, result.List)
+
+		input := map[string]any{"address": map[string]any{"city": ""}, "list": []any{}}
+		assert.ErrorContains(t, r.ValidateAndUpdate(input, &Request{}), "field address invalid")
+	})
+
+	t.Run("Struct with tags only in an inner struct", func(t *testing.T) {
+		// Inner has no tag, so it is never updated, also if Outer has no tag on its own fields.
+		type Inner struct {
+			Name string `json:"name" vld:"min1"`
+		}
+		type Outer struct {
+			Inner Inner  `json:"inner"`
+			Value string `json:"value"`
+		}
+		type Request struct {
+			Outer Outer   `json:"outer" vld:"-"`
+			List  []Outer `json:"list" vld:"-"`
+		}
+
+		outer := map[string]any{"inner": map[string]any{"name": "n"}, "value": "v"}
+		result := &Request{}
+		require.NoError(t, r.ValidateAndUpdate(map[string]any{"outer": outer, "list": []any{outer}}, result))
+		assert.Equal(t, Outer{}, result.Outer)
+		assert.Equal(t, []Outer{{}}, result.List)
 	})
 }
 
