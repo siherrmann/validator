@@ -44,7 +44,7 @@ func (p *Parser) ParseValidation(validation string) (model.RootNode, error) {
 		if len(p.errors) == 0 {
 			p.parseError(fmt.Sprintf("error parsing validation, expected a value, got: %v", p.currentToken.Literal))
 		}
-		return model.RootNode{RootValue: &model.AstValue{}}, fmt.Errorf("invalid requirement %q: %s", validation, p.Errors())
+		return model.RootNode{RootValue: &model.AstValue{}}, fmt.Errorf("%w %q: %s", model.ErrInvalidRequirement, validation, p.Errors())
 	}
 	val.UsesFields = val.HasFieldUsage()
 	rootNode.RootValue = val

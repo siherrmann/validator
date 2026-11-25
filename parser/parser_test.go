@@ -3,6 +3,8 @@ package parser
 import (
 	"testing"
 
+	"github.com/siherrmann/validator/model"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -516,6 +518,7 @@ func TestParseValidation(t *testing.T) {
 	t.Run("Error message names the requirement", func(t *testing.T) {
 		_, err := NewParser().ParseValidation("min1 &&")
 		assert.EqualError(t, err, `invalid requirement "min1 &&": error parsing group, expected a condition after &&`)
+		assert.ErrorIs(t, err, model.ErrInvalidRequirement)
 	})
 
 	t.Run("Field usage is set on the root", func(t *testing.T) {

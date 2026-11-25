@@ -35,7 +35,7 @@ func (r *Validator) runFieldCondition(ctx context.Context, input any, v *model.A
 		return r.runInjectedCondition(ctx, input, v, correct, sc)
 	}
 	if sc == nil {
-		return true, fmt.Errorf("%v with field %v can only be validated together with the other fields", v.ConditionType, v.Ref.Raw)
+		return true, fmt.Errorf("%w: %v with field %v can only be validated together with the other fields", model.ErrInvalidRequirement, v.ConditionType, v.Ref.Raw)
 	}
 
 	value, found, err := resolveFieldRef(sc, v.Ref)

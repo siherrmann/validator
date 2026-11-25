@@ -79,7 +79,7 @@ func (r *Validator) ValidateContext(ctx context.Context, v any, tagType ...strin
 
 	validations, err := getCachedValidationsFromStruct(v, tagTypeSet)
 	if err != nil {
-		return fmt.Errorf("error getting validations from struct: %v", err)
+		return fmt.Errorf("error getting validations from struct: %w", err)
 	}
 
 	_, err = r.ValidateWithValidationContext(ctx, jsonMap, validations)
@@ -109,7 +109,7 @@ func (r *Validator) ValidateAndUpdateContext(ctx context.Context, jsonInput map[
 
 	validations, err := getCachedValidationsFromStruct(structToUpdate, tagTypeSet)
 	if err != nil {
-		return fmt.Errorf("error getting validations from struct: %v", err)
+		return fmt.Errorf("error getting validations from struct: %w", err)
 	}
 
 	validatedMap, err := r.ValidateWithValidationContext(ctx, jsonInput, validations)
@@ -282,7 +282,7 @@ func (r *Validator) validateField(ctx context.Context, jsonInput map[string]any,
 		if jsonValueMap, ok := jsonValue.(map[string]any); ok && validation.Inner() != nil {
 			jsonValue, err = r.validateStruct(ctx, jsonValueMap, validation, sc)
 			if err != nil {
-				return nil, false, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
+				return nil, false, fmt.Errorf("field %v invalid: %w", validation.Key, err)
 			}
 		} else {
 			err = r.validateValue(ctx, jsonValue, validation, sc)
@@ -299,19 +299,19 @@ func (r *Validator) validateField(ctx context.Context, jsonInput map[string]any,
 				if validation.Default != "" {
 					return validation.Default, true, nil
 				}
-				return nil, false, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
+				return nil, false, fmt.Errorf("field %v invalid: %w", validation.Key, err)
 			}
 
 			validatedArray := []any{}
 			for _, jsonValueInner := range jsonArray {
 				jsonValueInnerMap, err := helper.GetValidMap(jsonValueInner)
 				if err != nil {
-					return nil, false, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
+					return nil, false, fmt.Errorf("field %v invalid: %w", validation.Key, err)
 				}
 
 				validatedInnerMap, err := r.validateWithScope(ctx, jsonValueInnerMap, validation.Inner(), sc)
 				if err != nil {
-					return nil, false, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
+					return nil, false, fmt.Errorf("field %v invalid: %w", validation.Key, err)
 				}
 				validatedArray = append(validatedArray, validatedInnerMap)
 			}
@@ -337,7 +337,7 @@ func (r *Validator) validateField(ctx context.Context, jsonInput map[string]any,
 		if validation.Default != "" {
 			return validation.Default, true, nil
 		}
-		return nil, false, fmt.Errorf("field %v invalid: %v", validation.Key, err.Error())
+		return nil, false, fmt.Errorf("field %v invalid: %w", validation.Key, err)
 	}
 	if skipResult {
 		return nil, false, nil
@@ -390,7 +390,7 @@ func (r *Validator) validateStruct(ctx context.Context, jsonValueMap map[string]
 	err = r.runConditions(ctx, jsonValueMap, astValue, &correct, sc)
 	if err != nil {
 		if innerErr != nil {
-			return nil, fmt.Errorf("%v, inner errors: %v", err, innerErr)
+			return nil, fmt.Errorf("%w, inner errors: %w", err, innerErr)
 		}
 		return nil, err
 	} else if len(jsonValueMap) == 0 {
@@ -479,7 +479,7 @@ func (r *Validator) runConditions(ctx context.Context, input any, astValue *mode
 				// The premise is not fulfilled, so the consequence does not have to be.
 				return nil
 			} else if i > 0 && astValue.ConditionGroup[i-1].Operator == model.IMPLIES {
-				return fmt.Errorf("%v (required because of %v)", err, premiseToString(astValue.ConditionGroup[i-1]))
+				return fmt.Errorf("%w (required because of %v)", err, premiseToString(astValue.ConditionGroup[i-1]))
 			} else if (i == 0 && v.Operator == model.OR) || (i > 0 && astValue.ConditionGroup[i-1].Operator == model.OR) {
 				errors = append(errors, err)
 			} else {
@@ -538,7 +538,7 @@ func (r *Validator) runCondition(ctx context.Context, input any, v *model.AstVal
 		err = validators.ValidateUnique(input, v)
 	case model.CORRECT_MIN, model.CORRECT_MAX:
 		if correct == nil {
-			err = fmt.Errorf("%v is only usable on struct fields with inner validations", v.ConditionType)
+			return true, fmt.Errorf("%w: %v is only usable on struct fields with inner validations", model.ErrInvalidRequirement, v.ConditionType)
 		} else if v.ConditionType == model.CORRECT_MIN {
 			err = validators.ValidateCorrectMin(*correct, v)
 		} else {
@@ -547,11 +547,11 @@ func (r *Validator) runCondition(ctx context.Context, input any, v *model.AstVal
 	case model.FUNC:
 		fun, ok := r.ValidationFuncs[v.ConditionValue]
 		if !ok {
-			return true, fmt.Errorf("unknown validation function: %v", v.ConditionValue)
+			return true, fmt.Errorf("%w: unknown validation function: %v", model.ErrInvalidRequirement, v.ConditionValue)
 		}
 		err = fun(ctx, input, v)
 	default:
-		return true, fmt.Errorf("unknown condition type: %v", v.ConditionType)
+		return true, fmt.Errorf("%w: unknown condition type: %v", model.ErrInvalidRequirement, v.ConditionType)
 	}
 	return false, err
 }

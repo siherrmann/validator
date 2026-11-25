@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"testing"
@@ -280,6 +281,20 @@ func TestValidate(t *testing.T) {
 		err = r.Validate(&TestStruct{Fruit: "banana"})
 		assert.Error(t, err, "Expected an error but got none")
 		assert.Contains(t, err.Error(), "value is not apple")
+		assert.NotErrorIs(t, err, model.ErrInvalidRequirement)
+
+		err = NewValidator().Validate(&TestStruct{Fruit: "apple"})
+		assert.ErrorIs(t, err, model.ErrInvalidRequirement, "Expected an unknown function to be an invalid requirement")
+		assert.ErrorContains(t, err, "unknown validation function: isApple")
+	})
+
+	t.Run("Struct with invalid requirement", func(t *testing.T) {
+		err := NewValidator().Validate(&struct {
+			Age int `json:"age" vld:"min1 &&"`
+		}{Age: 1})
+		assert.ErrorIs(t, err, model.ErrInvalidRequirement)
+		var fieldErrors model.FieldErrors
+		assert.False(t, errors.As(err, &fieldErrors), "Expected no field errors for an invalid requirement")
 	})
 
 	type NestedInner struct {

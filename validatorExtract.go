@@ -110,7 +110,7 @@ func (e *extractor) fieldValidation(fieldType reflect.StructField, valueType ref
 		}
 		err = checkNumberConditions(root.RootValue, validation.Type)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing validation of field %v: %w", key, err)
+			return nil, fmt.Errorf("error parsing validation of field %v: %w %q: %w", key, model.ErrInvalidRequirement, validation.Requirement, err)
 		}
 		validation.Default = root.ExtractDefault()
 		validation.RequirementAST = root.RootValue
@@ -120,7 +120,7 @@ func (e *extractor) fieldValidation(fieldType reflect.StructField, valueType ref
 		var err error
 		validation.Groups, err = model.GetGroups(tagSplit[tagIndex])
 		if err != nil {
-			return nil, fmt.Errorf("error extracting group: %v", err)
+			return nil, fmt.Errorf("error extracting group of field %v: %w %q: %w", key, model.ErrInvalidRequirement, tagSplit[tagIndex], err)
 		}
 	}
 
@@ -131,10 +131,15 @@ func (e *extractor) fieldValidation(fieldType reflect.StructField, valueType ref
 		} else if hasTag(innerType, e.tagType, map[reflect.Type]bool{}) {
 			innerValidation, err := e.structValidations(innerType)
 			if err != nil {
-				return nil, fmt.Errorf("error getting inner validation from %v: %v", valueType, err)
+				return nil, fmt.Errorf("error getting inner validation from %v: %w", valueType, err)
 			}
 			validation.InnerValidation = innerValidation
 		}
+	}
+
+	if validation.RequirementAST.HasCondition(model.ConditionType.IsCorrect) && (validation.Type != model.Struct || (validation.InnerValidation == nil && validation.InnerValidationRef == nil)) {
+		// InnerValidationRef is not filled yet for a recursive type, so Inner() can not be used here.
+		return nil, fmt.Errorf("error parsing validation of field %v: %w %q: cmn and cmx are only usable on struct fields with inner validations", key, model.ErrInvalidRequirement, validation.Requirement)
 	}
 
 	validation.NoFieldUsage = !requirementOrInnerUsesFields(validation)

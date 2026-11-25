@@ -344,6 +344,7 @@ func TestRunFieldCondition(t *testing.T) {
 		err := r.ValidateValueWithParser("x", &model.Validation{Requirement: "rel(other equyes) => min1"})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "can only be validated together with the other fields")
+		assert.ErrorIs(t, err, model.ErrInvalidRequirement)
 
 		err = r.ValidateValueWithParser("x", &model.Validation{Requirement: "equ$other || min1"})
 		require.Error(t, err, "A missing scope is a configuration error, also inside an OR group")

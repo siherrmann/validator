@@ -311,6 +311,7 @@ func TestGetValidationsFromStruct(t *testing.T) {
 			_, err := GetValidationsFromStruct(v, model.VLD)
 			assert.ErrorContains(t, err, "is not a number", name)
 			assert.ErrorContains(t, err, "field A", name)
+			assert.ErrorIs(t, err, model.ErrInvalidRequirement, name)
 		}
 	})
 
@@ -319,6 +320,51 @@ func TestGetValidationsFromStruct(t *testing.T) {
 			A string `vld:"min1 &&"`
 		}{}, model.VLD)
 		assert.ErrorContains(t, err, `error parsing validation of field A: invalid requirement "min1 &&"`)
+		assert.ErrorIs(t, err, model.ErrInvalidRequirement)
+
+		_, err = GetValidationsFromStruct(&struct {
+			A string `vld:"min1, grx"`
+		}{}, model.VLD)
+		assert.ErrorIs(t, err, model.ErrInvalidRequirement, "Expected an invalid group to be an invalid requirement")
+
+		_, err = GetValidationsFromStruct(&struct {
+			Inner struct {
+				A string `vld:"min1 &&"`
+			} `vld:"-"`
+		}{}, model.VLD)
+		assert.ErrorIs(t, err, model.ErrInvalidRequirement, "Expected the error of an inner struct to be wrapped")
+	})
+
+	t.Run("Correct conditions only on structs with inner validations", func(t *testing.T) {
+		type Inner struct {
+			A string `vld:"min1"`
+		}
+		type Untagged struct {
+			A string
+		}
+		_, err := GetValidationsFromStruct(&struct {
+			Inner   Inner               `vld:"cmn1"`
+			Pointer *Inner              `vld:"max0 || cmx1"`
+			Rel     string              `vld:"rel(Inner.A min1) => min1"`
+			Node    *extractCorrectNode `vld:"-"`
+		}{}, model.VLD)
+		assert.NoError(t, err)
+
+		for name, v := range map[string]any{
+			"String": &struct {
+				A string `vld:"cmn1"`
+			}{},
+			"List": &struct {
+				A []Inner `vld:"min1 && cmx2"`
+			}{},
+			"Untagged": &struct {
+				A Untagged `vld:"cmn1"`
+			}{},
+		} {
+			_, err := GetValidationsFromStruct(v, model.VLD)
+			assert.ErrorIs(t, err, model.ErrInvalidRequirement, name)
+			assert.ErrorContains(t, err, "only usable on struct fields with inner validations", name)
+		}
 	})
 }
 
@@ -403,4 +449,10 @@ type extractNode struct {
 
 type extractWrapper struct {
 	Node *extractNode `json:"node" vld:"-"`
+}
+
+// extractCorrectNode uses cmn on a recursive field, whose inner validations are a reference.
+type extractCorrectNode struct {
+	Name string              `vld:"min1"`
+	Next *extractCorrectNode `vld:"max0 || cmn1"`
 }

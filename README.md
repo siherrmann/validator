@@ -193,7 +193,7 @@ Types that can be unmarshaled from text (they implement `encoding.TextUnmarshale
 | `application/yaml`, `application/x-yaml`, `text/yaml` | The yaml body. |
 | None | The json body or, if the body is empty, the query. |
 
-Any other `Content-Type` returns `validator.ErrUnsupportedMediaType`. Input that can not be read or parsed (eg. invalid json) returns `validator.ErrMalformedInput`, this is the same for all unpack functions. All other errors are errors of the validation, invalid fields are returned as `model.FieldErrors`. All errors are wrapped, so check them with `errors.Is` and `errors.As`:
+Any other `Content-Type` returns `model.ErrUnsupportedMediaType`. Input that can not be read or parsed (eg. invalid json) returns `model.ErrMalformedInput`, this is the same for all unpack functions. An invalid requirement in a tag returns `model.ErrInvalidRequirement` (see [Requirement](#requirement)), this is a mistake in the code, not in the input. All other errors are errors of the validation, invalid fields are returned as `model.FieldErrors`. Check `model.ErrInvalidRequirement` before `model.FieldErrors`, because an unknown function is found while validating a field and is part of the field errors. All errors are wrapped, so check them with `errors.Is` and `errors.As`:
 
 ```go
 func CreateUser(w http.ResponseWriter, r *http.Request) {
@@ -202,11 +202,13 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
     err := v.UnpackAndValidate(r, user)
     var maxBytesError *http.MaxBytesError
     switch {
-    case errors.Is(err, validator.ErrUnsupportedMediaType):
+    case errors.Is(err, model.ErrInvalidRequirement):
+        http.Error(w, "internal server error", http.StatusInternalServerError)
+    case errors.Is(err, model.ErrUnsupportedMediaType):
         http.Error(w, err.Error(), http.StatusUnsupportedMediaType)
     case errors.As(err, &maxBytesError):
         http.Error(w, err.Error(), http.StatusRequestEntityTooLarge)
-    case errors.Is(err, validator.ErrMalformedInput):
+    case errors.Is(err, model.ErrMalformedInput):
         http.Error(w, err.Error(), http.StatusBadRequest)
     case err != nil:
         http.Error(w, err.Error(), http.StatusUnprocessableEntity)
@@ -241,7 +243,7 @@ A complex example for a password check (min length 8, max length 30, at least on
 In this example all connections are `&&` (=AND) connections. Because behind the requirement check is a little parser you can also do more complex requirements with multiple conditions grouped and connected with AND and OR connections.
 You can do for example `vld:"max0 || ((min10 && max30) || equTest)"` for a string that has to be either empty, the string `Test` or between 10 and 30 characters long. And yes, the outer brackets are not needed 😉.
 
-A requirement is checked when the validations of a struct are extracted (on the first call for a struct type), an invalid requirement returns an error with the field and the requirement (eg. `error parsing validation of field age: invalid requirement "min1 &&": ...`). Invalid are for example an operator without a condition after it (`min1 &&`, `min1 && || max2`) or before it (`&& min1`), an unknown operator (`&&&`) or condition type, braces that are not closed or not opened (`(min1`, `max1)`) or empty (`()`), `-` with other conditions, a value of `min`, `max`, `cmn` or `cmx` that is not a number (eg. `minabc`), an unknown `ist` type and an invalid regex. A value of `equ` or `neq` has to be a number on an int or float field and on a list or map (where the length is compared). Operators have to be separated from the values by a space (`min1&&max2` is `min` with the value `1&&max2`), braces inside a value are part of it if they are closed in the value (eg. `rex^(a|b)$`).
+A requirement is checked when the validations of a struct are extracted (on the first call for a struct type), an invalid requirement returns `model.ErrInvalidRequirement` (wrapped, check it with `errors.Is`) with the field and the requirement (eg. `error parsing validation of field age: invalid requirement "min1 &&": ...`). Invalid are for example an operator without a condition after it (`min1 &&`, `min1 && || max2`) or before it (`&& min1`), an unknown operator (`&&&`) or condition type, braces that are not closed or not opened (`(min1`, `max1)`) or empty (`()`), `-` with other conditions, a value of `min`, `max`, `cmn` or `cmx` that is not a number (eg. `minabc`), an unknown `ist` type, an invalid regex and an invalid group. A value of `equ` or `neq` has to be a number on an int or float field and on a list or map (where the length is compared), `cmn` and `cmx` are only usable on struct fields with inner validations. An unknown function (`fun`) is only found while validating, because functions are added to the validator and not to the struct, it returns `model.ErrInvalidRequirement` too. Operators have to be separated from the values by a space (`min1&&max2` is `min` with the value `1&&max2`), braces inside a value are part of it if they are closed in the value (eg. `rex^(a|b)$`).
 
 `a => b` means "if `a` is fulfilled, `b` has to be fulfilled too". If `a` is not fulfilled, the requirement is fulfilled. `=>` binds weaker than `&&` and `||`, so `min1 && max5 => equ3 || equ4` is `(min1 && max5) => (equ3 || equ4)`. Use brackets to combine it with other conditions, eg. `(min3 => max5) && conb`. It is mostly used together with `rel` (see [Relations](#relations)).
 

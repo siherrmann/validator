@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,17 +15,6 @@ import (
 //
 // All unpack functions read request.Body only once and only as far as the reader allows,
 // so the body can be limited with http.MaxBytesReader.
-
-var (
-	// ErrUnsupportedMediaType is returned by UnpackAndValidate (wrapped) if the Content-Type of the request
-	// is not supported. A handler can answer it with 415.
-	ErrUnsupportedMediaType = errors.New("unsupported media type")
-	// ErrMalformedInput is returned by all unpack functions (wrapped) if the input can not be read or parsed,
-	// eg. invalid json or yaml, an invalid query or a body that is larger than allowed by http.MaxBytesReader
-	// (the *http.MaxBytesError is wrapped too). A handler can answer it with 400 (or 413).
-	// All other errors are errors of the validation or of the struct.
-	ErrMalformedInput = errors.New("malformed input")
-)
 
 // mediaTypeSource is the source of the input of a request.
 type mediaTypeSource int
@@ -55,8 +43,8 @@ var mediaTypeSources = map[string]mediaTypeSource{
 //   - `application/yaml`, `application/x-yaml` and `text/yaml`: the yaml body,
 //   - no Content-Type: the body as json or, if the body is empty, the query.
 //
-// Any other Content-Type returns ErrUnsupportedMediaType,
-// input that can not be read or parsed returns ErrMalformedInput. Both are wrapped, check them with errors.Is.
+// Any other Content-Type returns model.ErrUnsupportedMediaType,
+// input that can not be read or parsed returns model.ErrMalformedInput. Both are wrapped, check them with errors.Is.
 // It returns an error if the unpacking, validation or update fails.
 //
 // For more information look at ValidateAndUpdate.
@@ -99,7 +87,7 @@ func unpackRequest(request *http.Request) (map[string]any, error) {
 
 	mediaType, err := helper.MediaType(request)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrUnsupportedMediaType, err)
+		return nil, fmt.Errorf("%w: %v", model.ErrUnsupportedMediaType, err)
 	}
 
 	if mediaType == "" {
@@ -111,7 +99,7 @@ func unpackRequest(request *http.Request) (map[string]any, error) {
 		source, ok = sourceJson, true
 	}
 	if !ok {
-		return nil, fmt.Errorf("%w: %v", ErrUnsupportedMediaType, mediaType)
+		return nil, fmt.Errorf("%w: %v", model.ErrUnsupportedMediaType, mediaType)
 	}
 
 	switch source {
@@ -120,7 +108,7 @@ func unpackRequest(request *http.Request) (map[string]any, error) {
 	case sourceYaml:
 		mapOut, err := helper.UnmarshalYamlRequestToJsonMap(request)
 		if err != nil {
-			return nil, fmt.Errorf("%w: error unmarshaling request body: %w", ErrMalformedInput, err)
+			return nil, fmt.Errorf("%w: error unmarshaling request body: %w", model.ErrMalformedInput, err)
 		}
 		return mapOut, nil
 	default:
@@ -138,14 +126,14 @@ func unpackWithoutMediaType(request *http.Request) (map[string]any, error) {
 
 	bodyBytes, err := io.ReadAll(request.Body)
 	if err != nil {
-		return nil, fmt.Errorf("%w: error reading request body: %w", ErrMalformedInput, err)
+		return nil, fmt.Errorf("%w: error reading request body: %w", model.ErrMalformedInput, err)
 	} else if len(bodyBytes) == 0 {
 		return unmapRequest(request)
 	}
 
 	mapOut, err := helper.UnmarshalJsonToJsonMap(bodyBytes)
 	if err != nil {
-		return nil, fmt.Errorf("%w: error unmarshaling request body: %w", ErrMalformedInput, err)
+		return nil, fmt.Errorf("%w: error unmarshaling request body: %w", model.ErrMalformedInput, err)
 	}
 	return mapOut, nil
 }
@@ -154,7 +142,7 @@ func unpackWithoutMediaType(request *http.Request) (map[string]any, error) {
 func unmarshalRequest(request *http.Request) (map[string]any, error) {
 	mapOut, err := helper.UnmarshalRequestToJsonMap(request)
 	if err != nil {
-		return nil, fmt.Errorf("%w: error unmarshaling request body: %w", ErrMalformedInput, err)
+		return nil, fmt.Errorf("%w: error unmarshaling request body: %w", model.ErrMalformedInput, err)
 	}
 	return mapOut, nil
 }
@@ -163,7 +151,7 @@ func unmarshalRequest(request *http.Request) (map[string]any, error) {
 func unmapRequest(request *http.Request) (map[string]any, error) {
 	mapOut, err := helper.UnmapRequestToJsonMap(request)
 	if err != nil {
-		return nil, fmt.Errorf("%w: error unmapping form values: %w", ErrMalformedInput, err)
+		return nil, fmt.Errorf("%w: error unmapping form values: %w", model.ErrMalformedInput, err)
 	}
 	return mapOut, nil
 }

@@ -512,8 +512,8 @@ func TestUnpackAndValidate(t *testing.T) {
 			"Form without the right type": newBodyRequest(t, "text/x-www-form-urlencoded", "name=apple&age=2"),
 		} {
 			err := v.UnpackAndValidate(request, &testStruct{})
-			assert.ErrorIs(t, err, ErrUnsupportedMediaType, name)
-			assert.NotErrorIs(t, err, ErrMalformedInput, name)
+			assert.ErrorIs(t, err, model.ErrUnsupportedMediaType, name)
+			assert.NotErrorIs(t, err, model.ErrMalformedInput, name)
 		}
 	})
 
@@ -526,7 +526,7 @@ func TestUnpackAndValidate(t *testing.T) {
 			"Query":                     newBodyRequest(t, "application/x-www-form-urlencoded", "name=%zz"),
 		} {
 			err := v.UnpackAndValidate(request, &testStruct{})
-			assert.ErrorIs(t, err, ErrMalformedInput, name)
+			assert.ErrorIs(t, err, model.ErrMalformedInput, name)
 			var fieldErrors model.FieldErrors
 			assert.False(t, errors.As(err, &fieldErrors), name)
 		}
@@ -538,7 +538,7 @@ func TestUnpackAndValidate(t *testing.T) {
 		req.Body = http.MaxBytesReader(recorder, req.Body, 5)
 
 		err := v.UnpackAndValidate(req, &testStruct{})
-		assert.ErrorIs(t, err, ErrMalformedInput)
+		assert.ErrorIs(t, err, model.ErrMalformedInput)
 		var maxBytesError *http.MaxBytesError
 		assert.ErrorAs(t, err, &maxBytesError)
 	})
@@ -548,8 +548,16 @@ func TestUnpackAndValidate(t *testing.T) {
 		var fieldErrors model.FieldErrors
 		require.ErrorAs(t, err, &fieldErrors)
 		assert.Len(t, fieldErrors, 1)
-		assert.NotErrorIs(t, err, ErrMalformedInput)
-		assert.NotErrorIs(t, err, ErrUnsupportedMediaType)
+		assert.NotErrorIs(t, err, model.ErrMalformedInput)
+		assert.NotErrorIs(t, err, model.ErrUnsupportedMediaType)
+	})
+
+	t.Run("Invalid requirement", func(t *testing.T) {
+		err := v.UnpackAndValidate(newBodyRequest(t, "application/json", `{"age":2}`), &struct {
+			Age int `json:"age" vld:"minabc"`
+		}{})
+		assert.ErrorIs(t, err, model.ErrInvalidRequirement)
+		assert.NotErrorIs(t, err, model.ErrMalformedInput)
 	})
 
 	t.Run("Values injected into the request context", func(t *testing.T) {
@@ -592,11 +600,11 @@ func TestUnpackAndValidateWithValidation(t *testing.T) {
 
 	t.Run("Unsupported media type", func(t *testing.T) {
 		err := v.UnpackAndValidateWithValidation(newBodyRequest(t, "text/csv", "name,age"), &map[string]any{}, validations)
-		assert.ErrorIs(t, err, ErrUnsupportedMediaType)
+		assert.ErrorIs(t, err, model.ErrUnsupportedMediaType)
 	})
 
 	t.Run("Malformed input", func(t *testing.T) {
 		err := v.UnpackAndValidateWithValidation(newBodyRequest(t, "application/json", "{"), &map[string]any{}, validations)
-		assert.ErrorIs(t, err, ErrMalformedInput)
+		assert.ErrorIs(t, err, model.ErrMalformedInput)
 	})
 }

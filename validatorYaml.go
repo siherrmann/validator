@@ -11,7 +11,7 @@ import (
 // UnmarshalYamlAndValidate unmarshals given yaml ([]byte) into a JsonMap.
 // It validates the map by the tagType of the given struct and updates the struct.
 // It returns an error if the unmarshaling, validation or update fails.
-// Invalid yaml returns ErrMalformedInput (wrapped).
+// Invalid yaml returns model.ErrMalformedInput (wrapped).
 //
 // The keys are taken from the json tag, fall back to the yaml tag and then to the field name.
 // For more information look at ValidateAndUpdate.
@@ -24,7 +24,7 @@ func (r *Validator) UnmarshalYamlAndValidate(yamlInput []byte, structToUpdate an
 func (r *Validator) UnmarshalYamlAndValidateContext(ctx context.Context, yamlInput []byte, structToUpdate any, tagType ...string) error {
 	mapOut, err := helper.UnmarshalYamlToJsonMap(yamlInput)
 	if err != nil {
-		return fmt.Errorf("%w: error unmarshaling yaml: %w", ErrMalformedInput, err)
+		return fmt.Errorf("%w: error unmarshaling yaml: %w", model.ErrMalformedInput, err)
 	}
 
 	err = r.ValidateAndUpdateContext(ctx, mapOut, structToUpdate, tagType...)
@@ -47,7 +47,7 @@ func (r *Validator) UnmarshalYamlAndValidateWithValidation(yamlInput []byte, map
 func (r *Validator) UnmarshalYamlAndValidateWithValidationContext(ctx context.Context, yamlInput []byte, mapToUpdate *map[string]any, validations []model.Validation) error {
 	mapOut, err := helper.UnmarshalYamlToJsonMap(yamlInput)
 	if err != nil {
-		return fmt.Errorf("%w: error unmarshaling yaml: %w", ErrMalformedInput, err)
+		return fmt.Errorf("%w: error unmarshaling yaml: %w", model.ErrMalformedInput, err)
 	}
 
 	err = r.ValidateAndUpdateWithValidationContext(ctx, mapOut, mapToUpdate, validations)
