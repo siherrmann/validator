@@ -128,6 +128,35 @@ func TestUnmapRequestToJsonMap(t *testing.T) {
 		assert.Equal(t, map[string]any{"name": "apple", "age": float64(2)}, mapOut)
 	})
 
+	t.Run("Multipart form larger than the limit", func(t *testing.T) {
+		newRequest := func() *http.Request {
+			body := &bytes.Buffer{}
+			writer := multipart.NewWriter(body)
+			require.NoError(t, writer.WriteField("name", "apple"))
+			fileWriter, err := writer.CreateFormFile("file", "file.bin")
+			require.NoError(t, err)
+			_, err = fileWriter.Write(make([]byte, MultipartMaxSize))
+			require.NoError(t, err)
+			require.NoError(t, writer.Close())
+			req, err := http.NewRequest("POST", "/", body)
+			require.NoError(t, err)
+			req.Header.Set("Content-Type", writer.FormDataContentType())
+			return req
+		}
+
+		_, err := UnmapRequestToJsonMap(newRequest())
+		var maxBytesError *http.MaxBytesError
+		assert.ErrorAs(t, err, &maxBytesError)
+
+		// A form parsed by the caller is not limited.
+		req := newRequest()
+		require.NoError(t, req.ParseMultipartForm(MultipartMaxSize))
+		mapOut, err := UnmapRequestToJsonMap(req)
+		require.NoError(t, err)
+		assert.Equal(t, "apple", mapOut["name"])
+		require.NoError(t, req.MultipartForm.RemoveAll())
+	})
+
 	t.Run("Invalid request", func(t *testing.T) {
 		_, err := UnmapRequestToJsonMap(nil)
 		assert.Error(t, err, "Expected error unmapping invalid request")

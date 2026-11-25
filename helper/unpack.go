@@ -13,10 +13,10 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// MultipartMaxMemory is the number of bytes of a multipart form that are kept in memory,
-// the rest of the files is stored in temporary files (see http.Request.ParseMultipartForm).
-// It is the same as the default of net/http.
-const MultipartMaxMemory = 32 << 20
+// MultipartMaxSize is the maximum size of a multipart form body that is read by UnmapRequestToJsonMap.
+// The whole form is kept in memory, so no temporary files are written. To read a larger form
+// (eg. with files), call request.ParseMultipartForm before, the form is not parsed again then.
+const MultipartMaxSize = 32 << 20
 
 // UnmarshalRequestToJsonMap unmarshals the json body of the request into a JsonMap.
 // An error while reading the body (eg. *http.MaxBytesError) is wrapped.
@@ -56,6 +56,7 @@ func readRequestBody(request *http.Request) ([]byte, error) {
 
 // UnmapRequestToJsonMap unmaps the form values of the request (the query and,
 // for a url encoded or multipart form, the body) into a JsonMap. Files of a multipart form are ignored.
+// A multipart form is limited to MultipartMaxSize, a url encoded form to 10 MiB (by net/http).
 // An error while reading the body (eg. *http.MaxBytesError) is wrapped.
 func UnmapRequestToJsonMap(request *http.Request) (map[string]any, error) {
 	if request == nil {
@@ -64,7 +65,12 @@ func UnmapRequestToJsonMap(request *http.Request) (map[string]any, error) {
 
 	var err error
 	if IsMediaType(request, "multipart/form-data") {
-		err = request.ParseMultipartForm(MultipartMaxMemory)
+		if request.MultipartForm == nil && request.Body != nil {
+			request.Body = http.MaxBytesReader(nil, request.Body, MultipartMaxSize)
+		}
+		// gosec reports every ParseMultipartForm, the body is limited by http.MaxBytesReader above
+		// (or the form was already parsed by the caller).
+		err = request.ParseMultipartForm(MultipartMaxSize) // #nosec G120
 	} else {
 		err = request.ParseForm()
 	}

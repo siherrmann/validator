@@ -217,7 +217,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-The body is read only once and only as far as the reader allows, so it can be limited with `http.MaxBytesReader`. To update a map by an array of `Validation` use `UnpackAndValidateWithValidation`.
+The body is read only once and only as far as the reader allows, so it can be limited with `http.MaxBytesReader`. A multipart form is limited to 32 MiB (`helper.MultipartMaxSize`) and kept in memory, a url encoded form to 10 MiB (by `net/http`). To read a larger multipart form (eg. with files), call `r.ParseMultipartForm` before, the form is not parsed again then. To update a map by an array of `Validation` use `UnpackAndValidateWithValidation`.
 
 ## Form values and slices
 
